@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          iotlab-ssh wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_ROOT/wait_for_boot.json"
+          iotlab-ssh -i "$EXP_ID" wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_ROOT/wait_for_boot.json"
           cat "$RUN_ROOT/wait_for_boot.json"
           python - <<'PY'
           import json
@@ -199,8 +199,8 @@ jobs:
           if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
             SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
             FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
-            if [ -n "${LOC:-}" ]; then
-              iotlab-ssh run-cmd 'set +e; broker_ip=$(getent hosts mqtt4.iot-lab.info | awk "NR==1{print \\$1}"); if [ -n "$broker_ip" ]; then while iptables -D OUTPUT -p tcp -d "$broker_ip" --dport 8883 -j REJECT >/dev/null 2>&1; do :; done; fi; rm -f "$HOME/.config/mosquitto_pub"' -l "$LOC" >/dev/null 2>&1 || true
+            if [ -n "${LOC:-}" ] && [ -n "${EXP_ID:-}" ]; then
+              iotlab-ssh -i "$EXP_ID" run-cmd 'set +e; broker_ip=$(getent hosts mqtt4.iot-lab.info | awk "NR==1{print \\$1}"); if [ -n "$broker_ip" ]; then while iptables -D OUTPUT -p tcp -d "$broker_ip" --dport 8883 -j REJECT >/dev/null 2>&1; do :; done; fi; rm -f "$HOME/.config/mosquitto_pub"' -l "$LOC" >/dev/null 2>&1 || true
             fi
             ssh "${SSH_OPTS[@]}" "$FRONTEND" 'rm -f ~/.config/mosquitto_sub ~/shared/.iotlabsshcli/wp-rt01-dry/common/mqtt_auth.conf' >/dev/null 2>&1 || true
           fi
