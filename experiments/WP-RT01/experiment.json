@@ -1,0 +1,22 @@
+{
+  "experiment_id": "WP-RT01-v1.0",
+  "records_per_run": 10000,
+  "architectures": [
+    "B0_publish_only_non_durable",
+    "W1_wellpulse_offline_first"
+  ],
+  "conditions": [
+    "C0_normal_no_restart",
+    "C1_outage_no_restart",
+    "C2_outage_with_restart"
+  ],
+  "replications_target": 3,
+  "primary_success": {
+    "missing": 0,
+    "duplicates": 0,
+    "cloud_unique": 10000
+  },
+  "evidence_class": "real_embedded_hardware_and_communications_only",
+  "target_platform": "FIT_IoT_LAB",
+  "status": "FROZEN_NOT_EXECUTED"
+}
