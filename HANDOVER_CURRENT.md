@@ -1,12 +1,12 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-23 15:53 Africa/Cairo
+Last updated: 2026-08-23 16:10 Africa/Cairo
 
 ## Standing handover rule
 No material project state may exist only in chat. Before leaving this workstream, ensure decisions, results, artifacts, blockers, evidence boundaries, and the exact next action are recoverable from Drive and/or GitHub.
 
 ## Project status
-WellPulse has completed its first publication-grade remote-testbed validation layer on FIT IoT-LAB and now has two parallel access lanes for the next scientific layer.
+WellPulse has completed its first publication-grade remote-testbed validation layer on FIT IoT-LAB and now has three parallel access/qualification lanes for the next scientific layer. Parallelize access gates, not redundant final experiments.
 
 ### WP-RT01 — FIT IoT-LAB
 Status: COMPLETE / FINAL EVIDENCE PASS
@@ -91,13 +91,58 @@ Current access evidence:
 - Do not create a duplicate POWDER/Emulab account
 - No POWDER experiment has been reserved or executed
 
-## Current validation ladder
-1. FIT WP-RT01 — COMPLETE: real embedded hardware + controlled transport/connectivity outage
-2. POWDER WP-RT03 — parallel access lane: controlled real-RF impairment/recovery
-3. ARA WP-RT02 — parallel access lane: rural outdoor OTA confirmation
-4. Actual Siwa/pump deployment remains a separate future physical field-validation layer
+### WP-RT04 — COSMOS/ORBIT controlled-RF fallback
+Status: GO FOR ACCESS QUALIFICATION / NO EXTERNAL ACTION YET
 
-Do not add testbeds merely to increase experiment count. Each platform must contribute a distinct material claim.
+Canonical alternative scan:
+- `experiments/ALT_SCAN/ALTERNATIVE_TESTBEDS_2026-08-23.md`
+- Commit introducing scan: `01f7ab02eb61e6ad5fe1d63ef297d034d84f4481`
+
+Tracking:
+- GitHub Issue #24 — open
+
+Why this lane exists:
+- current COSMOS/ORBIT scheduler exposes `sb4.orbit-lab.org` RF Attenuator Matrix for repeatable RF/topology control;
+- `outdoor.orbit-lab.org` provides an approximately 22-node outdoor wireless domain;
+- COSMOS supports remote reservations and SSH/VPN experiment access;
+- COSMOS Sandbox 1 has a current 5G NR OTA path with end-to-end IP traffic through a real gNB↔UE air link;
+- portal documentation states account activation plus group-PI approval typically takes a day or two.
+
+Preferred role:
+- first use ORBIT SB4 as a substitute/fallback for POWDER controlled RF;
+- only use ORBIT outdoor or COSMOS 5G OTA if it adds a distinct material claim;
+- do not run a redundant final matrix merely because both POWDER and COSMOS become available.
+
+Current state:
+- no COSMOS/ORBIT account/project/reservation action has been taken in this workstream;
+- external registration/reservation requires owner approval.
+
+### AERPAW — secondary outdoor/mobile candidate
+Status: QUALIFIED CANDIDATE / HOLD UNTIL NEEDED
+
+The 2026 scan confirms AERPAW is active and supports real outdoor 4G/5G, SDR, LoRa and autonomous ground/aerial vehicles, with external-user portal/tutorial infrastructure and current real-world outdoor experiments.
+
+Potential role:
+- outdoor/mobile wireless resilience under motion/interference if a mobility/environment claim materially strengthens the paper.
+
+Reason to hold:
+- greater operational/field coordination;
+- UAV/autonomy is unnecessary for WellPulse;
+- do not let the platform pull the research into unrelated autonomy/6G work.
+
+### Other scanned alternatives
+- NITOS: HOLD — real SDR/LTE/Wi-Fi and isolated indoor hardware exist, but onboarding clarity/incremental claim value are weaker than COSMOS/ORBIT.
+- Colosseum: HOLD — valuable massive RF channel emulator with SDR hardware, but not a physical-environment substitute for outdoor OTA; use only if repeatable channel scale becomes a specific manuscript requirement.
+
+## Current validation ladder
+1. FIT WP-RT01 — COMPLETE: real embedded hardware + controlled transport/connectivity outage.
+2. POWDER WP-RT03 — pending access: preferred controlled real-RF impairment/recovery.
+3. COSMOS/ORBIT WP-RT04 — third access lane and controlled-RF fallback; optional outdoor/5G OTA if distinct.
+4. ARA WP-RT02 — pending access: strongest rural outdoor OTA confirmation.
+5. AERPAW — hold for a distinct outdoor/mobile claim only.
+6. Actual Siwa/pump deployment remains a separate future physical field-validation layer.
+
+Do not add testbeds merely to increase experiment count. Each platform must contribute a distinct material claim. Whichever of POWDER or COSMOS/ORBIT clears access/capability first should take the controlled-RF capability smoke; the other should not automatically receive a duplicate final matrix.
 
 ## Canonical Drive locations
 Project root:
@@ -122,26 +167,12 @@ Cross-project lessons ledger:
 - Location: `02 - Research & Grants / 00 - Research Operating Records`
 
 ## Cross-project lessons already captured
-The general lessons ledger has been seeded with reusable rules covering:
-- handover-readiness and chat-independent source-of-truth discipline
-- evidence classes (smoke/pre-final/final)
-- claim/evidence boundaries
-- freeze-before-final-run discipline
-- legitimate use of deterministic synthetic workloads
-- capability-first impairment selection
-- preservation/classification of failed attempts
-- trigger-only PR hygiene
-- durable archival of CI artifacts and checksums
-- live TLS chain verification and trust-anchor pinning
-- account identifier resolution across portal/API/SSH surfaces
-- parallel testbed access lanes
-- duplicate-account avoidance through mailbox/record search
-- layered validation strategy across FIT/POWDER/ARA
-- independent receiver-side reconciliation
-- precise restart/fault semantics
+The general lessons ledger has been seeded with reusable rules covering handover-readiness, evidence classes, claim boundaries, freeze-before-final-run discipline, deterministic synthetic workloads, capability-first impairment selection, preservation of failed attempts, trigger-only PR hygiene, durable archival, TLS verification, account identifier resolution, parallel access lanes, duplicate-account avoidance, layered validation, independent receiver reconciliation, and precise fault semantics.
 
 ## Exact next action
-Monitor/resolve the POWDER and ARA access gates. Whichever platform becomes usable first takes the next bounded capability smoke.
+Continue monitoring/resolving ARA and POWDER access gates. COSMOS/ORBIT is now the approved-in-principle third candidate for access qualification but no external signup is authorized by the scan itself.
+
+If the owner approves COSMOS/ORBIT registration, first check for any existing account, then complete only the minimal account/group access path and stop before any reservation. After approval, capability-smoke SB4 RF attenuation before freezing final treatment values.
 
 For POWDER, first prove account/project access and `srs-rf-matrix` availability before freezing attenuation values or running final evidence.
 
