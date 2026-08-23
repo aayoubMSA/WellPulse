@@ -1,0 +1,208 @@
+name: FIT A8 MQTT capability smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-mqtt-smoke-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-fit-a8-smoke
+  cancel-in-progress: false
+
+jobs:
+  mqtt-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      RUN_DIR: fit-mqtt-smoke
+
+    steps:
+      - name: Checkout WellPulse
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FIT tools and resolve login
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$RUN_DIR" "$HOME/.ssh"
+          test -n "${FIT_IDENTIFIER:-}"
+          test -n "${FIT_PASSWORD:-}"
+          python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+          python - <<'PY'
+          import base64, os, re
+          from pathlib import Path
+          from iotlabcli.rest import Api
+          ident=os.environ['FIT_IDENTIFIER']
+          password=os.environ['FIT_PASSWORD']
+          profile=Api(ident,password).method('user')
+          login=profile.get('login') if isinstance(profile,dict) else None
+          if not login or not re.fullmatch(r'[a-z][0-9a-z]{3,19}',login):
+              raise SystemExit('No valid FIT generated login')
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write(f'FIT_LOGIN={login}\n')
+          p=Path.home()/'.iotlabrc'
+          p.write_text(login+':'+base64.b64encode(password.encode()).decode())
+          p.chmod(0o600)
+          print('FIT generated login resolved without disclosure.')
+          PY
+
+      - name: Register ephemeral SSH key
+        shell: bash
+        run: |
+          set -eu
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-FIT-mqtt-smoke-${GITHUB_RUN_ID}" >/dev/null
+          chmod 600 "$HOME/.ssh/id_rsa"
+          chmod 644 "$HOME/.ssh/id_rsa.pub"
+          iotlab-auth --add-ssh-key | tee "$RUN_DIR/add_ssh_key.log"
+
+      - name: Reserve one Saclay A8 and wait for boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          submit_out=$(iotlab-experiment submit -n "WP-RT01-mqtt-smoke-${GITHUB_RUN_ID}" -d 15 -l '1,archi=a8:at86rf231+site=saclay')
+          printf '%s\n' "$submit_out" | tee "$RUN_DIR/reservation_submit.json"
+          EXP_ID=$(printf '%s' "$submit_out" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"
+          iotlab-experiment wait -i "$EXP_ID" --timeout 180 --cancel-on-timeout | tee "$RUN_DIR/reservation_wait.txt"
+          iotlab-experiment get -i "$EXP_ID" -n > "$RUN_DIR/experiment_nodes.json"
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          items=json.loads(Path('fit-mqtt-smoke/experiment_nodes.json').read_text()).get('items',[])
+          if not items: raise SystemExit('No A8 allocated')
+          addr=items[0]['network_address']
+          m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+          if not m: raise SystemExit('Cannot parse A8 node')
+          node=m.group(1)
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write(f'SITE=saclay\nNODE_ID={node}\nNODE_ADDRESS={addr}\nLOC=saclay,a8,{node}\n')
+          Path('fit-mqtt-smoke/selected_node.txt').write_text(f'node_address={addr}\nnode_id={node}\n')
+          PY
+          iotlab-ssh wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_DIR/wait_for_boot.json"
+          cat "$RUN_DIR/wait_for_boot.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('fit-mqtt-smoke/wait_for_boot.json').read_text())
+          if not data.get('wait-for-boot',{}).get('0',[]):
+              raise SystemExit('A8 boot did not return code 0')
+          PY
+
+      - name: Stage public CA and smoke scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'mkdir -p ~/shared/.iotlabsshcli && chmod 700 ~/shared/.iotlabsshcli && cp /opt/iot-lab-ca.pem ~/shared/.iotlabsshcli/iot-lab-ca.pem && chmod 644 ~/shared/.iotlabsshcli/iot-lab-ca.pem'
+          scp "${SSH_OPTS[@]}" scripts/fit_probe.sh scripts/fit_mqtt_smoke.sh "$FRONTEND:shared/.iotlabsshcli/"
+
+      - name: Re-probe TLS and outage capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          iotlab-ssh --verbose run-cmd 'set -eu; OUT="$HOME/shared/.iotlabsshcli/fit_probe.log"; sh "$HOME/shared/.iotlabsshcli/fit_probe.sh" "$OUT"; cat "$OUT"' -l "$LOC" 2>&1 | tee "$RUN_DIR/probe_remote.log"
+          scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log" "$RUN_DIR/fit_probe.log"
+          scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log.sha256" "$RUN_DIR/fit_probe.remote.sha256" || true
+          sha256sum "$RUN_DIR/fit_probe.log" | tee "$RUN_DIR/fit_probe.local.sha256"
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('fit-mqtt-smoke/probe_remote.log').read_text(errors='replace')
+          if '"0"' not in text:
+              raise SystemExit('Probe run-cmd did not report code 0')
+          PY
+
+      - name: Authenticated MQTT round trip on A8
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          AUTH_FILE="$RUNNER_TEMP/mqtt_auth.conf"
+          umask 077
+          printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$AUTH_FILE"
+          scp "${SSH_OPTS[@]}" "$AUTH_FILE" "$FRONTEND:shared/.iotlabsshcli/mqtt_auth.conf"
+          TOPIC="iotlab/${FIT_LOGIN}/wellpulse/smoke/${GITHUB_RUN_ID}"
+          PAYLOAD="WP_SMOKE_${GITHUB_RUN_ID}"
+          set +e
+          iotlab-ssh --verbose run-cmd "sh \"\$HOME/shared/.iotlabsshcli/fit_mqtt_smoke.sh\" '$TOPIC' '$PAYLOAD'" -l "$LOC" 2>&1 | tee "$RUN_DIR/mqtt_remote.log"
+          remote_rc=${PIPESTATUS[0]}
+          set -e
+          scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/mqtt_smoke.log" "$RUN_DIR/mqtt_smoke.log" || true
+          rm -f "$AUTH_FILE"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
+          grep -F 'mqtt_authenticated=PASS' "$RUN_DIR/mqtt_smoke.log"
+          test "$remote_rc" -eq 0
+
+      - name: Write metadata
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          Path('fit-mqtt-smoke').mkdir(exist_ok=True)
+          Path('fit-mqtt-smoke/metadata.json').write_text(json.dumps({
+            'evidence_class':'CAPABILITY_SMOKE_NOT_FINAL_EXPERIMENT',
+            'github_run_id':os.getenv('GITHUB_RUN_ID'),
+            'git_commit':os.getenv('GITHUB_SHA'),
+            'experiment_id':os.getenv('EXP_ID'),
+            'site':os.getenv('SITE'),
+            'node_id':os.getenv('NODE_ID'),
+            'node_address':os.getenv('NODE_ADDRESS'),
+            'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          },indent=2)+'\n')
+          PY
+
+      - name: Cleanup FIT experiment and credentials
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+            ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "${FIT_LOGIN}@${SITE}.iot-lab.info" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
+          fi
+          [ -n "${EXP_ID:-}" ] && iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
+          if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+            python - <<'PY'
+          from pathlib import Path
+          from iotlabcli import auth
+          from iotlabcli.rest import Api
+          keyfile=Path.home()/'.ssh'/'id_rsa.pub'
+          if keyfile.exists():
+              key=keyfile.read_text().strip()
+              user,password=auth._read_password_file()
+              if user and password:
+                  api=Api(user,password)
+                  obj=api.get_ssh_keys()
+                  if key in obj.get('sshkeys',[]):
+                      obj['sshkeys']=[k for k in obj['sshkeys'] if k != key]
+                      api.set_ssh_keys(obj)
+          PY
+          fi
+          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$RUNNER_TEMP/mqtt_auth.conf"
+          rm -f "$HOME/.iotlabrc"
+
+      - name: Upload MQTT smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-fit-a8-mqtt-smoke-${{ github.run_id }}
+          path: fit-mqtt-smoke/
+          if-no-files-found: warn
+          retention-days: 30
