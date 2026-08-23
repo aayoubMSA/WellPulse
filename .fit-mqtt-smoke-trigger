@@ -1,0 +1,2 @@
+Trigger corrected FIT A8 MQTT smoke with fingerprint-verified ISRG Root X1 trust anchor.
+Capability smoke only; no final WP-RT01 evidence.
