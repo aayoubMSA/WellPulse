@@ -1,12 +1,12 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-23 16:14 Africa/Cairo
+Last updated: 2026-08-23 16:23 Africa/Cairo
 
 ## Standing handover rule
 No material project state may exist only in chat. Decisions, results, artifacts, blockers, evidence boundaries, and the exact next action must be recoverable from Drive and/or GitHub.
 
 ## Executive state
-WellPulse has completed its first publication-grade remote-testbed validation layer on FIT IoT-LAB. Three next-layer access lanes are now active/qualified: POWDER for controlled real-RF, COSMOS/ORBIT as the controlled-RF fallback, and ARA for rural outdoor OTA. Parallelize access gates, not redundant final experiments.
+WellPulse has completed its first publication-grade remote-testbed validation layer on FIT IoT-LAB. Three next-layer access lanes are active/qualified: POWDER for controlled real-RF, COSMOS/ORBIT as the controlled-RF fallback, and ARA for rural outdoor OTA. Parallelize access gates, not redundant final experiments.
 
 ## WP-RT01 — FIT IoT-LAB
 Status: **COMPLETE / FINAL EVIDENCE PASS**
@@ -108,7 +108,7 @@ Current access evidence:
 - no reservation or experiment executed
 
 ## WP-RT04 — COSMOS/ORBIT controlled-RF fallback
-Status: **OWNER-APPROVED ACCESS REGISTRATION / ORGANIZATION GATE**
+Status: **ACTIVATION EMAIL RECEIVED / OWNER CLICK PENDING**
 
 Canonical scan:
 - `experiments/ALT_SCAN/ALTERNATIVE_TESTBEDS_2026-08-23.md`
@@ -124,18 +124,26 @@ Why this lane exists:
 
 Access precheck completed 2026-08-23:
 - Gmail search found no prior COSMOS/ORBIT/WINLAB account, verification, or approval messages
-- public search found no evidence that MSA / October University for Modern Sciences and Arts is already registered as a COSMOS/ORBIT organization
+- public search found no evidence that MSA / October University for Modern Sciences and Arts was already registered as a COSMOS/ORBIT organization
 - current ORBIT policy explicitly allows university research users from non-US institutions
 - current COSMOS/ORBIT workflow requires organization/group registration by the PI if the institution is absent; after group approval, the PI can approve user accounts
-- user has explicitly approved proceeding with this access gate
+- user explicitly approved proceeding with this access gate
+
+Activation milestone:
+- COSMOS Support email received 2026-08-23 16:22 Cairo (13:22 UTC)
+- subject: `ORBIT Group Account - Activation Required`
+- sender: `support@cosmos-lab.org`
+- confirmed group: `msa-university`
+- confirmed PI username: `aayoub`
+- activation link is in the email and must be clicked by the owner
+- receipt of the activation email is **not** yet proof that the account/group is approved or usable
 
 Exact next external action:
-1. Register MSA as a COSMOS/ORBIT organization/group with Dr. Ahmed as PI.
-2. Complete email activation and wait for organization approval.
-3. Activate/approve the associated user account.
-4. Upload public SSH key and prove login.
-5. STOP before any reservation.
-6. After access is proven, capability-smoke SB4 before freezing attenuation values or launching final evidence.
+1. Owner clicks the activation link in the COSMOS Support email.
+2. Verify the resulting organization/group approval and user-login state.
+3. Upload the WellPulse public SSH key if needed and prove SSH/login access.
+4. STOP before any reservation.
+5. After access is proven, capability-smoke ORBIT SB4 RF attenuation before freezing attenuation values or launching final evidence.
 
 No external reservation or experiment has been executed.
 
@@ -152,7 +160,7 @@ Outdoor/mobile wireless resilience if mobility materially strengthens the manusc
 ## Current validation ladder
 1. FIT WP-RT01 — COMPLETE: real embedded hardware + controlled transport/connectivity outage
 2. POWDER WP-RT03 — pending access: preferred controlled real-RF impairment/recovery
-3. COSMOS/ORBIT WP-RT04 — owner-approved third access lane and controlled-RF fallback
+3. COSMOS/ORBIT WP-RT04 — activation email received; controlled-RF fallback pending activation/approval/login
 4. ARA WP-RT02 — pending access: strongest rural outdoor OTA confirmation
 5. AERPAW — hold for a distinct outdoor/mobile claim only
 6. Actual Siwa/pump deployment — separate future physical field-validation layer
