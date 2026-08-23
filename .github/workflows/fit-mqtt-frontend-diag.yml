@@ -27,11 +27,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Fetch and verify current trust anchor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_DIR"
+          bash scripts/fetch_mqtt_trust_anchor.sh "$RUN_DIR/isrgrootx1.pem" | tee "$RUN_DIR/trust_anchor.txt"
+
       - name: Resolve FIT login and register ephemeral SSH key
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUN_DIR" "$HOME/.ssh"
+          mkdir -p "$HOME/.ssh"
           python -m pip install --disable-pip-version-check iotlabcli
           python - <<'PY'
           import base64, os, re
@@ -55,19 +62,25 @@ jobs:
           chmod 644 "$HOME/.ssh/id_rsa.pub"
           iotlab-auth --add-ssh-key > "$RUN_DIR/add_ssh_key.log"
 
-      - name: Inspect official CA and broker chain on FIT frontend
+      - name: Test broker with verified ISRG Root X1 on FIT frontend
         shell: bash
         run: |
           set -euo pipefail
           SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
           FRONTEND="${FIT_LOGIN}@saclay.iot-lab.info"
-          ssh "${SSH[@]}" "$FRONTEND" 'set -eu; echo "=== openssl ==="; openssl version -a; echo "=== mosquitto ==="; mosquitto_pub -h 2>&1 | head -n 4 || true; echo "=== CA certificates ==="; awk '\''/BEGIN CERTIFICATE/{n++} END{print "pem_cert_count=" n}'\'' /opt/iot-lab-ca.pem; csplit -s -f /tmp/wpca- -b "%02d.pem" /opt/iot-lab-ca.pem "/-----BEGIN CERTIFICATE-----/" "{*}" || true; for f in /tmp/wpca-*.pem; do grep -q "BEGIN CERTIFICATE" "$f" || continue; echo "--- $f ---"; openssl x509 -in "$f" -noout -subject -issuer -serial -dates -fingerprint -sha256 || true; done; rm -f /tmp/wpca-*.pem; echo "=== broker showcerts ==="; echo | openssl s_client -showcerts -connect mqtt4.iot-lab.info:8883 -servername mqtt4.iot-lab.info -CAfile /opt/iot-lab-ca.pem 2>&1; echo "=== frontend mqtt auth smoke ==="; mkdir -p ~/.config; umask 077; printf "%s\n%s\n" "-u '${FIT_LOGIN}'" "-P '${FIT_PASSWORD}'" > ~/.config/mosquitto_pub; cp ~/.config/mosquitto_pub ~/.config/mosquitto_sub; topic="iotlab/'${FIT_LOGIN}'/wellpulse/frontend-diag/'${GITHUB_RUN_ID}'"; payload="WP_FRONTEND_DIAG_'${GITHUB_RUN_ID}'"; rm -f /tmp/wp_frontend_msg; mosquitto_sub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -C 1 -W 10 -t "$topic" > /tmp/wp_frontend_msg & pid=$!; sleep 2; mosquitto_pub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -t "$topic" -m "$payload"; wait "$pid"; grep -Fx "$payload" /tmp/wp_frontend_msg; echo mqtt_frontend_authenticated=PASS; rm -f /tmp/wp_frontend_msg ~/.config/mosquitto_pub ~/.config/mosquitto_sub' 2>&1 | tee "$RUN_DIR/frontend_diag.log"
+          scp "${SSH[@]}" "$RUN_DIR/isrgrootx1.pem" "$FRONTEND:shared/isrgrootx1.pem"
+          ssh "${SSH[@]}" "$FRONTEND" 'set -eu; echo "=== verified trust-anchor TLS ==="; echo | openssl s_client -connect mqtt4.iot-lab.info:8883 -servername mqtt4.iot-lab.info -CAfile ~/shared/isrgrootx1.pem 2>&1 | grep -E "Protocol|Cipher|Verify return code|Verification" || true; echo "=== authenticated MQTT round trip ==="; mkdir -p ~/.config; umask 077; printf "%s\n%s\n" "-u '${FIT_LOGIN}'" "-P '${FIT_PASSWORD}'" > ~/.config/mosquitto_pub; cp ~/.config/mosquitto_pub ~/.config/mosquitto_sub; topic="iotlab/'${FIT_LOGIN}'/wellpulse/frontend-diag/'${GITHUB_RUN_ID}'"; payload="WP_FRONTEND_DIAG_'${GITHUB_RUN_ID}'"; rm -f /tmp/wp_frontend_msg; mosquitto_sub --cafile ~/shared/isrgrootx1.pem -h mqtt4.iot-lab.info -p 8883 -C 1 -W 10 -t "$topic" > /tmp/wp_frontend_msg & pid=$!; sleep 2; mosquitto_pub --cafile ~/shared/isrgrootx1.pem -h mqtt4.iot-lab.info -p 8883 -t "$topic" -m "$payload"; wait "$pid"; grep -Fx "$payload" /tmp/wp_frontend_msg; echo mqtt_frontend_authenticated=PASS; rm -f /tmp/wp_frontend_msg ~/.config/mosquitto_pub ~/.config/mosquitto_sub ~/shared/isrgrootx1.pem' 2>&1 | tee "$RUN_DIR/frontend_diag.log"
+          grep -F 'Verify return code: 0 (ok)' "$RUN_DIR/frontend_diag.log"
+          grep -F 'mqtt_frontend_authenticated=PASS' "$RUN_DIR/frontend_diag.log"
 
       - name: Cleanup ephemeral SSH key
         if: always()
         shell: bash
         run: |
           set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+            ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "${FIT_LOGIN}@saclay.iot-lab.info" 'rm -f ~/shared/isrgrootx1.pem ~/.config/mosquitto_pub ~/.config/mosquitto_sub' >/dev/null 2>&1 || true
+          fi
           if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then
             python - <<'PY'
           from pathlib import Path
