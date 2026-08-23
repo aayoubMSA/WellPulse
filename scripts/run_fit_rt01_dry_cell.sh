@@ -9,6 +9,7 @@ OUT_ROOT="${3:?local output root required}"
 : "${FIT_PASSWORD:?}"
 : "${SITE:?}"
 : "${LOC:?}"
+: "${EXP_ID:?}"
 : "${SSH_KEY:?}"
 
 case "$ARCH" in
@@ -20,7 +21,6 @@ esac
 SSH_OPTS=(-i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
 FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
 REL_BASE="shared/.iotlabsshcli/wp-rt01-dry/${RUN_ID}"
-ABS_BASE="$HOME/shared/.iotlabsshcli/wp-rt01-dry/${RUN_ID}"
 COMMON_REL="shared/.iotlabsshcli/wp-rt01-dry/common"
 TOPIC="iotlab/${FIT_LOGIN}/wellpulse/wp-rt01/${RUN_ID}/records"
 PROBE_TOPIC="iotlab/${FIT_LOGIN}/wellpulse/wp-rt01/${RUN_ID}/probe"
@@ -31,7 +31,7 @@ run_node() {
   local label="$1"
   local cmd="$2"
   local out="$LOCAL_DIR/${label}.json"
-  iotlab-ssh run-cmd "$cmd" -l "$LOC" > "$out"
+  iotlab-ssh -i "$EXP_ID" run-cmd "$cmd" -l "$LOC" > "$out"
   cat "$out"
   python - "$out" <<'PY'
 import json, sys
@@ -54,7 +54,7 @@ ssh "${SSH_OPTS[@]}" "$FRONTEND" "set -eu; nohup sh -c 'mosquitto_sub --cafile \
 sleep 2
 ssh "${SSH_OPTS[@]}" "$FRONTEND" "set -eu; pid=\$(cat '$REL_BASE/subscriber.pid'); kill -0 \"\$pid\"; test ! -s '$REL_BASE/receiver/subscriber.log' || { cat '$REL_BASE/receiver/subscriber.log'; exit 1; }"
 
-run_node setup_edge "set -eu; mkdir -p \"\$HOME/.config\" \"\$HOME/$REL_BASE/edge\"; cp \"\$HOME/$COMMON_REL/mqtt_auth.conf\" \"\$HOME/.config/mosquitto_pub\"; chmod 600 \"\$HOME/.config/mosquitto_pub\"; python3 -m py_compile \"\$HOME/$COMMON_REL/fit_rt01_edge.py\"; iptables -D OUTPUT -p tcp --dport 8883 -j REJECT >/dev/null 2>&1 || true"
+run_node setup_edge "set -eu; mkdir -p \"\$HOME/.config\" \"\$HOME/$REL_BASE/edge\"; cp \"\$HOME/$COMMON_REL/mqtt_auth.conf\" \"\$HOME/.config/mosquitto_pub\"; chmod 600 \"\$HOME/.config/mosquitto_pub\"; python3 -m py_compile \"\$HOME/$COMMON_REL/fit_rt01_edge.py\""
 
 CMD1="python3 \"\$HOME/$COMMON_REL/fit_rt01_edge.py\" --run-id '$RUN_ID' --architecture '$ARCH' --condition C2_outage_restart --start-seq 1 --end-seq 4000 --workdir \"\$HOME/$REL_BASE/edge\" --topic '$TOPIC' --probe-topic '$PROBE_TOPIC' --ca \"\$HOME/$COMMON_REL/iot-lab-ca.pem\" --batch-size 50 --leave-outage-active"
 run_node segment_1 "$CMD1"
