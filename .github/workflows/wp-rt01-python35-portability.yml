@@ -1,0 +1,77 @@
+name: WP-RT01 Python 3.5 portability gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.wp-rt01-portability-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  python35-portability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile and execute 10k semantic gates under Python 3.5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p portability-evidence
+          docker run --rm -v "$PWD:/work" -w /work python:3.5 sh -lc '
+            set -eu
+            python --version
+            python -m py_compile scripts/wp_rt01_a8_runner.py scripts/wp_rt01_receiver.py
+            python scripts/wp_rt01_a8_runner.py --help >/dev/null
+            python scripts/wp_rt01_receiver.py --help >/dev/null
+            rm -rf /tmp/wp35 && mkdir -p /tmp/wp35/fakebin /tmp/wp35/w1 /tmp/wp35/b0
+            cat > /tmp/wp35/fakebin/mosquitto_pub <<"EOF"
+          #!/bin/sh
+          cat >/dev/null
+          exit 0
+          EOF
+            cat > /tmp/wp35/fakebin/iptables <<"EOF"
+          #!/bin/sh
+          case "$1" in
+            -C) test -f /tmp/wp35/iptables_active ;;
+            -A) : > /tmp/wp35/iptables_active ;;
+            -D) rm -f /tmp/wp35/iptables_active ;;
+            *) exit 0 ;;
+          esac
+          EOF
+            chmod +x /tmp/wp35/fakebin/mosquitto_pub /tmp/wp35/fakebin/iptables
+            : > /tmp/wp35/ca.pem
+            export PATH="/tmp/wp35/fakebin:$PATH"
+            python scripts/wp_rt01_a8_runner.py --run-id PY35-W1-C2 --architecture W1_wellpulse_offline_first --condition C2_outage_with_restart --records 10000 --batch-size 100 --broker localhost --topic test/w1 --ca-file /tmp/wp35/ca.pem --out-dir /tmp/wp35/w1
+            python scripts/wp_rt01_a8_runner.py --run-id PY35-B0-C1 --architecture B0_publish_only_non_durable --condition C1_outage_no_restart --records 10000 --batch-size 100 --broker localhost --topic test/b0 --ca-file /tmp/wp35/ca.pem --out-dir /tmp/wp35/b0
+            python - <<"PY"
+          import json
+          w1=json.load(open("/tmp/wp35/w1/edge_summary.json"))
+          b0=json.load(open("/tmp/wp35/b0/edge_summary.json"))
+          assert w1["generated"] == 10000
+          assert w1["queue_total"] == 10000
+          assert w1["queue_pending"] == 0
+          assert w1["restart_done"] is True
+          assert w1["queue_high_water"] >= 2000
+          assert b0["generated"] == 10000
+          assert b0["queue_total"] == 0
+          drops=sum(1 for _ in open("/tmp/wp35/b0/baseline_dropped.ndjson"))
+          assert drops == 2000, drops
+          print("python35_semantic_gate=PASS")
+          print("w1_queue_high_water=%s" % w1["queue_high_water"])
+          print("b0_dropped=%s" % drops)
+          PY
+            cp /tmp/wp35/w1/edge_summary.json /work/portability-evidence/w1_c2_summary.json
+            cp /tmp/wp35/b0/edge_summary.json /work/portability-evidence/b0_c1_summary.json
+          ' | tee portability-evidence/python35_gate.log
+
+      - name: Upload portability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp-rt01-python35-portability-${{ github.run_id }}
+          path: portability-evidence/
+          retention-days: 30
