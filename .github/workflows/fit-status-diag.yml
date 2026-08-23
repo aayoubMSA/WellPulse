@@ -1,0 +1,71 @@
+name: FIT status diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-status-diag-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install FIT CLI and inspect status
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p fit-status-diag
+          python -m pip install --disable-pip-version-check iotlabcli
+          python - <<'PY'
+          import base64,os,re
+          from pathlib import Path
+          from iotlabcli.rest import Api
+          ident=os.environ['FIT_IDENTIFIER']; password=os.environ['FIT_PASSWORD']; profile=Api(ident,password).method('user'); login=profile.get('login') if isinstance(profile,dict) else None
+          if not login or not re.fullmatch(r'[a-z][0-9a-z]{3,19}',login): raise SystemExit('No valid FIT login')
+          p=Path.home()/'.iotlabrc'; p.write_text(login+':'+base64.b64encode(password.encode()).decode()); p.chmod(0o600)
+          PY
+          iotlab-status --experiments-running > fit-status-diag/experiments_running.json
+          iotlab-status --nodes --archi a8 --state Alive > fit-status-diag/a8_alive.json
+          cat fit-status-diag/experiments_running.json
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          d=json.load(open('fit-status-diag/experiments_running.json'))
+          ids=[]
+          if isinstance(d,dict):
+              if isinstance(d.get('items'),list):
+                  for x in d['items']:
+                      if isinstance(x,dict) and x.get('id') is not None: ids.append(str(x['id']))
+              elif isinstance(d.get('Running'),list): ids=[str(x) for x in d['Running']]
+          elif isinstance(d,list):
+              for x in d:
+                  if isinstance(x,dict) and x.get('id') is not None: ids.append(str(x['id']))
+          for eid in ids:
+              with open('fit-status-diag/experiment_%s.json'%eid,'w') as f:
+                  subprocess.call(['iotlab-experiment','get','-i',eid],stdout=f,stderr=subprocess.STDOUT)
+              with open('fit-status-diag/experiment_%s_nodes.json'%eid,'w') as f:
+                  subprocess.call(['iotlab-experiment','get','-i',eid,'-n'],stdout=f,stderr=subprocess.STDOUT)
+          Path('fit-status-diag/summary.txt').write_text('running_experiment_ids='+','.join(ids)+'\n')
+          PY
+          cat fit-status-diag/summary.txt
+      - name: Cleanup auth
+        if: always()
+        run: rm -f "$HOME/.iotlabrc"
+      - name: Upload status evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-fit-status-${{ github.run_id }}
+          path: fit-status-diag/
+          retention-days: 7
