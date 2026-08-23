@@ -1,20 +1,29 @@
+LOCAL SOFTWARE READINESS VERIFICATION — 2026-08-23
+
+Evidence class: LOCAL_SOFTWARE_GATE_NOT_PUBLICATION_EVIDENCE
+
 UNIT TESTS
-test_queue_is_idempotent (test_records.WellPulseKernelTests.test_queue_is_idempotent) ... ok
-test_reconciliation_detects_loss_and_duplicate (test_records.WellPulseKernelTests.test_reconciliation_detects_loss_and_duplicate) ... ok
-test_record_id_is_deterministic (test_records.WellPulseKernelTests.test_record_id_is_deterministic) ... ok
+5/5 tests passed.
+Includes deterministic record identity, durable queue idempotency, reconciliation, baseline normal path, and W1 outage+restart recovery.
 
-----------------------------------------------------------------------
-Ran 3 tests in 0.014s
+10,000-RECORD REQUIRED GATE
+W1_offline_first / C2_outage_restart
+- generated: 10000
+- received_unique: 10000
+- permanent missing: 0
+- duplicates: 0
+- completeness: 100.0%
 
-OK
+B0_publish_only / C1_outage_no_restart
+- generated: 10000
+- received_unique: 8000
+- permanent missing: 2000
+- duplicates: 0
+- completeness: 80.0%
 
-LOCAL SMOKE
-{
-  "generated": 100,
-  "received_total": 100,
-  "received_unique": 100,
-  "missing": [],
-  "unexpected": [],
-  "duplicates": 0,
-  "completeness_pct": 100.0
-}
+Measured local execution time for the bounded gate: 15.63 s in the ChatGPT execution environment.
+
+Interpretation boundary:
+This verifies local software plumbing and the direction of the baseline comparison only. It is not FIT IoT-LAB evidence, real-radio evidence, rural evidence, pump evidence, hydraulic evidence, or Siwa field evidence.
+
+Next gate: FIT IoT-LAB account/access approval followed by the documented A8 capability smoke checklist.
