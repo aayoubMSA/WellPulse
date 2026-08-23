@@ -29,6 +29,19 @@ class DurableQueue:
     def rows(self):
         return list(self.conn.execute("SELECT record_id,payload_json,checksum_sha256,state FROM queue ORDER BY record_id"))
 
+    def pending_rows(self):
+        return list(self.conn.execute(
+            "SELECT record_id,payload_json,checksum_sha256,state FROM queue WHERE state='PENDING' ORDER BY record_id"
+        ))
+
+    def mark_sent(self, record_id: str, *, commit: bool = True) -> None:
+        self.conn.execute("UPDATE queue SET state='SENT' WHERE record_id=?", (record_id,))
+        if commit:
+            self.conn.commit()
+
+    def commit_state(self) -> None:
+        self.conn.commit()
+
     def count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM queue").fetchone()[0]
 
