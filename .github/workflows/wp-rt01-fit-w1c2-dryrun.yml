@@ -1,0 +1,303 @@
+name: WP-RT01 FIT W1-C2 10k dry run
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.wp-rt01-fit-dryrun-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-wp-rt01-fit-dryrun
+  cancel-in-progress: false
+
+jobs:
+  fit-w1c2-dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      RUN_DIR: fit-wp-rt01-dryrun
+
+    steps:
+      - name: Checkout canonical main, not PR merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up controller Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Freeze dry-run identity and verify current trust anchor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_DIR"
+          CANONICAL_COMMIT=$(git rev-parse HEAD)
+          RUN_ID="FIT-DRYRUN-W1-C2-${GITHUB_RUN_ID}"
+          echo "CANONICAL_COMMIT=$CANONICAL_COMMIT" >> "$GITHUB_ENV"
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          echo "START_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          bash scripts/fetch_mqtt_trust_anchor.sh "$RUN_DIR/iot-lab-ca.pem" | tee "$RUN_DIR/trust_anchor.txt"
+          python -m py_compile scripts/wp_rt01_reconcile.py
+
+      - name: Install FIT tools and resolve generated login
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          test -n "${FIT_IDENTIFIER:-}"
+          test -n "${FIT_PASSWORD:-}"
+          python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+          python - <<'PY'
+          import base64, os, re
+          from pathlib import Path
+          from iotlabcli.rest import Api
+          ident=os.environ['FIT_IDENTIFIER']
+          password=os.environ['FIT_PASSWORD']
+          profile=Api(ident,password).method('user')
+          login=profile.get('login') if isinstance(profile,dict) else None
+          if not login or not re.fullmatch(r'[a-z][0-9a-z]{3,19}',login):
+              raise SystemExit('No valid FIT-generated login')
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write('FIT_LOGIN=%s\n' % login)
+              fh.write('TOPIC=iotlab/%s/wellpulse/dryrun/%s\n' % (login, os.environ['GITHUB_RUN_ID']))
+          p=Path.home()/'.iotlabrc'
+          p.write_text(login+':'+base64.b64encode(password.encode()).decode())
+          p.chmod(0o600)
+          print('FIT generated login resolved without disclosure.')
+          PY
+
+      - name: Register ephemeral SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-WP-RT01-dryrun-${GITHUB_RUN_ID}" >/dev/null
+          chmod 600 "$HOME/.ssh/id_rsa"
+          chmod 644 "$HOME/.ssh/id_rsa.pub"
+          ssh-keygen -lf "$HOME/.ssh/id_rsa.pub" -E sha256 | tee "$RUN_DIR/ssh_key_fingerprint.txt"
+          iotlab-auth --add-ssh-key | tee "$RUN_DIR/add_ssh_key.log"
+
+      - name: Reserve one Saclay A8 for bounded dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          submit_out=$(iotlab-experiment submit -n "WP-RT01-W1C2-dryrun-${GITHUB_RUN_ID}" -d 30 -l '1,archi=a8:at86rf231+site=saclay')
+          printf '%s\n' "$submit_out" | tee "$RUN_DIR/reservation_submit.json"
+          EXP_ID=$(printf '%s' "$submit_out" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"
+          iotlab-experiment wait -i "$EXP_ID" --timeout 180 --cancel-on-timeout | tee "$RUN_DIR/reservation_wait.txt"
+          iotlab-experiment get -i "$EXP_ID" -n > "$RUN_DIR/experiment_nodes.json"
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          items=json.loads(Path(os.environ['RUN_DIR']+'/experiment_nodes.json').read_text()).get('items',[])
+          if not items:
+              raise SystemExit('No A8 allocated')
+          addr=items[0]['network_address']
+          m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+          if not m:
+              raise SystemExit('Cannot parse A8 node')
+          node=m.group(1)
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write('SITE=saclay\nNODE_ID=%s\nNODE_ADDRESS=%s\nLOC=saclay,a8,%s\n' % (node,addr,node))
+          PY
+
+      - name: Require real A8 Linux boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          iotlab-ssh wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_DIR/wait_for_boot.json"
+          cat "$RUN_DIR/wait_for_boot.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.loads(Path(os.environ['RUN_DIR']+'/wait_for_boot.json').read_text())
+          if not data.get('wait-for-boot',{}).get('0',[]):
+              raise SystemExit('A8 boot did not return code 0')
+          PY
+
+      - name: Stage frozen adapters, CA, and protected MQTT config
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          AUTH_FILE="$RUNNER_TEMP/mqtt_auth.conf"
+          umask 077
+          printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$AUTH_FILE"
+          ssh "${SSH[@]}" "$FRONTEND" "mkdir -p ~/shared/.iotlabsshcli ~/shared/wp-rt01-dryrun/${RUN_ID}/edge ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver && chmod 700 ~/shared/.iotlabsshcli"
+          scp "${SSH[@]}" "$RUN_DIR/iot-lab-ca.pem" scripts/wp_rt01_a8_runner.py scripts/wp_rt01_receiver.py "$FRONTEND:shared/.iotlabsshcli/"
+          scp "${SSH[@]}" "$AUTH_FILE" "$FRONTEND:shared/.iotlabsshcli/mqtt_auth.conf"
+          ssh "${SSH[@]}" "$FRONTEND" 'chmod 600 ~/shared/.iotlabsshcli/mqtt_auth.conf'
+          rm -f "$AUTH_FILE"
+
+      - name: Start idempotent receiver on FIT frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          ssh "${SSH[@]}" "$FRONTEND" "set -eu; mkdir -p ~/.config; cp ~/shared/.iotlabsshcli/mqtt_auth.conf ~/.config/mosquitto_sub; cp ~/shared/.iotlabsshcli/mqtt_auth.conf ~/.config/mosquitto_pub; chmod 600 ~/.config/mosquitto_sub ~/.config/mosquitto_pub; python3 --version > ~/shared/wp-rt01-dryrun/${RUN_ID}/frontend_python.txt 2>&1; setsid sh -c 'mosquitto_sub --cafile ~/shared/.iotlabsshcli/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -q 1 -t \"${TOPIC}\" | python3 -u ~/shared/.iotlabsshcli/wp_rt01_receiver.py --run-id \"${RUN_ID}\" --out-dir ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver --stop-after-unique 10000' > ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver_pipeline.log 2>&1 < /dev/null & echo \$! > ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver.pid"
+          sleep 2
+          ssh "${SSH[@]}" "$FRONTEND" "pid=\$(cat ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver.pid); kill -0 \$pid"
+
+      - name: Prepare A8 runtime and verify Python 3.5 adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          iotlab-ssh --verbose run-cmd 'set -eu; mkdir -p "$HOME/.config"; cp "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_pub"; chmod 600 "$HOME/.config/mosquitto_pub"; python3 --version; python3 -m py_compile "$HOME/shared/.iotlabsshcli/wp_rt01_a8_runner.py"' -l "$LOC" 2>&1 | tee "$RUN_DIR/a8_prepare.log"
+          python - <<'PY'
+          import os,re
+          from pathlib import Path
+          text=Path(os.environ['RUN_DIR']+'/a8_prepare.log').read_text(errors='replace')
+          if not re.search(r'"run-cmd"\s*:\s*\{\s*"0"\s*:',text,re.S):
+              raise SystemExit('A8 preparation did not report code 0')
+          PY
+
+      - name: Execute 10,000-record real-A8 W1-C2 dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          CMD="python3 \"\$HOME/shared/.iotlabsshcli/wp_rt01_a8_runner.py\" --run-id '${RUN_ID}' --architecture W1_wellpulse_offline_first --condition C2_outage_with_restart --records 10000 --batch-size 100 --broker mqtt4.iot-lab.info --port 8883 --topic '${TOPIC}' --ca-file \"\$HOME/shared/.iotlabsshcli/iot-lab-ca.pem\" --out-dir \"\$HOME/shared/wp-rt01-dryrun/${RUN_ID}/edge\""
+          iotlab-ssh --verbose run-cmd "$CMD" -l "$LOC" 2>&1 | tee "$RUN_DIR/a8_run_remote.log"
+          python - <<'PY'
+          import os,re
+          from pathlib import Path
+          text=Path(os.environ['RUN_DIR']+'/a8_run_remote.log').read_text(errors='replace')
+          if not re.search(r'"run-cmd"\s*:\s*\{\s*"0"\s*:',text,re.S):
+              raise SystemExit('Real-A8 W1/C2 dry run did not report code 0')
+          PY
+
+      - name: Finalize receiver without assuming success
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          found=0
+          for i in $(seq 1 10); do
+            if ssh "${SSH[@]}" "$FRONTEND" "test -f ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver/receiver_summary.json"; then found=1; break; fi
+            sleep 2
+          done
+          if [ "$found" -eq 0 ]; then
+            CONTROL=$(printf '{"_wellpulse_control":"END","run_id":"%s"}' "$RUN_ID")
+            ssh "${SSH[@]}" "$FRONTEND" "mosquitto_pub --cafile ~/shared/.iotlabsshcli/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -q 1 -t '${TOPIC}' -m '${CONTROL}'"
+            for i in $(seq 1 15); do
+              if ssh "${SSH[@]}" "$FRONTEND" "test -f ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver/receiver_summary.json"; then found=1; break; fi
+              sleep 2
+            done
+          fi
+          test "$found" -eq 1
+          ssh "${SSH[@]}" "$FRONTEND" "pid=\$(cat ~/shared/wp-rt01-dryrun/${RUN_ID}/receiver.pid 2>/dev/null || true); if [ -n \"\$pid\" ]; then kill -TERM -\$pid >/dev/null 2>&1 || kill -TERM \$pid >/dev/null 2>&1 || true; fi"
+
+      - name: Retrieve and reconcile complete dry-run evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          mkdir -p "$RUN_DIR/retrieved"
+          scp "${SSH[@]}" -r "$FRONTEND:shared/wp-rt01-dryrun/${RUN_ID}" "$RUN_DIR/retrieved/"
+          python scripts/wp_rt01_reconcile.py --edge-dir "$RUN_DIR/retrieved/${RUN_ID}/edge" --receiver-dir "$RUN_DIR/retrieved/${RUN_ID}/receiver" --output "$RUN_DIR/metrics.json" | tee "$RUN_DIR/reconcile_stdout.txt"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          m=json.loads(Path(os.environ['RUN_DIR']+'/metrics.json').read_text())
+          assert m['generated_records'] == 10000, m
+          assert m['cloud_unique'] == 10000, m
+          assert m['permanent_missing'] == 0, m
+          assert m['final_duplicates'] == 0, m
+          assert m['checksum_mismatch_deliveries'] == 0, m
+          assert m['restart_observed'] is True, m
+          assert m['queue_high_water'] >= 2000, m
+          assert m['w1_primary_success'] is True, m
+          print('real_a8_w1c2_10k_dryrun=PASS')
+          PY
+
+      - name: Write dry-run metadata and SHA256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          out={
+            'evidence_class':'REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT',
+            'experiment_contract':'WP-RT01-v1.0',
+            'execution_amendment':'AMENDMENT_001_FIT_EXECUTION.md',
+            'run_id':os.environ['RUN_ID'],
+            'canonical_main_commit':os.environ['CANONICAL_COMMIT'],
+            'github_actions_run_id':os.environ['GITHUB_RUN_ID'],
+            'fit_experiment_id':os.environ.get('EXP_ID'),
+            'site':os.environ.get('SITE'),
+            'node_id':os.environ.get('NODE_ID'),
+            'node_address':os.environ.get('NODE_ADDRESS'),
+            'architecture':'W1_wellpulse_offline_first',
+            'condition':'C2_outage_with_restart',
+            'records':10000,
+            'impairment_method':'iptables OUTPUT REJECT broker IPv4 TCP/8883, records 3001-5000',
+            'trust_anchor':'ISRG Root X1 fingerprint-verified before use',
+            'start_utc':os.environ.get('START_UTC'),
+            'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          }
+          Path(os.environ['RUN_DIR']+'/dryrun_metadata.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          PY
+          (cd "$RUN_DIR" && find . -type f ! -name manifest.sha256 -print0 | sort -z | xargs -0 sha256sum > manifest.sha256)
+
+      - name: Remove remote dry-run staging after verified retrieval
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          ssh "${SSH[@]}" "$FRONTEND" "rm -rf ~/shared/wp-rt01-dryrun/${RUN_ID}"
+
+      - name: Cleanup experiment and ephemeral credentials
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+            SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+            FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+            ssh "${SSH[@]}" "$FRONTEND" 'rm -f ~/.config/mosquitto_pub ~/.config/mosquitto_sub ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
+          fi
+          if [ -n "${EXP_ID:-}" ] && [ -f "$HOME/.iotlabrc" ]; then
+            iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
+          fi
+          if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+            python - <<'PY'
+          from pathlib import Path
+          from iotlabcli import auth
+          from iotlabcli.rest import Api
+          keyfile=Path.home()/'.ssh'/'id_rsa.pub'
+          if keyfile.exists():
+              key=keyfile.read_text().strip()
+              user,password=auth._read_password_file()
+              if user and password:
+                  api=Api(user,password)
+                  obj=api.get_ssh_keys()
+                  if key in obj.get('sshkeys',[]):
+                      obj['sshkeys']=[k for k in obj['sshkeys'] if k != key]
+                      api.set_ssh_keys(obj)
+          PY
+          fi
+          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$HOME/.iotlabrc" "$RUNNER_TEMP/mqtt_auth.conf"
+
+      - name: Upload bounded real-A8 dry-run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp-rt01-fit-w1c2-10k-dryrun-${{ github.run_id }}
+          path: fit-wp-rt01-dryrun/
+          if-no-files-found: warn
+          retention-days: 30
