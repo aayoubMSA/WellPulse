@@ -1,0 +1,20 @@
+UNIT TESTS
+test_queue_is_idempotent (test_records.WellPulseKernelTests.test_queue_is_idempotent) ... ok
+test_reconciliation_detects_loss_and_duplicate (test_records.WellPulseKernelTests.test_reconciliation_detects_loss_and_duplicate) ... ok
+test_record_id_is_deterministic (test_records.WellPulseKernelTests.test_record_id_is_deterministic) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.014s
+
+OK
+
+LOCAL SMOKE
+{
+  "generated": 100,
+  "received_total": 100,
+  "received_unique": 100,
+  "missing": [],
+  "unexpected": [],
+  "duplicates": 0,
+  "completeness_pct": 100.0
+}
