@@ -142,13 +142,15 @@ jobs:
               raise SystemExit('Allocated A8 did not complete Linux boot successfully')
           PY
 
-      - name: Copy and execute capability probe
+      - name: Transfer and execute capability probe
         shell: bash
         run: |
           set -euo pipefail
-          iotlab-ssh copy-file scripts/fit_probe.sh > "$RUN_DIR/copy_probe.json"
-          cat "$RUN_DIR/copy_probe.json"
-          iotlab-ssh --verbose run-cmd 'set -eu; OUT=/tmp/wellpulse_fit_probe.log; sh ~/shared/.iotlabsshcli/fit_probe.sh "$OUT"; cat "$OUT"; echo "--- probe sha256 ---"; cat "$OUT.sha256" 2>/dev/null || true' -l "$LOC" 2>&1 | tee "$RUN_DIR/probe_remote.log"
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'mkdir -p ~/shared/.iotlabsshcli && chmod 700 ~/shared/.iotlabsshcli'
+          scp "${SSH_OPTS[@]}" scripts/fit_probe.sh "$FRONTEND:shared/.iotlabsshcli/fit_probe.sh"
+          iotlab-ssh --verbose run-cmd 'set -eu; OUT="$HOME/shared/.iotlabsshcli/fit_probe.log"; sh "$HOME/shared/.iotlabsshcli/fit_probe.sh" "$OUT"; cat "$OUT"; echo "--- probe sha256 ---"; cat "$OUT.sha256" 2>/dev/null || true' -l "$LOC" 2>&1 | tee "$RUN_DIR/probe_remote.log"
           python - <<'PY'
           import re
           from pathlib import Path
@@ -156,24 +158,30 @@ jobs:
           if not re.search(r'"run-cmd"\s*:\s*\{\s*"0"\s*:', text, re.S):
               raise SystemExit('Remote capability probe did not return run-cmd code 0')
           PY
+          scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log" "$RUN_DIR/fit_probe.log"
+          scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log.sha256" "$RUN_DIR/fit_probe.remote.sha256" || true
+          sha256sum "$RUN_DIR/fit_probe.log" | tee "$RUN_DIR/fit_probe.local.sha256"
 
       - name: Authenticated MQTT smoke from A8
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
           AUTH_FILE="$RUNNER_TEMP/mqtt_auth.conf"
           umask 077
           printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$AUTH_FILE"
-          iotlab-ssh copy-file "$AUTH_FILE" > "$RUN_DIR/copy_mqtt_auth.json"
+          scp "${SSH_OPTS[@]}" "$AUTH_FILE" "$FRONTEND:shared/.iotlabsshcli/mqtt_auth.conf"
           TOPIC="iotlab/${FIT_LOGIN}/wellpulse/smoke/${GITHUB_RUN_ID}"
           PAYLOAD="WP_SMOKE_${GITHUB_RUN_ID}"
-          CMD='set -eu; if ! command -v mosquitto_pub >/dev/null 2>&1 || ! command -v mosquitto_sub >/dev/null 2>&1; then echo mqtt_authenticated=CLIENTS_NOT_AVAILABLE; exit 4; fi; mkdir -p "$HOME/.config"; cp ~/shared/.iotlabsshcli/mqtt_auth.conf "$HOME/.config/mosquitto_pub"; cp ~/shared/.iotlabsshcli/mqtt_auth.conf "$HOME/.config/mosquitto_sub"; chmod 600 "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"; topic='"'"$TOPIC"'"'; payload='"'"$PAYLOAD"'"'; rm -f /tmp/wellpulse_mqtt_msg; mosquitto_sub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -C 1 -W 12 -t "$topic" > /tmp/wellpulse_mqtt_msg & subpid=$!; sleep 2; mosquitto_pub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -t "$topic" -m "$payload"; wait "$subpid"; if grep -Fx "$payload" /tmp/wellpulse_mqtt_msg >/dev/null 2>&1; then echo mqtt_authenticated=PASS; else echo mqtt_authenticated=FAIL; exit 5; fi; rm -f /tmp/wellpulse_mqtt_msg "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"'
+          CMD='set -eu; if ! command -v mosquitto_pub >/dev/null 2>&1 || ! command -v mosquitto_sub >/dev/null 2>&1; then echo mqtt_authenticated=CLIENTS_NOT_AVAILABLE; exit 4; fi; mkdir -p "$HOME/.config"; cp "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_pub"; cp "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_sub"; chmod 600 "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"; topic='"'"$TOPIC"'"'; payload='"'"$PAYLOAD"'"'; rm -f /tmp/wellpulse_mqtt_msg; mosquitto_sub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -C 1 -W 12 -t "$topic" > /tmp/wellpulse_mqtt_msg & subpid=$!; sleep 2; mosquitto_pub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -t "$topic" -m "$payload"; wait "$subpid"; if grep -Fx "$payload" /tmp/wellpulse_mqtt_msg >/dev/null 2>&1; then echo mqtt_authenticated=PASS; else echo mqtt_authenticated=FAIL; exit 5; fi; rm -f /tmp/wellpulse_mqtt_msg "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"'
           set +e
           iotlab-ssh --verbose run-cmd "$CMD" -l "$LOC" 2>&1 | tee "$RUN_DIR/mqtt_authenticated.log"
           rc=${PIPESTATUS[0]}
           set -e
           rm -f "$AUTH_FILE"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
           exit "$rc"
 
       - name: Write smoke metadata
@@ -204,6 +212,10 @@ jobs:
         shell: bash
         run: |
           set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+            SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+            ssh "${SSH_OPTS[@]}" "${FIT_LOGIN}@${SITE}.iot-lab.info" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
+          fi
           if [ -n "${EXP_ID:-}" ] && [ -f "$HOME/.iotlabrc" ]; then
             iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
           fi
