@@ -86,7 +86,7 @@ def append_line(path,line):
     with open(path,"a") as f: f.write(line+"\n"); f.flush(); os.fsync(f.fileno())
 
 def main():
-    p=argparse.ArgumentParser(); p.add_argument("--run-id",required=True); p.add_argument("--architecture",choices=["B0","W1"],required=True); p.add_argument("--condition",choices=["C0","C1","C2"],required=True); p.add_argument("--topic",required=True); p.add_argument("--auth-file",required=True); p.add_argument("--ca-file",required=True); p.add_argument("--work-dir",required=True); p.add_argument("--records",type=int,default=10000); p.add_argument("--resume",action="store_true"); a=p.parse_args()
+    p=argparse.ArgumentParser(); p.add_argument("--run-id",required=True); p.add_argument("--architecture",choices=["B0","W1"],required=True); p.add_argument("--condition",choices=["C0","C1","C2"],required=True); p.add_argument("--topic",required=True); p.add_argument("--auth-file",required=True); p.add_argument("--ca-file",required=True); p.add_argument("--work-dir",required=True); p.add_argument("--records",type=int,default=10000); p.add_argument("--evidence-class",default="PREFINAL_REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT"); p.add_argument("--resume",action="store_true"); a=p.parse_args()
     if a.records!=10000: raise SystemExit("WP-RT01 runner requires exactly 10000 records")
     if not os.path.isdir(a.work_dir): os.makedirs(a.work_dir)
     log_path=os.path.join(a.work_dir,"edge_events.log"); gen_path=os.path.join(a.work_dir,"generated.jsonl"); state_path=os.path.join(a.work_dir,"control_state.json"); queue_path=os.path.join(a.work_dir,"queue.sqlite"); metrics_path=os.path.join(a.work_dir,"edge_metrics.json")
@@ -135,12 +135,12 @@ def main():
                 write_json(state_path,{"next_sequence":seq+1,"boot_no":boot_no,"outage_active":outage,"generated":generated,"published":published,"reconnect_s":reconnect_s,"restart_count":restarts})
                 log.write("gateway_process_restart_utc=%s after_sequence=%d\n"%(utc_now(),seq)); log.flush()
                 if publisher: publisher.close()
-                os.execv(sys.executable,[sys.executable,os.path.abspath(__file__),"--run-id",a.run_id,"--architecture",a.architecture,"--condition",a.condition,"--topic",a.topic,"--auth-file",a.auth_file,"--ca-file",a.ca_file,"--work-dir",a.work_dir,"--records",str(a.records),"--resume"])
+                os.execv(sys.executable,[sys.executable,os.path.abspath(__file__),"--run-id",a.run_id,"--architecture",a.architecture,"--condition",a.condition,"--topic",a.topic,"--auth-file",a.auth_file,"--ca-file",a.ca_file,"--work-dir",a.work_dir,"--records",str(a.records),"--evidence-class",a.evidence_class,"--resume"])
             seq+=1
         if queue:
             if queue.pending_count()!=0: raise RuntimeError("W1 finished with pending records")
             queue.commit_state()
-        write_json(metrics_path,{"evidence_class":"PREFINAL_REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT","run_id":a.run_id,"architecture":a.architecture,"condition":a.condition,"records":a.records,"generated":generated,"published_qos1_acked":published,"queue_count":queue.count() if queue else 0,"queue_pending":queue.pending_count() if queue else 0,"restart_count":restarts,"reconnect_s":reconnect_s,"backlog_drain_s":backlog_drain_s,"outage_method":"iptables_REJECT_tcp_8883_records_3001_5000" if a.condition!="C0" else "none","restart_definition":"WellPulse_gateway_process_exec_restart_after_record_4000" if a.condition=="C2" else "none","completed_utc":utc_now()})
+        write_json(metrics_path,{"evidence_class":a.evidence_class,"run_id":a.run_id,"architecture":a.architecture,"condition":a.condition,"records":a.records,"generated":generated,"published_qos1_acked":published,"queue_count":queue.count() if queue else 0,"queue_pending":queue.pending_count() if queue else 0,"restart_count":restarts,"reconnect_s":reconnect_s,"backlog_drain_s":backlog_drain_s,"outage_method":"iptables_REJECT_tcp_8883_records_3001_5000" if a.condition!="C0" else "none","restart_definition":"WellPulse_gateway_process_exec_restart_after_record_4000" if a.condition=="C2" else "none","completed_utc":utc_now()})
         print(open(metrics_path).read())
     finally:
         if publisher:
