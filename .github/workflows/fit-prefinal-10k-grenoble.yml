@@ -1,0 +1,201 @@
+name: FIT WP-RT01 pre-final 10k gate Grenoble
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-prefinal-grenoble-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-fit-prefinal-grenoble
+  cancel-in-progress: false
+
+jobs:
+  prefinal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      RUN_DIR: fit-prefinal-grenoble
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare trust anchor and Python-3.5 paho bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_DIR/vendor"
+          bash scripts/fetch_mqtt_trust_anchor.sh "$RUN_DIR/iot-lab-ca.pem" | tee "$RUN_DIR/trust_anchor.txt"
+          python -m pip download --no-deps paho-mqtt==1.6.1 -d "$RUN_DIR/vendor"
+          python - <<'PY'
+          import tarfile,zipfile,shutil
+          from pathlib import Path
+          vd=Path('fit-prefinal-grenoble/vendor'); src=next(vd.glob('paho-mqtt-1.6.1*')); out=vd/'extract'; out.mkdir()
+          (zipfile.ZipFile(src).extractall(out) if src.suffix=='.whl' else tarfile.open(src).extractall(out))
+          c=[p for p in list(out.glob('**/src/paho'))+list(out.glob('**/paho')) if (p/'mqtt').is_dir()]
+          if not c: raise SystemExit('paho package missing')
+          shutil.make_archive('fit-prefinal-grenoble/paho_py35','gztar',root_dir=str(c[0].parent),base_dir='paho')
+          PY
+
+      - name: Resolve FIT login and register ephemeral SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+          python - <<'PY'
+          import base64,os,re
+          from pathlib import Path
+          from iotlabcli.rest import Api
+          ident=os.environ['FIT_IDENTIFIER']; password=os.environ['FIT_PASSWORD']; profile=Api(ident,password).method('user'); login=profile.get('login') if isinstance(profile,dict) else None
+          if not login or not re.fullmatch(r'[a-z][0-9a-z]{3,19}',login): raise SystemExit('No valid FIT login')
+          with open(os.environ['GITHUB_ENV'],'a') as f: f.write('FIT_LOGIN=%s\n'%login)
+          p=Path.home()/'.iotlabrc'; p.write_text(login+':'+base64.b64encode(password.encode()).decode()); p.chmod(0o600)
+          PY
+          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-prefinal-grenoble-${GITHUB_RUN_ID}" >/dev/null
+          chmod 600 "$HOME/.ssh/id_rsa"; chmod 644 "$HOME/.ssh/id_rsa.pub"
+          iotlab-auth --add-ssh-key | tee "$RUN_DIR/add_ssh_key.log"
+
+      - name: Reserve one Grenoble A8
+        shell: bash
+        run: |
+          set -euo pipefail
+          submit=$(iotlab-experiment submit -n "WP-RT01-prefinal-grenoble-${GITHUB_RUN_ID}" -d 45 -l '1,archi=a8:at86rf231+site=grenoble')
+          printf '%s\n' "$submit" | tee "$RUN_DIR/reservation_submit.json"
+          EXP_ID=$(printf '%s' "$submit" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])'); echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"
+          iotlab-experiment wait -i "$EXP_ID" --timeout 180 --cancel-on-timeout | tee "$RUN_DIR/reservation_wait.txt"
+          iotlab-experiment get -i "$EXP_ID" -n > "$RUN_DIR/experiment_nodes.json"
+          python - <<'PY'
+          import json,os,re
+          items=json.load(open('fit-prefinal-grenoble/experiment_nodes.json')).get('items',[])
+          if not items: raise SystemExit('No A8')
+          addr=items[0]['network_address']; m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+          if not m: raise SystemExit('Cannot parse A8')
+          node=m.group(1)
+          with open(os.environ['GITHUB_ENV'],'a') as f: f.write('SITE=grenoble\nNODE_ID=%s\nNODE_ADDRESS=%s\nLOC=grenoble,a8,%s\n'%(node,addr,node))
+          PY
+
+      - name: Strict A8 boot for exact experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          iotlab-ssh -i "$EXP_ID" wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_DIR/wait_for_boot.json"
+          cat "$RUN_DIR/wait_for_boot.json"
+          python - <<'PY'
+          import json
+          d=json.load(open('fit-prefinal-grenoble/wait_for_boot.json'))
+          if not d.get('wait-for-boot',{}).get('0',[]): raise SystemExit('A8 boot failed')
+          PY
+
+      - name: Stage frozen adapter and protected credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20); FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          JSON_AUTH="$RUNNER_TEMP/wp_auth.json"; MOSQ_AUTH="$RUNNER_TEMP/mosq_auth.conf"; umask 077
+          python - <<'PY' > "$JSON_AUTH"
+          import json,os; print(json.dumps({'username':os.environ['FIT_LOGIN'],'password':os.environ['FIT_PASSWORD']}))
+          PY
+          printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$MOSQ_AUTH"
+          ssh "${SSH[@]}" "$FRONTEND" 'mkdir -p ~/shared/.wellpulse-prefinal-grenoble && chmod 700 ~/shared/.wellpulse-prefinal-grenoble'
+          scp "${SSH[@]}" "$RUN_DIR/iot-lab-ca.pem" "$RUN_DIR/paho_py35.tar.gz" experiments/WP-RT01/fit_runner_py35.py "$JSON_AUTH" "$MOSQ_AUTH" "$FRONTEND:shared/.wellpulse-prefinal-grenoble/"
+          ssh "${SSH[@]}" "$FRONTEND" 'chmod 600 ~/shared/.wellpulse-prefinal-grenoble/wp_auth.json ~/shared/.wellpulse-prefinal-grenoble/mosq_auth.conf; cd ~/shared/.wellpulse-prefinal-grenoble; rm -rf vendor; mkdir vendor; tar -xzf paho_py35.tar.gz -C vendor'
+          rm -f "$JSON_AUTH" "$MOSQ_AUTH"
+          iotlab-ssh -i "$EXP_ID" --verbose run-cmd 'PYTHONPATH="$HOME/shared/.wellpulse-prefinal-grenoble/vendor" python3 -c "import paho.mqtt.client; print(\"paho_import=PASS\")"' -l "$LOC" | tee "$RUN_DIR/paho_import.json"
+          grep -F '"0"' "$RUN_DIR/paho_import.json"
+
+      - name: W1 C2 10000 real-A8 dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20); FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          RID="PREFINAL-W1-C2-${GITHUB_RUN_ID}"; TOPIC="iotlab/${FIT_LOGIN}/wellpulse/prefinal/${GITHUB_RUN_ID}/w1c2"
+          ssh "${SSH[@]}" "$FRONTEND" "mkdir -p ~/.config ~/shared/.wellpulse-prefinal-grenoble/recv; rm -f ~/shared/.wellpulse-prefinal-grenoble/recv/w1c2.jsonl; cp ~/shared/.wellpulse-prefinal-grenoble/mosq_auth.conf ~/.config/mosquitto_sub; chmod 600 ~/.config/mosquitto_sub; nohup mosquitto_sub --cafile ~/shared/.wellpulse-prefinal-grenoble/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -q 1 -C 10000 -t '$TOPIC' > ~/shared/.wellpulse-prefinal-grenoble/recv/w1c2.jsonl 2>~/shared/.wellpulse-prefinal-grenoble/recv/w1c2.err &"
+          sleep 2
+          iotlab-ssh -i "$EXP_ID" --verbose run-cmd "rm -rf \"\$HOME/shared/.wellpulse-prefinal-grenoble/w1c2\"; mkdir -p \"\$HOME/shared/.wellpulse-prefinal-grenoble/w1c2\"; PYTHONPATH=\"\$HOME/shared/.wellpulse-prefinal-grenoble/vendor\" python3 \"\$HOME/shared/.wellpulse-prefinal-grenoble/fit_runner_py35.py\" --run-id '$RID' --architecture W1 --condition C2 --topic '$TOPIC' --auth-file \"\$HOME/shared/.wellpulse-prefinal-grenoble/wp_auth.json\" --ca-file \"\$HOME/shared/.wellpulse-prefinal-grenoble/iot-lab-ca.pem\" --work-dir \"\$HOME/shared/.wellpulse-prefinal-grenoble/w1c2\" --records 10000" -l "$LOC" 2>&1 | tee "$RUN_DIR/w1c2_remote.log"
+          grep -F '"0"' "$RUN_DIR/w1c2_remote.log"
+          ssh "${SSH[@]}" "$FRONTEND" 'for i in $(seq 1 30); do n=$(wc -l < ~/shared/.wellpulse-prefinal-grenoble/recv/w1c2.jsonl 2>/dev/null || echo 0); [ "$n" -ge 10000 ] && break; sleep 1; done; wc -l ~/shared/.wellpulse-prefinal-grenoble/recv/w1c2.jsonl; rm -f ~/.config/mosquitto_sub'
+          scp -r "${SSH[@]}" "$FRONTEND:shared/.wellpulse-prefinal-grenoble/w1c2" "$RUN_DIR/"
+          scp "${SSH[@]}" "$FRONTEND:shared/.wellpulse-prefinal-grenoble/recv/w1c2.jsonl" "$RUN_DIR/w1c2_received.jsonl"
+
+      - name: B0 C1 10000 real-A8 dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20); FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          RID="PREFINAL-B0-C1-${GITHUB_RUN_ID}"; TOPIC="iotlab/${FIT_LOGIN}/wellpulse/prefinal/${GITHUB_RUN_ID}/b0c1"
+          ssh "${SSH[@]}" "$FRONTEND" "mkdir -p ~/.config; rm -f ~/shared/.wellpulse-prefinal-grenoble/recv/b0c1.jsonl; cp ~/shared/.wellpulse-prefinal-grenoble/mosq_auth.conf ~/.config/mosquitto_sub; chmod 600 ~/.config/mosquitto_sub; nohup mosquitto_sub --cafile ~/shared/.wellpulse-prefinal-grenoble/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -q 1 -C 8000 -t '$TOPIC' > ~/shared/.wellpulse-prefinal-grenoble/recv/b0c1.jsonl 2>~/shared/.wellpulse-prefinal-grenoble/recv/b0c1.err &"
+          sleep 2
+          iotlab-ssh -i "$EXP_ID" --verbose run-cmd "rm -rf \"\$HOME/shared/.wellpulse-prefinal-grenoble/b0c1\"; mkdir -p \"\$HOME/shared/.wellpulse-prefinal-grenoble/b0c1\"; PYTHONPATH=\"\$HOME/shared/.wellpulse-prefinal-grenoble/vendor\" python3 \"\$HOME/shared/.wellpulse-prefinal-grenoble/fit_runner_py35.py\" --run-id '$RID' --architecture B0 --condition C1 --topic '$TOPIC' --auth-file \"\$HOME/shared/.wellpulse-prefinal-grenoble/wp_auth.json\" --ca-file \"\$HOME/shared/.wellpulse-prefinal-grenoble/iot-lab-ca.pem\" --work-dir \"\$HOME/shared/.wellpulse-prefinal-grenoble/b0c1\" --records 10000" -l "$LOC" 2>&1 | tee "$RUN_DIR/b0c1_remote.log"
+          grep -F '"0"' "$RUN_DIR/b0c1_remote.log"
+          ssh "${SSH[@]}" "$FRONTEND" 'for i in $(seq 1 30); do n=$(wc -l < ~/shared/.wellpulse-prefinal-grenoble/recv/b0c1.jsonl 2>/dev/null || echo 0); [ "$n" -ge 8000 ] && break; sleep 1; done; wc -l ~/shared/.wellpulse-prefinal-grenoble/recv/b0c1.jsonl; rm -f ~/.config/mosquitto_sub'
+          scp -r "${SSH[@]}" "$FRONTEND:shared/.wellpulse-prefinal-grenoble/b0c1" "$RUN_DIR/"
+          scp "${SSH[@]}" "$FRONTEND:shared/.wellpulse-prefinal-grenoble/recv/b0c1.jsonl" "$RUN_DIR/b0c1_received.jsonl"
+
+      - name: Independent reconciliation gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('fit-prefinal-grenoble')
+          def ids(p): return [json.loads(x)['record_id'] for x in Path(p).read_text().splitlines() if x.strip()]
+          out={}
+          for key in ('w1c2','b0c1'):
+              g=ids(root/key/'generated.jsonl'); r=ids(root/(key+'_received.jsonl')); gs=set(g); rs=set(r)
+              out[key]={'evidence_class':'PREFINAL_REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT','generated':len(g),'cloud_received':len(r),'cloud_unique':len(rs),'duplicates':len(r)-len(rs),'permanent_missing':len(gs-rs),'completeness_pct':100.0*len(rs)/len(g)}
+          assert out['w1c2']['generated']==10000 and out['w1c2']['cloud_unique']==10000 and out['w1c2']['duplicates']==0 and out['w1c2']['permanent_missing']==0
+          assert out['b0c1']['generated']==10000 and out['b0c1']['cloud_unique']==8000 and out['b0c1']['duplicates']==0 and out['b0c1']['permanent_missing']==2000
+          (root/'reconciliation.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n'); print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+          find "$RUN_DIR" -type f -print0 | sort -z | xargs -0 sha256sum > "$RUN_DIR/SHA256SUMS.txt"
+
+      - name: Metadata
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,os
+          from datetime import datetime,timezone
+          from pathlib import Path
+          p=Path('fit-prefinal-grenoble'); p.mkdir(exist_ok=True)
+          (p/'metadata.json').write_text(json.dumps({'evidence_class':'PREFINAL_REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT','github_run_id':os.getenv('GITHUB_RUN_ID'),'git_commit':os.getenv('GITHUB_SHA'),'fit_experiment_id':os.getenv('EXP_ID'),'site':os.getenv('SITE'),'node_id':os.getenv('NODE_ID'),'outage_method':'iptables REJECT broker TCP 8883 records 3001-5000','restart_definition':'gateway process exec restart after record 4000','trust_anchor':'ISRG Root X1 SHA256 pinned','end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')},indent=2)+'\n')
+          PY
+
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new "${FIT_LOGIN}@${SITE}.iot-lab.info" 'pkill -f "mosquitto_sub.*wellpulse/prefinal" >/dev/null 2>&1 || true; rm -rf ~/shared/.wellpulse-prefinal-grenoble; rm -f ~/.config/mosquitto_sub' >/dev/null 2>&1 || true; fi
+          [ -n "${EXP_ID:-}" ] && iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
+          if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then python - <<'PY'
+          from pathlib import Path
+          from iotlabcli import auth
+          from iotlabcli.rest import Api
+          k=Path.home()/'.ssh'/'id_rsa.pub'
+          if k.exists():
+              key=k.read_text().strip(); user,password=auth._read_password_file()
+              if user and password:
+                  api=Api(user,password); obj=api.get_ssh_keys()
+                  if key in obj.get('sshkeys',[]): obj['sshkeys']=[x for x in obj['sshkeys'] if x!=key]; api.set_ssh_keys(obj)
+          PY
+          fi
+          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$HOME/.iotlabrc"
+
+      - name: Upload pre-final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-fit-prefinal-grenoble-${{ github.run_id }}
+          path: fit-prefinal-grenoble/
+          retention-days: 30
