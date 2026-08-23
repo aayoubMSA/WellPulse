@@ -97,10 +97,10 @@ trap cleanup_probe EXIT INT TERM
 
   echo "--- TLS 8883 handshake probe ---"
   CA_FILE=""
-  if [ -f /opt/iot-lab-ca.pem ]; then
-    CA_FILE=/opt/iot-lab-ca.pem
-  elif [ -f "$HOME/shared/.iotlabsshcli/iot-lab-ca.pem" ]; then
+  if [ -f "$HOME/shared/.iotlabsshcli/iot-lab-ca.pem" ]; then
     CA_FILE="$HOME/shared/.iotlabsshcli/iot-lab-ca.pem"
+  elif [ -f /opt/iot-lab-ca.pem ]; then
+    CA_FILE=/opt/iot-lab-ca.pem
   fi
   if command -v openssl >/dev/null 2>&1 && [ -n "$CA_FILE" ]; then
     echo "iotlab_ca_present=YES"
