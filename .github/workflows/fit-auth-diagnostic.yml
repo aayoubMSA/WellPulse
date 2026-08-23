@@ -31,18 +31,25 @@ jobs:
 
       - name: Install official FIT CLI
         shell: bash
-        run: python -m pip install --disable-pip-version-check iotlabcli
+        run: python -m pip install --disable-pip-version-check iotlabcli requests
 
-      - name: Test authenticated FIT endpoints
+      - name: Diagnose account identifier and authenticated endpoints
         shell: bash
         run: |
           set -eu
           python - <<'PY'
           import os
+          import requests
           from urllib.error import HTTPError
           from iotlabcli.rest import Api
 
-          api = Api(os.environ['FIT_USERNAME'], os.environ['FIT_PASSWORD'])
+          ident = os.environ['FIT_USERNAME']
+          password = os.environ['FIT_PASSWORD']
+          shape = 'email' if '@' in ident else 'login'
+          print(f'identifier_shape={shape}')
+
+          api = Api(ident, password)
+          statuses = {}
           checks = [
               ('user', lambda: api.method('user')),
               ('user_keys', api.get_ssh_keys),
@@ -51,9 +58,25 @@ jobs:
               try:
                   fn()
               except HTTPError as exc:
+                  statuses[name] = exc.code
                   print(f'{name}=HTTP_{exc.code}')
               except Exception as exc:
+                  statuses[name] = None
                   print(f'{name}=ERROR_{type(exc).__name__}')
               else:
+                  statuses[name] = 200
                   print(f'{name}=PASS')
+
+          if shape == 'email' and statuses.get('user') != 200:
+              try:
+                  resp = requests.post(
+                      'https://www.iot-lab.info/api/users/reset_password',
+                      json={'email': ident},
+                      timeout=20,
+                  )
+                  print(f'reset_request=HTTP_{resp.status_code}')
+              except Exception as exc:
+                  print(f'reset_request=ERROR_{type(exc).__name__}')
+          else:
+              print('reset_request=SKIPPED')
           PY
