@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+title: "WellPulse"
+message: "Citation metadata will be finalized when a publication-ready release is frozen."
+type: software
+authors:
+  - family-names: "Ayoub"
+    given-names: "Ahmed"
+version: "0.1.0"
