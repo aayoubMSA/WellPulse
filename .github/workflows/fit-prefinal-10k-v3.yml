@@ -1,0 +1,41 @@
+name: FIT WP-RT01 pre-final 10k gate v3
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-prefinal-v3-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-fit-prefinal-v3
+  cancel-in-progress: false
+
+jobs:
+  prefinal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      FIT_A8_NODE_ID: '100'
+      RUN_DIR: fit-prefinal-v3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install FIT orchestration tools
+        run: python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+      - name: Run pinned-node pre-final gate
+        shell: bash
+        run: bash scripts/run_fit_prefinal_v3.sh
+      - name: Upload pre-final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-fit-prefinal-v3-${{ github.run_id }}
+          path: fit-prefinal-v3/
+          retention-days: 30
