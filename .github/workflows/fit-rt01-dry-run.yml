@@ -1,0 +1,234 @@
+name: FIT WP-RT01 real-A8 dry run
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-rt01-dry-run-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-fit-rt01-dry-run
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      RUN_ROOT: fit-rt01-dry-run
+      SCIENCE_COMMIT: ${{ github.event.pull_request.base.sha || github.sha }}
+
+    steps:
+      - name: Checkout WellPulse
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Record evidence class and fetch verified trust anchor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_ROOT"
+          {
+            echo 'evidence_class=REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT'
+            echo "github_run_id=$GITHUB_RUN_ID"
+            echo "trigger_sha=$GITHUB_SHA"
+            echo "science_commit=$SCIENCE_COMMIT"
+            echo "start_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$RUN_ROOT/workflow_context.txt"
+          bash scripts/fetch_mqtt_trust_anchor.sh "$RUN_ROOT/iot-lab-ca.pem" | tee "$RUN_ROOT/trust_anchor.txt"
+
+      - name: Install FIT tools and resolve generated login
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${FIT_IDENTIFIER:-}"
+          test -n "${FIT_PASSWORD:-}"
+          python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+          python - <<'PY'
+          import base64, os, re
+          from pathlib import Path
+          from iotlabcli.rest import Api
+          ident=os.environ['FIT_IDENTIFIER']
+          password=os.environ['FIT_PASSWORD']
+          profile=Api(ident,password).method('user')
+          login=profile.get('login') if isinstance(profile,dict) else None
+          if not login or not re.fullmatch(r'[a-z][0-9a-z]{3,19}',login):
+              raise SystemExit('FIT profile did not provide a valid generated login')
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write('FIT_LOGIN=%s\n' % login)
+          p=Path.home()/'.iotlabrc'
+          p.write_text(login+':'+base64.b64encode(password.encode()).decode())
+          p.chmod(0o600)
+          print('FIT generated login resolved without disclosure.')
+          PY
+          iotlab-auth --version | tee "$RUN_ROOT/iotlabcli_version.txt"
+          iotlab-ssh --version | tee "$RUN_ROOT/iotlabsshcli_version.txt"
+
+      - name: Register ephemeral SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-RT01-dry-${GITHUB_RUN_ID}" >/dev/null
+          chmod 600 "$HOME/.ssh/id_rsa"
+          chmod 644 "$HOME/.ssh/id_rsa.pub"
+          iotlab-auth --add-ssh-key | tee "$RUN_ROOT/add_ssh_key.log"
+
+      - name: Reserve one Saclay A8
+        shell: bash
+        run: |
+          set -euo pipefail
+          submit_out=$(iotlab-experiment submit -n "WP-RT01-dry-${GITHUB_RUN_ID}" -d 30 -l '1,archi=a8:at86rf231+site=saclay')
+          printf '%s\n' "$submit_out" | tee "$RUN_ROOT/reservation_submit.json"
+          EXP_ID=$(printf '%s' "$submit_out" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"
+          iotlab-experiment wait -i "$EXP_ID" --timeout 180 --cancel-on-timeout | tee "$RUN_ROOT/reservation_wait.txt"
+          iotlab-experiment get -i "$EXP_ID" -n > "$RUN_ROOT/experiment_nodes.json"
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          items=json.loads(Path('fit-rt01-dry-run/experiment_nodes.json').read_text()).get('items',[])
+          if not items:
+              raise SystemExit('No A8 allocated')
+          addr=items[0]['network_address']
+          m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+          if not m:
+              raise SystemExit('Cannot parse A8 node')
+          node=m.group(1)
+          with open(os.environ['GITHUB_ENV'],'a') as fh:
+              fh.write('SITE=saclay\nNODE_ID=%s\nNODE_ADDRESS=%s\nLOC=saclay,a8,%s\n' % (node,addr,node))
+          PY
+
+      - name: Require A8 Linux boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          iotlab-ssh wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_ROOT/wait_for_boot.json"
+          cat "$RUN_ROOT/wait_for_boot.json"
+          python - <<'PY'
+          import json
+          data=json.load(open('fit-rt01-dry-run/wait_for_boot.json'))
+          if not data.get('wait-for-boot',{}).get('0',[]):
+              raise SystemExit('A8 boot did not return code 0')
+          PY
+
+      - name: Stage dry-run code, trust anchor, and protected MQTT config
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+          COMMON='shared/.iotlabsshcli/wp-rt01-dry/common'
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" "rm -rf shared/.iotlabsshcli/wp-rt01-dry; mkdir -p '$COMMON'; chmod 700 '$COMMON'"
+          scp "${SSH_OPTS[@]}" "$RUN_ROOT/iot-lab-ca.pem" scripts/fit_rt01_edge.py scripts/fit_rt01_stamp_stream.py "$FRONTEND:$COMMON/"
+          AUTH_FILE="$RUNNER_TEMP/mqtt_auth.conf"
+          umask 077
+          printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$AUTH_FILE"
+          scp "${SSH_OPTS[@]}" "$AUTH_FILE" "$FRONTEND:$COMMON/mqtt_auth.conf"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" "chmod 600 '$COMMON/mqtt_auth.conf'; chmod 644 '$COMMON/iot-lab-ca.pem'"
+          rm -f "$AUTH_FILE"
+          echo "SSH_KEY=$HOME/.ssh/id_rsa" >> "$GITHUB_ENV"
+
+      - name: Run B0 C2 10k real-A8 dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="DRY-B0-C2-${GITHUB_RUN_ID}"
+          bash scripts/run_fit_rt01_dry_cell.sh B0_publish_only "$RUN_ID" "$RUN_ROOT"
+
+      - name: Run W1 C2 10k real-A8 dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="DRY-W1-C2-${GITHUB_RUN_ID}"
+          bash scripts/run_fit_rt01_dry_cell.sh W1_offline_first "$RUN_ID" "$RUN_ROOT"
+
+      - name: Assert dry-run gates and write summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          root='fit-rt01-dry-run'
+          run=os.environ['GITHUB_RUN_ID']
+          b0=json.load(open('%s/DRY-B0-C2-%s/analysis/metrics.json' % (root,run)))
+          w1=json.load(open('%s/DRY-W1-C2-%s/analysis/metrics.json' % (root,run)))
+          assert b0['generated_records']==10000
+          assert b0['permanent_missing']>0
+          assert b0['restart_entry_count']>=1
+          assert w1['generated_records']==10000
+          assert w1['cloud_unique']==10000
+          assert w1['permanent_missing']==0
+          assert w1['final_duplicates']==0
+          assert w1['pending_final']==0
+          assert w1['restart_entry_count']>=1
+          out={
+            'evidence_class':'REAL_A8_DRY_RUN_NOT_FINAL_EXPERIMENT',
+            'science_commit':os.environ['SCIENCE_COMMIT'],
+            'github_run_id':run,
+            'fit_experiment_id':os.environ.get('EXP_ID'),
+            'site':os.environ.get('SITE'),
+            'node_id':os.environ.get('NODE_ID'),
+            'impairment_method':'iptables deterministic broker TCP/8883 blocking',
+            'restart_semantics':'gateway process restart during outage; not OS/power-cycle reboot',
+            'trust_anchor':'ISRG Root X1 fingerprint-verified before use',
+            'b0_c2':b0,
+            'w1_c2':w1,
+          }
+          with open(root+'/dry_run_summary.json','w') as fh:
+              json.dump(out,fh,indent=2,sort_keys=True); fh.write('\n')
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+          find "$RUN_ROOT" -type f ! -name 'mqtt_auth.conf' -print0 | sort -z | xargs -0 sha256sum > "$RUN_ROOT/SHA256_MANIFEST.txt"
+
+      - name: Cleanup FIT experiment and credentials
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+            SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+            FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
+            if [ -n "${LOC:-}" ]; then
+              iotlab-ssh run-cmd 'set +e; broker_ip=$(getent hosts mqtt4.iot-lab.info | awk "NR==1{print \\$1}"); if [ -n "$broker_ip" ]; then while iptables -D OUTPUT -p tcp -d "$broker_ip" --dport 8883 -j REJECT >/dev/null 2>&1; do :; done; fi; rm -f "$HOME/.config/mosquitto_pub"' -l "$LOC" >/dev/null 2>&1 || true
+            fi
+            ssh "${SSH_OPTS[@]}" "$FRONTEND" 'rm -f ~/.config/mosquitto_sub ~/shared/.iotlabsshcli/wp-rt01-dry/common/mqtt_auth.conf' >/dev/null 2>&1 || true
+          fi
+          [ -n "${EXP_ID:-}" ] && iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
+          if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+            python - <<'PY'
+          from pathlib import Path
+          from iotlabcli import auth
+          from iotlabcli.rest import Api
+          keyfile=Path.home()/'.ssh'/'id_rsa.pub'
+          if keyfile.exists():
+              key=keyfile.read_text().strip()
+              user,password=auth._read_password_file()
+              if user and password:
+                  api=Api(user,password)
+                  obj=api.get_ssh_keys()
+                  if key in obj.get('sshkeys',[]):
+                      obj['sshkeys']=[k for k in obj['sshkeys'] if k != key]
+                      api.set_ssh_keys(obj)
+          PY
+          fi
+          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$HOME/.iotlabrc" "$RUNNER_TEMP/mqtt_auth.conf"
+
+      - name: Upload non-final dry-run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-fit-rt01-dry-run-${{ github.run_id }}
+          path: fit-rt01-dry-run/
+          if-no-files-found: warn
+          retention-days: 30
