@@ -166,7 +166,7 @@ def resolve_broker_ipv4():
 
 
 def set_outage(broker_ip, enabled, log):
-    rule = ["iptables", "-p", "tcp", "-d", broker_ip, "--dport", str(PORT), "-j", "REJECT"]
+    rule = ["-p", "tcp", "-d", broker_ip, "--dport", str(PORT), "-j", "REJECT"]
     if enabled:
         run_cmd(["iptables", "-I", "OUTPUT", "1"] + rule, log)
     else:
