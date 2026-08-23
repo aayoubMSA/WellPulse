@@ -1,2 +1,2 @@
-Trigger FIT MQTT frontend-only certificate diagnostic.
-No A8 reservation. No final experiment evidence.
+Trigger FIT MQTT frontend-only certificate diagnostic v2.
+Uses verified current ISRG Root X1. No A8 reservation. No final experiment evidence.
