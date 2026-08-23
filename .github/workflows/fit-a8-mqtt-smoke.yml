@@ -67,7 +67,7 @@ jobs:
           chmod 644 "$HOME/.ssh/id_rsa.pub"
           iotlab-auth --add-ssh-key | tee "$RUN_DIR/add_ssh_key.log"
 
-      - name: Reserve one Saclay A8 and wait for boot
+      - name: Reserve one Saclay A8
         shell: bash
         run: |
           set -euo pipefail
@@ -90,6 +90,11 @@ jobs:
               fh.write(f'SITE=saclay\nNODE_ID={node}\nNODE_ADDRESS={addr}\nLOC=saclay,a8,{node}\n')
           Path('fit-mqtt-smoke/selected_node.txt').write_text(f'node_address={addr}\nnode_id={node}\n')
           PY
+
+      - name: Wait for A8 Linux boot
+        shell: bash
+        run: |
+          set -euo pipefail
           iotlab-ssh wait-for-boot --max-wait 180 -l "$LOC" > "$RUN_DIR/wait_for_boot.json"
           cat "$RUN_DIR/wait_for_boot.json"
           python - <<'PY'
@@ -120,9 +125,10 @@ jobs:
           scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log.sha256" "$RUN_DIR/fit_probe.remote.sha256" || true
           sha256sum "$RUN_DIR/fit_probe.log" | tee "$RUN_DIR/fit_probe.local.sha256"
           python - <<'PY'
+          import re
           from pathlib import Path
           text=Path('fit-mqtt-smoke/probe_remote.log').read_text(errors='replace')
-          if '"0"' not in text:
+          if not re.search(r'"run-cmd"\s*:\s*\{\s*"0"\s*:', text, re.S):
               raise SystemExit('Probe run-cmd did not report code 0')
           PY
 
