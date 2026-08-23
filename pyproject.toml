@@ -1,0 +1,8 @@
+[project]
+name = "wellpulse"
+version = "0.1.0"
+description = "Offline-first resilience and remote-testbed validation harness for WellPulse"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
