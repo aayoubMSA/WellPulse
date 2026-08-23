@@ -4,7 +4,8 @@
 Reads one canonical WellPulse JSON payload per stdin line, preserves every raw
 broker delivery, and stores the first occurrence of each record_id in SQLite.
 A control payload with `_wellpulse_control=END` terminates the sink without
-being counted as an experimental record.
+being counted as an experimental record. `--stop-after-unique` is useful for
+W1 dry runs where the frozen success target is exactly 10,000 unique records.
 """
 from __future__ import print_function
 
@@ -35,6 +36,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--run-id", required=True)
     p.add_argument("--out-dir", required=True)
+    p.add_argument("--stop-after-unique", type=int, default=0)
     args = p.parse_args()
 
     if not os.path.isdir(args.out_dir):
@@ -55,6 +57,7 @@ def main():
     total = 0
     invalid = 0
     control_seen = False
+    target_seen = False
     started = utc_now()
 
     with open(raw_path, "a") as raw:
@@ -98,6 +101,11 @@ def main():
                 (record_id, payload_json, checksum, received_utc),
             )
             conn.commit()
+            if args.stop_after_unique:
+                unique_now = conn.execute("SELECT COUNT(*) FROM received").fetchone()[0]
+                if unique_now >= args.stop_after_unique:
+                    target_seen = True
+                    break
 
     unique = conn.execute("SELECT COUNT(*) FROM received").fetchone()[0]
     summary = {
@@ -109,6 +117,8 @@ def main():
         "duplicate_deliveries": total - unique,
         "invalid_deliveries": invalid,
         "control_end_seen": control_seen,
+        "stop_after_unique": args.stop_after_unique,
+        "unique_target_seen": target_seen,
     }
     atomic_json(summary_path, summary)
     conn.close()
