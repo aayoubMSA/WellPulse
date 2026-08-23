@@ -31,11 +31,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Fetch and verify current MQTT trust anchor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_DIR"
+          bash scripts/fetch_mqtt_trust_anchor.sh "$RUN_DIR/iot-lab-ca.pem" | tee "$RUN_DIR/trust_anchor.txt"
+
       - name: Install FIT tools and resolve login
         shell: bash
         run: |
           set -eu
-          mkdir -p "$RUN_DIR" "$HOME/.ssh"
+          mkdir -p "$HOME/.ssh"
           test -n "${FIT_IDENTIFIER:-}"
           test -n "${FIT_PASSWORD:-}"
           python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
@@ -105,14 +112,14 @@ jobs:
               raise SystemExit('A8 boot did not return code 0')
           PY
 
-      - name: Stage public CA and smoke scripts
+      - name: Stage verified trust anchor and smoke scripts
         shell: bash
         run: |
           set -euo pipefail
           SSH_OPTS=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
           FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
-          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'mkdir -p ~/shared/.iotlabsshcli && chmod 700 ~/shared/.iotlabsshcli && cp /opt/iot-lab-ca.pem ~/shared/.iotlabsshcli/iot-lab-ca.pem && chmod 644 ~/shared/.iotlabsshcli/iot-lab-ca.pem'
-          scp "${SSH_OPTS[@]}" scripts/fit_probe.sh scripts/fit_mqtt_smoke.sh "$FRONTEND:shared/.iotlabsshcli/"
+          ssh "${SSH_OPTS[@]}" "$FRONTEND" 'mkdir -p ~/shared/.iotlabsshcli && chmod 700 ~/shared/.iotlabsshcli'
+          scp "${SSH_OPTS[@]}" "$RUN_DIR/iot-lab-ca.pem" scripts/fit_probe.sh scripts/fit_mqtt_smoke.sh "$FRONTEND:shared/.iotlabsshcli/"
 
       - name: Re-probe TLS and outage capability
         shell: bash
@@ -124,6 +131,8 @@ jobs:
           scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log" "$RUN_DIR/fit_probe.log"
           scp "${SSH_OPTS[@]}" "$FRONTEND:shared/.iotlabsshcli/fit_probe.log.sha256" "$RUN_DIR/fit_probe.remote.sha256" || true
           sha256sum "$RUN_DIR/fit_probe.log" | tee "$RUN_DIR/fit_probe.local.sha256"
+          grep -F 'Verify return code: 0 (ok)' "$RUN_DIR/fit_probe.log"
+          grep -F 'iptables_chain_create=PASS' "$RUN_DIR/fit_probe.log"
           python - <<'PY'
           import re
           from pathlib import Path
@@ -171,6 +180,7 @@ jobs:
             'site':os.getenv('SITE'),
             'node_id':os.getenv('NODE_ID'),
             'node_address':os.getenv('NODE_ADDRESS'),
+            'trust_anchor':'ISRG Root X1 fingerprint-verified from letsencrypt.org',
             'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
           },indent=2)+'\n')
           PY
@@ -181,7 +191,7 @@ jobs:
         run: |
           set +e
           if [ -n "${FIT_LOGIN:-}" ] && [ -n "${SITE:-}" ] && [ -f "$HOME/.ssh/id_rsa" ]; then
-            ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "${FIT_LOGIN}@${SITE}.iot-lab.info" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf' >/dev/null 2>&1 || true
+            ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "${FIT_LOGIN}@${SITE}.iot-lab.info" 'rm -f ~/shared/.iotlabsshcli/mqtt_auth.conf ~/shared/.iotlabsshcli/iot-lab-ca.pem' >/dev/null 2>&1 || true
           fi
           [ -n "${EXP_ID:-}" ] && iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
           if [ -f "$HOME/.iotlabrc" ] && [ -f "$HOME/.ssh/id_rsa.pub" ]; then
