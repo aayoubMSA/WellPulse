@@ -39,6 +39,10 @@ def append_json(path, obj):
         fh.flush()
 
 
+def write_json_line(fh, obj):
+    fh.write(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n")
+
+
 def canonical_record(run_id, boot_id, sequence):
     body = {
         "run_id": run_id,
@@ -176,6 +180,7 @@ def load_state(path, args):
         "outage_active": False,
         "broker_ipv4": broker_ipv4(args.broker),
         "boot_id": "BOOT-001",
+        "queue_high_water": 0,
     }
     atomic_json(path, state)
     return state
@@ -190,6 +195,10 @@ def drain_queue(queue, args, events_path):
         if not mqtt_publish_lines(args, payloads, events_path):
             raise RuntimeError("MQTT batch publish failed while transport should be available")
         queue.mark_sent([r[0] for r in rows])
+
+
+def should_checkpoint(seq, args):
+    return seq % args.batch_size == 0 or seq in (3000, 3001, 4000, 5000, args.records)
 
 
 def main():
@@ -230,10 +239,15 @@ def main():
 
     queue = DurableQueue(queue_path) if args.architecture == "W1_wellpulse_offline_first" else None
     b0_buffer = []
+    if queue is not None:
+        state["queue_high_water"] = max(int(state.get("queue_high_water", 0)), queue.pending_count())
 
     start_seq = int(state.get("last_sequence", 0)) + 1
     append_json(events_path, {"event": "process_start", "utc": utc_now(), "start_sequence": start_seq,
                               "restart_done": bool(state.get("restart_done"))})
+
+    generated_fh = open(generated_path, "a", 1)
+    dropped_fh = open(dropped_path, "a", 1) if args.architecture == "B0_publish_only_non_durable" else None
 
     try:
         for seq in range(start_seq, args.records + 1):
@@ -243,7 +257,7 @@ def main():
                 atomic_json(state_path, state)
 
             body, payload_json, checksum = canonical_record(args.run_id, state["boot_id"], seq)
-            append_json(generated_path, {
+            write_json_line(generated_fh, {
                 "record_id": body["record_id"],
                 "sequence": seq,
                 "generated_at_utc": body["generated_at_utc"],
@@ -253,12 +267,15 @@ def main():
 
             if args.architecture == "W1_wellpulse_offline_first":
                 queue.enqueue(body["record_id"], seq, payload_json, checksum)
-                if not in_outage(seq, args.condition) and queue.pending_count() >= args.batch_size:
+                pending_now = queue.pending_count()
+                if pending_now > int(state.get("queue_high_water", 0)):
+                    state["queue_high_water"] = pending_now
+                if not in_outage(seq, args.condition) and pending_now >= args.batch_size:
                     drain_queue(queue, args, events_path)
             else:
                 if in_outage(seq, args.condition):
-                    append_json(dropped_path, {"record_id": body["record_id"], "sequence": seq,
-                                               "utc": utc_now(), "reason": "transport_blocked_no_durable_queue"})
+                    write_json_line(dropped_fh, {"record_id": body["record_id"], "sequence": seq,
+                                                 "utc": utc_now(), "reason": "transport_blocked_no_durable_queue"})
                 else:
                     b0_buffer.append(payload_json)
                     if len(b0_buffer) >= args.batch_size:
@@ -267,15 +284,24 @@ def main():
                         b0_buffer = []
 
             state["last_sequence"] = seq
-            atomic_json(state_path, state)
+            if should_checkpoint(seq, args):
+                atomic_json(state_path, state)
 
             if args.condition == "C2_outage_with_restart" and seq == 4000 and not state.get("restart_done"):
                 state["restart_done"] = True
                 atomic_json(state_path, state)
+                generated_fh.flush()
+                os.fsync(generated_fh.fileno())
+                if dropped_fh is not None:
+                    dropped_fh.flush()
+                    os.fsync(dropped_fh.fileno())
                 append_json(events_path, {"event": "gateway_restart_exec", "utc": utc_now(),
                                           "after_sequence": 4000})
                 if queue is not None:
                     queue.close()
+                generated_fh.close()
+                if dropped_fh is not None:
+                    dropped_fh.close()
                 os.execv(sys.executable, [sys.executable] + sys.argv)
 
             if seq == 5000 and args.condition != "C0_normal_no_restart" and state.get("outage_active"):
@@ -297,6 +323,14 @@ def main():
                 raise RuntimeError("B0 final MQTT publish failed")
             b0_buffer = []
 
+        generated_fh.flush()
+        os.fsync(generated_fh.fileno())
+        if dropped_fh is not None:
+            dropped_fh.flush()
+            os.fsync(dropped_fh.fileno())
+
+        state["last_sequence"] = args.records
+        atomic_json(state_path, state)
         summary = {
             "run_id": args.run_id,
             "architecture": args.architecture,
@@ -308,14 +342,22 @@ def main():
             "broker_ipv4": ip,
             "queue_total": queue.total_count() if queue is not None else 0,
             "queue_pending": queue.pending_count() if queue is not None else 0,
+            "queue_high_water": int(state.get("queue_high_water", 0)),
             "completed_utc": utc_now(),
         }
         atomic_json(summary_path, summary)
         append_json(events_path, {"event": "process_complete", "utc": utc_now()})
         print(json.dumps(summary, sort_keys=True))
     finally:
+        if not generated_fh.closed:
+            generated_fh.close()
+        if dropped_fh is not None and not dropped_fh.closed:
+            dropped_fh.close()
         if queue is not None:
-            queue.close()
+            try:
+                queue.close()
+            except Exception:
+                pass
         if state.get("outage_active") and rule_present(ip):
             unblock_mqtt(ip, events_path)
 
