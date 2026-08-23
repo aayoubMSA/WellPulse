@@ -3,14 +3,19 @@ set -eu
 
 OUT="${1:-fit_probe_$(date -u +%Y%m%dT%H%M%SZ).log}"
 NETEM_ERR="/tmp/wellpulse_netem_probe.err"
+IPT_CHAIN="WELLPULSE_PROBE_$$"
 
-cleanup_netem() {
+cleanup_probe() {
   if command -v tc >/dev/null 2>&1; then
     tc qdisc del dev lo root >/dev/null 2>&1 || true
   fi
+  if command -v iptables >/dev/null 2>&1; then
+    iptables -F "$IPT_CHAIN" >/dev/null 2>&1 || true
+    iptables -X "$IPT_CHAIN" >/dev/null 2>&1 || true
+  fi
   rm -f "$NETEM_ERR"
 }
-trap cleanup_netem EXIT INT TERM
+trap cleanup_probe EXIT INT TERM
 
 {
   echo "evidence_class=CAPABILITY_SMOKE_NOT_FINAL_EXPERIMENT"
@@ -32,6 +37,8 @@ trap cleanup_netem EXIT INT TERM
   command -v openssl || true
   command -v mosquitto_pub || true
   command -v mosquitto_sub || true
+  command -v iptables || true
+  command -v nft || true
 
   echo "--- disk ---"
   df -h || true
@@ -72,23 +79,39 @@ trap cleanup_netem EXIT INT TERM
     echo "netem_loopback_add=NOT_TESTED"
   fi
 
+  echo "--- iptables deterministic-outage capability ---"
+  if command -v iptables >/dev/null 2>&1; then
+    if iptables -N "$IPT_CHAIN" 2>/dev/null; then
+      echo "iptables_chain_create=PASS"
+      iptables -X "$IPT_CHAIN" 2>/dev/null || true
+    else
+      echo "iptables_chain_create=FAIL"
+    fi
+  else
+    echo "iptables_present=NO"
+    echo "iptables_chain_create=NOT_TESTED"
+  fi
+
   echo "--- MQTT broker DNS ---"
   getent hosts mqtt4.iot-lab.info 2>/dev/null || nslookup mqtt4.iot-lab.info 2>/dev/null || true
 
-  echo "--- TCP 8883 probe ---"
-  (command -v nc >/dev/null 2>&1 && nc -vz -w 5 mqtt4.iot-lab.info 8883) 2>&1 || true
-
-  echo "--- TLS handshake probe ---"
-  if command -v openssl >/dev/null 2>&1; then
-    if [ -f /opt/iot-lab-ca.pem ]; then
-      echo | openssl s_client \
-        -connect mqtt4.iot-lab.info:8883 \
-        -servername mqtt4.iot-lab.info \
-        -CAfile /opt/iot-lab-ca.pem \
-        2>&1 | grep -E 'Protocol|Cipher|Verify return code|Verification' || true
-    else
-      echo "iotlab_ca_present=NO"
-    fi
+  echo "--- TLS 8883 handshake probe ---"
+  CA_FILE=""
+  if [ -f /opt/iot-lab-ca.pem ]; then
+    CA_FILE=/opt/iot-lab-ca.pem
+  elif [ -f "$HOME/shared/.iotlabsshcli/iot-lab-ca.pem" ]; then
+    CA_FILE="$HOME/shared/.iotlabsshcli/iot-lab-ca.pem"
+  fi
+  if command -v openssl >/dev/null 2>&1 && [ -n "$CA_FILE" ]; then
+    echo "iotlab_ca_present=YES"
+    echo "iotlab_ca_source=$(basename "$CA_FILE")"
+    echo | openssl s_client \
+      -connect mqtt4.iot-lab.info:8883 \
+      -servername mqtt4.iot-lab.info \
+      -CAfile "$CA_FILE" \
+      2>&1 | grep -E 'Protocol|Cipher|Verify return code|Verification' || true
+  elif [ -z "$CA_FILE" ]; then
+    echo "iotlab_ca_present=NO"
   else
     echo "openssl_present=NO"
   fi
