@@ -1,0 +1,59 @@
+name: FIT account auth diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.fit-auth-check-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  auth-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIT_USERNAME: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+    steps:
+      - name: Require FIT secrets
+        shell: bash
+        run: |
+          set -eu
+          test -n "${FIT_USERNAME:-}"
+          test -n "${FIT_PASSWORD:-}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install official FIT CLI
+        shell: bash
+        run: python -m pip install --disable-pip-version-check iotlabcli
+
+      - name: Test authenticated FIT endpoints
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import os
+          from urllib.error import HTTPError
+          from iotlabcli.rest import Api
+
+          api = Api(os.environ['FIT_USERNAME'], os.environ['FIT_PASSWORD'])
+          checks = [
+              ('user', lambda: api.method('user')),
+              ('user_keys', api.get_ssh_keys),
+          ]
+          for name, fn in checks:
+              try:
+                  fn()
+              except HTTPError as exc:
+                  print(f'{name}=HTTP_{exc.code}')
+              except Exception as exc:
+                  print(f'{name}=ERROR_{type(exc).__name__}')
+              else:
+                  print(f'{name}=PASS')
+          PY
