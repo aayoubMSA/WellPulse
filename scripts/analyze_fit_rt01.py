@@ -23,11 +23,34 @@ def percentile(values, p):
     return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
 
 
-def verify_wire(obj):
+def verify_wire_text(wire):
+    """Verify against the original compact wire bytes without float reserialization.
+
+    The A8 uses Python 3.5.1 and the analyzer runs on a current Python. Some
+    floating-point timestamps have equivalent numeric values but different
+    shortest textual representations across those runtimes. The checksum was
+    created before checksum_sha256 was inserted into the sorted compact JSON,
+    so reconstruct those exact original bytes by removing that field directly
+    from the wire text.
+    """
+    try:
+        obj = json.loads(wire)
+    except Exception:
+        return False
     expected = obj.get("checksum_sha256")
-    body = dict(obj)
-    body.pop("checksum_sha256", None)
-    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    if not expected:
+        return False
+    marker = '"checksum_sha256":"%s"' % expected
+    pos = wire.find(marker)
+    if pos < 0:
+        return False
+    start = pos
+    end = pos + len(marker)
+    if start > 0 and wire[start - 1] == ',':
+        start -= 1
+    elif end < len(wire) and wire[end] == ',':
+        end += 1
+    canonical = wire[:start] + wire[end:]
     actual = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return expected == actual
 
@@ -37,10 +60,11 @@ def load_generated(path):
     checksum_errors = 0
     with open(path, "r", encoding="utf-8") as fh:
         for line in fh:
-            if not line.strip():
+            wire = line.rstrip("\r\n")
+            if not wire:
                 continue
-            obj = json.loads(line)
-            if not verify_wire(obj):
+            obj = json.loads(wire)
+            if not verify_wire_text(wire):
                 checksum_errors += 1
             rid = obj["record_id"]
             if rid in rows:
@@ -87,6 +111,8 @@ def main():
         raise RuntimeError("expected exactly 10000 generated records, got %d" % len(generated))
 
     receiver_db = os.path.join(args.outdir, "receiver.sqlite")
+    if os.path.exists(receiver_db):
+        os.remove(receiver_db)
     conn = sqlite3.connect(receiver_db)
     conn.execute(
         """CREATE TABLE received (
@@ -115,7 +141,7 @@ def main():
                 foreign_records_ignored += 1
                 continue
             raw_received += 1
-            if not verify_wire(obj):
+            if not verify_wire_text(wire):
                 receiver_checksum_errors += 1
             rid = obj.get("record_id")
             cur = conn.execute("SELECT seen_count FROM received WHERE record_id=?", (rid,))
