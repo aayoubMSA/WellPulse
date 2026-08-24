@@ -1,8 +1,8 @@
 # POWDER G3 simulated-stack validation — latest
 
-- Checked UTC: 2026-08-24T20:20:39Z
-- GitHub run ID: `32773313077`
-- GitHub SHA: `0894f897dcc4d257e5bb7bf5f50948322787cf0a`
+- Checked UTC: 2026-08-24T20:24:48Z
+- GitHub run ID: `32773709311`
+- GitHub SHA: `7ca2f7981d96e059bc5036411604a633276a602c`
 - Orchestration mode: **MANUAL_CREATE_PLUS_AUTOMATED_ATTACH**
 - Evidence class: **INFRASTRUCTURE_ONLY_NON_SCORED**
 - Experiment name: ``
