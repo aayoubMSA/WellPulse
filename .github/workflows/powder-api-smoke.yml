@@ -41,40 +41,72 @@ jobs:
           python -m pip install --quiet '/tmp/portal-api[cli]'
           portal-cli --help >/dev/null
 
-      - name: Run read-only experiment-list API call
+      - name: Run read-only API checks
         id: smoke
         shell: bash
         run: |
           set -uo pipefail
           mkdir -p evidence/powder
+
           set +e
-          portal-cli experiment list >/tmp/powder-experiments.json 2>/tmp/powder-api.err
-          RC=$?
+          portal-cli experiment list >/tmp/powder-experiments.json 2>/tmp/powder-experiments.err
+          EXP_RC=$?
+          portal-cli profile list >/tmp/powder-profiles.json 2>/tmp/powder-profiles.err
+          PROF_RC=$?
           set -e
 
           OUT=evidence/powder/api-smoke.md
-          {
-            echo "# POWDER Portal API smoke — latest"
-            echo
-            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "- WellPulse SHA: ${GITHUB_SHA}"
-            echo "- API action: \`experiment list\` (read-only)"
-            echo "- Resource action attempted: **NONE**"
-            if [[ "$RC" -eq 0 ]]; then
-              COUNT=$(jq 'length' /tmp/powder-experiments.json 2>/dev/null || echo unknown)
-              WP_COUNT=$(jq '[.[] | select(.project == "WellPulse")] | length' /tmp/powder-experiments.json 2>/dev/null || echo unknown)
-              echo "- Gate: **POWDER_API_AUTH_PASS**"
-              echo "- Visible experiment count: \`$COUNT\`"
-              echo "- Visible WellPulse experiment count: \`$WP_COUNT\`"
-              echo "- Token content recorded: **NO**"
-            else
-              echo "- Gate: **POWDER_API_AUTH_FAIL**"
-              echo "- CLI exit code: \`$RC\`"
-              echo "- Token content recorded: **NO**"
-              echo "- Diagnostic: API call failed; inspect masked GitHub Actions log if needed."
-            fi
-          } > "$OUT"
-          exit "$RC"
+          python - "$EXP_RC" "$PROF_RC" "$OUT" <<'PY'
+          import json, os, sys, datetime
+          exp_rc = int(sys.argv[1])
+          prof_rc = int(sys.argv[2])
+          out = sys.argv[3]
+
+          def load(path):
+              try:
+                  with open(path, 'r', encoding='utf-8') as f:
+                      return json.load(f)
+              except Exception:
+                  return None
+
+          def items(obj, key):
+              if isinstance(obj, list):
+                  return obj
+              if isinstance(obj, dict):
+                  v = obj.get(key)
+                  if isinstance(v, list):
+                      return v
+              return []
+
+          ex_raw = load('/tmp/powder-experiments.json')
+          pr_raw = load('/tmp/powder-profiles.json')
+          exps = items(ex_raw, 'experiments')
+          profs = items(pr_raw, 'profiles')
+          wp_exps = [x for x in exps if isinstance(x, dict) and x.get('project') == 'WellPulse']
+          matches = [x for x in profs if isinstance(x, dict) and x.get('name') == 'srs-rf-matrix' and x.get('project') == 'PowderTeam']
+
+          now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          with open(out, 'w', encoding='utf-8') as f:
+              f.write('# POWDER Portal API smoke — latest\n\n')
+              f.write(f'- Checked UTC: {now}\n')
+              f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA", "unknown")}\n')
+              f.write('- API actions: `experiment list`, `profile list` — read-only\n')
+              f.write('- Resource action attempted: **NONE**\n')
+              f.write(f'- Authentication gate: **{"POWDER_API_AUTH_PASS" if exp_rc == 0 else "POWDER_API_AUTH_FAIL"}**\n')
+              f.write(f'- Experiment JSON shape: `{type(ex_raw).__name__ if ex_raw is not None else "unparsed"}`\n')
+              f.write(f'- Visible experiment count: `{len(exps) if ex_raw is not None else "unknown"}`\n')
+              f.write(f'- Visible WellPulse experiment count: `{len(wp_exps) if ex_raw is not None else "unknown"}`\n')
+              f.write(f'- Profile-list gate: **{"PASS" if prof_rc == 0 else "FAIL"}**\n')
+              f.write(f'- Profile JSON shape: `{type(pr_raw).__name__ if pr_raw is not None else "unparsed"}`\n')
+              f.write(f'- Exact `PowderTeam/srs-rf-matrix` matches: `{len(matches) if pr_raw is not None else "unknown"}`\n')
+              if matches:
+                  p = matches[0]
+                  f.write(f'- Matched profile ID: `{p.get("id", "not-exposed")}`\n')
+              f.write('- Token content recorded: **NO**\n')
+          PY
+
+          [[ "$EXP_RC" -eq 0 ]] || exit "$EXP_RC"
+          [[ "$PROF_RC" -eq 0 ]] || exit "$PROF_RC"
 
       - name: Commit sanitized API smoke evidence
         if: always()
