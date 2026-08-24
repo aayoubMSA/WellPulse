@@ -1,4 +1,4 @@
-# WP-PWD01 Analysis Plan — v0.2
+# WP-PWD01 Analysis Plan — v0.3
 
 **Status:** PRE-SCORE ANALYSIS FREEZE. This plan may be amended only before scored-run authorization, or later through an explicit timestamped amendment that distinguishes confirmatory from exploratory analysis.
 
@@ -8,15 +8,33 @@ The **run** is the experimental/statistical unit. Individual telemetry messages 
 
 The primary design is paired: within each scenario/block, one `B1_MQTT_QOS1` run and one `W1_OFFLINE_FIRST` run are executed under the same frozen POWDER profile/RF condition, workload generator configuration, and experiment session, with architecture order randomized in advance.
 
+The run order is pre-generated in `randomization-plan.csv` using seed `26082401`; reserve pairs 4–5 exist before outcome inspection and may be executed only under the precision rule.
+
+## Primary analysis cohort and censoring rule
+
+Telemetry generation continues during recovery so B1/W1 experience realistic post-recovery traffic. However, records generated late in the observation window would otherwise have less time to arrive than earlier records.
+
+Therefore the **confirmatory primary cohort is frozen as:**
+
+> all valid records generated at or before the final transition back to `Q0` after the impairment schedule.
+
+The corresponding UTC timestamp is stored as `cohort_cutoff_utc` in the run manifest. In `S0_HEALTHY`, the analogous pseudo-restoration point after the 60 s + 120 s control interval is used.
+
+The endpoint observation closes at `horizon_end_utc = cohort_cutoff_utc + H`.
+
+Records generated after `cohort_cutoff_utc` continue to create realistic traffic/load but are **not** included in the primary completeness denominator. They may support exploratory steady-state/recovery diagnostics.
+
 ## Primary endpoint
 
 For each valid run:
 
-`completeness_H = unique valid expected records received by H / generated scored records`
+`completeness_H = unique valid primary-cohort records received no later than horizon_end_utc / primary-cohort generated records`
 
-Validity requires matching record identity and SHA-256 payload checksum.
+A received record is valid only when its record identity belongs to the generated cohort and its SHA-256 payload checksum matches the generated ledger.
 
-Report completeness as both proportion and percentage.
+Report completeness as both proportion and percentage, together with numerator and denominator.
+
+The deterministic implementation is `wellpulse.powder_analysis.reconstruct_primary_endpoint`; the one-run CLI is `scripts/analyze_wp_pwd01_run.py`.
 
 ## Primary estimand
 
@@ -48,16 +66,17 @@ Do not inspect p-values, effect direction, or manuscript desirability when decid
 ## Secondary endpoints
 
 ### Reliability/integrity
-- permanent missing rate;
+- permanent missing rate in the primary cohort;
 - duplicate delivery attempts;
 - final duplicate rate after idempotent sink;
 - checksum mismatch count;
+- unexpected record attempt count;
 - out-of-order rate.
 
 ### Recovery
 - transport reconnect time;
 - time from physical Q0 restoration to first successful post-outage delivery;
-- backlog-drain time;
+- backlog-drain time for the pre-restoration cohort;
 - reconciliation-completion time.
 
 ### Performance/overhead
@@ -79,6 +98,7 @@ Summarize programmed attenuation and all valid exposed RSRP/RSRQ/SINR/BLER/throu
 - Report absolute differences before relative percentages when the baseline approaches 0% or 100%.
 - For latency/recovery distributions, report median and p95/p99 where sample support and timestamp quality are adequate.
 - Do not infer statistical independence from the number of messages.
+- Receiver rows after `horizon_end_utc` are excluded from the confirmatory endpoint but retained immutably for exploratory diagnostics.
 
 ## Scenario interpretation hierarchy
 
@@ -107,6 +127,7 @@ Run B1/W1 x 3 paired blocks for `S1` and `S2` only. Report OTA effects separatel
 - A technically invalid run is excluded from confirmatory estimates only under the protocol's pre-defined invalidity rules.
 - The invalid run and reason remain visible in the ledger and artifact.
 - A replacement run is new evidence with a new run ID and cannot overwrite the invalid run.
+- Late delivery after H is not imputed as on-time delivery; it remains visible as a post-horizon observation.
 
 ## Protocol deviations
 
@@ -130,6 +151,7 @@ Exploratory, unless frozen before scoring:
 - alternative traffic-rate or MQTT-QoS sweeps;
 - correlations chosen after looking at outcomes;
 - new composite resilience scores;
+- post-horizon late-delivery behavior;
 - any model fitted after outcome inspection.
 
 Exploratory analyses may be useful, but must be labeled and cannot rewrite the confirmatory question.
@@ -140,7 +162,7 @@ A pinned analysis environment must provide one documented command that:
 1. verifies SHA-256 evidence manifests;
 2. validates run manifests/schema;
 3. reconstructs generated/received identity sets;
-4. computes run-level endpoints;
+4. computes run-level endpoints using the frozen cohort/censoring rule;
 5. applies the frozen pairing/precision rules;
 6. produces publication tables and figures without manual spreadsheet editing.
 
