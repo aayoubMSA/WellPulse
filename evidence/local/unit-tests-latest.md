@@ -1,7 +1,7 @@
 # Local unit-test gate — latest
 
-- Checked UTC: 2026-08-24T17:22:43Z
-- GitHub SHA: 4039a5e65849ad196cce3ca1a74e4697830f452e
+- Checked UTC: 2026-08-24T17:31:16Z
+- GitHub SHA: 23cee23cd7341d13c3d347e349fa8e16e949c11e
 - Python: Python 3.12.14
 - Gate: **PASS**
 
@@ -17,7 +17,7 @@ test_reconciliation_detects_loss_and_duplicate (test_records.WellPulseKernelTest
 test_record_id_is_deterministic (test_records.WellPulseKernelTests.test_record_id_is_deterministic) ... ok
 
 ----------------------------------------------------------------------
-Ran 9 tests in 39.274s
+Ran 9 tests in 13.266s
 
 OK
 ```
