@@ -1,6 +1,6 @@
 # POWDER G4 live controlled-RF discovery — 2026-08-25
 
-Status: **DISCOVERY PASS / ALLOCATION NOT YET ATTEMPTED**
+Status: **DISCOVERY PASS / ALLOCATION BLOCKED AT CURRENT TIME**
 
 Evidence class: **INFRASTRUCTURE_DISCOVERY_ONLY_NON_SCORED**
 
@@ -29,7 +29,9 @@ Observed UE choices:
 
 For the WellPulse controlled-RF lane, `srsLTE UE (B210)` is the preferred candidate because it keeps both UE and eNB sides programmable and reproducible.
 
-No experiment was created during this discovery step.
+The B210 selection exposes a topology with `rue1` and `enb1`, corresponding to the controlled-RF NUC5300/B210 path.
+
+No experiment has yet been created during this G4 qualification attempt.
 
 ## Live resource-availability snapshot
 
@@ -43,12 +45,31 @@ The authenticated POWDER Resource Availability view at approximately 2026-08-25 
 
 This availability page is a global/current resource snapshot. It does **not** by itself prove that project `WellPulse` is entitled to, or can successfully allocate, the exact NUC5300/B210 pair required by `srslte-controlled-rf`.
 
+## Schedule/admission-control result
+
+After selecting:
+
+- profile `srslte-controlled-rf`;
+- UE type `srsLTE UE (B210)`;
+- project `WellPulse`;
+- experiment name `WP-G4-CTRL-RF`;
+
+and advancing to the Schedule step, the live Portal displayed this admission-control warning:
+
+> Unable to start at this time; other projects are using, or have reservations for, node/type `nuc5300`.
+
+The Portal therefore exposed an actual hidden/late-bound dependency relevant to this profile: **`nuc5300` availability/admission control**.
+
+No `Finish` action was taken and no G4 experiment/resource allocation was created.
+
 ## Interpretation
 
 **G4 discovery sub-gate: PASS.**
 
-A current controlled physical-RF candidate has been identified in the live Portal and its parameterization has been inspected. The next step is a single manual, non-scored allocation attempt using `srsLTE UE (B210)` followed by READY -> manifest/topology verification -> explicit-key SSH -> clean terminate.
+**Immediate allocation at the observed time: BLOCKED by `nuc5300` usage/reservations.**
 
-G4 overall remains **PENDING** until that lifecycle passes.
+This is not an entitlement failure and not a scientific failure. The next defensible action is to use the POWDER reservation/scheduling mechanism to identify and reserve a future window for the required `nuc5300` resources under project `WellPulse`, then instantiate exactly one manual non-scored G4 lifecycle qualification inside that reservation.
+
+G4 overall remains **PENDING** until READY -> topology/manifest verification -> explicit-key SSH -> controlled-RF lifecycle sanity -> clean termination -> zero active usage all pass.
 
 No scientific claim is supported by this discovery step. Scientific completion remains **20%** and `scored_runs_authorized=false`.
