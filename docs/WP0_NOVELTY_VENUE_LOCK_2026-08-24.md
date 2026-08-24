@@ -86,3 +86,15 @@ Before manuscript submission, redirect the paper if any of the following holds:
 - the final contribution reduces to an implementation demo without a publishable empirical question.
 
 Negative or null results do **not** by themselves trigger a kill; a rigorously bounded negative result may still be publishable if the cross-testbed evidence is informative.
+
+## 2026-08-25 pre-G4 benchmark reaffirmation
+
+A broader manuscript-grade rapid structured benchmark was completed before G4 physical-RF execution and is preserved in:
+
+`docs/WP0_RELATED_WORK_BENCHMARK_2026-08-25.md`
+
+The expanded benchmark covered current MQTT robustness/retransmission work, DTN/offline-first systems, edge/cloud reconciliation, cellular smart-farming, 5G store-and-forward, IIoT store-and-forward, reproducible FIT/POWDER testbed methodology, agricultural MQTT deployments, and official Eclipse Paho persistent-session limitations.
+
+**Outcome:** C1-C5 remain defensible only as a **compound architectural + causal experimental contribution package**. No individual buffering, MQTT, offline-first, reconciliation, 5G/LTE, or agriculture mechanism is claimed as unprecedented. No pre-G4 protocol amendment is required.
+
+One mandatory manuscript-stage literature check remains: obtain and fully compare Gaspar et al., *The Price of Reliability: Stress-Testing MQTT in Practical IoT Communications*, IEEE Internet of Things Magazine (2026), DOI `10.1109/MIOT.2026.3681190`. Its metadata is confirmed, but its methods/results were not sufficiently exposed by the sources available during the 2026-08-25 benchmark and therefore were not inferred.
