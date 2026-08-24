@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-24 22:36 Africa/Cairo
+Last updated: 2026-08-24 22:58 Africa/Cairo
 
 ## Standing handover rule
 
@@ -31,6 +31,8 @@ Current POWDER infrastructure state:
 - Scored POWDER campaign: **NOT AUTHORIZED**.
 
 Resource-creating POWDER automation remains **FROZEN** until the equivalent manual layer has passed.
+
+A safe attach-only helper is now prepared at `.github/workflows/powder-g3-attach.yml`. It creates no POWDER resources. For the current G3 gate, the user still creates a fresh `srsLTE-SIM:9` experiment manually; after READY, the helper may attach to the exact experiment UUID, validate the expected profile/hardware/image, discover SSH from the live manifest, execute the profile-authoritative file-based simulated stack check, capture sanitized evidence, and fail-safe terminate the validated experiment. The existing `.github/workflows/powder-g3-simstack.yml` resource-creating workflow remains **UNAPPROVED / DO NOT RUN** until an equivalent G3 manual gate has passed and this handover explicitly unfreezes it.
 
 ## Canonical repositories and workspaces
 
@@ -225,23 +227,29 @@ Existing GitHub Actions secret names include `POWDER_SSH_PRIVATE_KEY`, `POWDER_U
 
 Status: **NEXT / NOT STARTED**.
 
-Purpose: prove that a current simulated radio-stack/data-path experiment works manually before selecting/automating a physical-RF path.
+Purpose: prove that a current simulated radio-stack/data-path experiment works before selecting/automating a physical-RF path. G3 remains non-scored and no RF.
 
-Preferred immediate reuse candidate: `srsLTE-SIM:9`, because it is already verified to instantiate and its profile instructions expose file-based eNodeB/UE examples. G3 is still non-scored and still no RF.
+Current approved execution mode is **manual create + automated attach**:
 
-Manual sequence:
+1. Confirm `Current Usage: 0 Node Hours` in the live POWDER portal.
+2. Instantiate `srsLTE-SIM:9` manually under project `WellPulse` with a distinct name beginning `WP-G3-SIMSTACK` and one `d430`; do not create a reservation unless required.
+3. Wait for READY and copy the experiment UUID.
+4. Run GitHub Action **POWDER G3 Attach to Manual Experiment** (`.github/workflows/powder-g3-attach.yml`) with that UUID and authorization token `G3ATTACH`.
+5. The action must validate profile UUID `80dda605-7e5f-11e9-8006-e4434b2381fc`, hardware `d430`, and image `PowderProfiles:gnuradio-srslte` before it may run or terminate the target.
+6. The action discovers the active SSH endpoint from the live manifest; it must not reuse a historical hostname.
+7. It executes only the profile-authoritative file-based example via `powder/g3_simstack_remote.sh`:
 
-1. Confirm `Current Usage: 0 Node Hours`.
-2. Re-run `srsLTE-SIM:9` manually under project `WellPulse` with a distinct G3 name such as `WP-G3-SIMSTACK`.
-3. Wait for READY.
-4. Read the actual SSH endpoint from List View.
-5. SSH using the explicit Golden key.
-6. Execute only the profile-authoritative srsLTE simulated send/receive example and capture stdout/stderr plus file metadata/checksum.
-7. Verify expected receive behavior; do not infer RF.
-8. Remove only temporary test output if appropriate after evidence capture.
-9. Exit and terminate manually.
-10. Confirm zero active usage.
-11. Record a sanitized G3 evidence file and update this handover.
+```bash
+/usr/local/srsLTE/build/lib/examples/pdsch_enodeb -o <temp-file> -n 5 -m 9 -v
+/usr/local/srsLTE/build/lib/examples/pdsch_ue -i <temp-file> -n 5 -r 1234 -v -d
+```
+
+8. It captures credential-free stdout/stderr evidence, remote metadata, exit codes, waveform byte count and SHA-256, removes the temporary waveform, and retains sanitized evidence under `evidence/powder/g3/` plus `evidence/powder/g3-simstack-latest.md`.
+9. It fail-safe terminates only after target identity validation and polls for destroyed/terminated/absent state.
+10. G3 PASS requires both `PROCESS_GATE=PASS` and `cleanup=PASS`.
+11. A G3 PASS still does not authorize scored work and does not add scientific percentage.
+
+The full resource-creating workflow `.github/workflows/powder-g3-simstack.yml` exists but remains **UNAPPROVED / DO NOT RUN** under D-010/D-014 until the equivalent G3 manual gate has passed and the canonical handover explicitly unfreezes it.
 
 After G3 PASS, manually discover a **current** controlled physical-RF profile through the live POWDER UI. Do not trust stale remembered profile names. `srs-rf-matrix` remains blocked as-is because of its `n310` dependency.
 
