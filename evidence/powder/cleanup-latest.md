@@ -1,9 +1,9 @@
 # POWDER targeted cleanup — latest
 
-- Checked UTC: 2026-08-24T17:33:12Z
-- GitHub SHA: d57b9cd366393ed41bcb79cfa4e147ea3eeadefb
-- Experiment ID: `7cec09e3-2e9e-4f6d-9ea5-dbcff0b9bb82`
-- Pre-cleanup state: `failed`
+- Checked UTC: 2026-08-24T17:58:09Z
+- GitHub SHA: a738b2a7ffe442eed33f320ae0da0596b4d6618f
+- Experiment ID: `a0095527-4e6b-4da5-8b59-f50f1282da67`
+- Pre-cleanup state: `absent`
 - Cleanup gate: **PASS — experiment absent**
 - Scientific action attempted: **NO**
 - Token content recorded: **NO**
