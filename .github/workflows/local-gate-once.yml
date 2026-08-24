@@ -1,0 +1,75 @@
+name: WellPulse Pre-Score Local Gate
+
+on:
+  push:
+    paths:
+      - ".local-gate-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wellpulse-local-gate-once
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install frozen transport dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet 'paho-mqtt==2.1.0'
+          test "$(python -c "import importlib.metadata as m; print(m.version('paho-mqtt'))")" = "2.1.0"
+      - name: Run complete unit suite and write evidence
+        id: tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/local
+          set +e
+          python -m unittest discover -s tests -v >/tmp/tests.log 2>&1
+          RC=$?
+          set -e
+          COUNT="$(grep -E '^Ran [0-9]+ tests?' /tmp/tests.log | tail -n1 | awk '{print $2}')"
+          PAHO="$(python -c "import importlib.metadata as m; print(m.version('paho-mqtt'))")"
+          {
+            echo "# WellPulse pre-score local gate — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Python: $(python --version 2>&1)"
+            echo "- Paho MQTT: $PAHO"
+            echo "- Tests discovered: ${COUNT:-unknown}"
+            if [[ "$RC" -eq 0 ]]; then echo "- Gate: **PASS**"; else echo "- Gate: **FAIL**"; echo "- Exit code: \`$RC\`"; fi
+            echo
+            echo '```text'
+            cat /tmp/tests.log
+            echo '```'
+          } > evidence/local/pre-score-gate-latest.md
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+      - name: Commit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/local/pre-score-gate-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record WellPulse pre-score local gate evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+      - name: Enforce result
+        if: always()
+        shell: bash
+        run: test "${{ steps.tests.outputs.rc }}" = "0"
