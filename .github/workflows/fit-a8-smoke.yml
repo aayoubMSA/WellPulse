@@ -20,6 +20,7 @@ jobs:
     env:
       FIT_USERNAME: ${{ secrets.FIT_USERNAME }}
       FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      FIT_SSH_LOGIN: aayoub
       RUN_DIR: fit-smoke
 
     steps:
@@ -36,15 +37,13 @@ jobs:
         run: |
           set -eu
           mkdir -p "$RUN_DIR"
-          if [ -z "${FIT_USERNAME:-}" ] || [ -z "${FIT_PASSWORD:-}" ]; then
-            echo "FIT Actions secrets are required." >&2
-            exit 2
-          fi
+          if [ -z "${FIT_USERNAME:-}" ] || [ -z "${FIT_PASSWORD:-}" ]; then exit 2; fi
           {
             echo "evidence_class=EAS_A8M3_PLUMBING_NON_SCORED"
             echo "github_run_id=$GITHUB_RUN_ID"
             echo "workflow_git_commit=$GITHUB_SHA"
             echo "eas_source_commit=75e90de8d6ba72b834f84b0f2b58414550140672"
+            echo "ssh_login=$FIT_SSH_LOGIN"
             echo "start_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "$RUN_DIR/workflow_context.txt"
           python -m pip install --disable-pip-version-check iotlabcli
@@ -52,9 +51,7 @@ jobs:
           python - <<'PY'
           import base64, os
           from pathlib import Path
-          p=Path.home()/'.iotlabrc'
-          p.write_text(os.environ['FIT_USERNAME']+':'+base64.b64encode(os.environ['FIT_PASSWORD'].encode()).decode())
-          p.chmod(0o600)
+          p=Path.home()/'.iotlabrc'; p.write_text(os.environ['FIT_USERNAME']+':'+base64.b64encode(os.environ['FIT_PASSWORD'].encode()).decode()); p.chmod(0o600)
           PY
 
       - name: Register ephemeral SSH key
@@ -71,8 +68,7 @@ jobs:
           from pathlib import Path
           from iotlabcli import auth
           from iotlabcli.rest import Api
-          key=(Path.home()/'.ssh'/'id_rsa.pub').read_text().strip()
-          user,pw=auth._read_password_file(); keys=Api(user,pw).get_ssh_keys().get('sshkeys',[])
+          key=(Path.home()/'.ssh'/'id_rsa.pub').read_text().strip(); user,pw=auth._read_password_file(); keys=Api(user,pw).get_ssh_keys().get('sshkeys',[])
           print('key_visible_in_profile='+('PASS' if key in keys else 'FAIL'))
           if key not in keys: raise SystemExit(4)
           PY
@@ -82,14 +78,12 @@ jobs:
         run: |
           set -u
           ok=0
-          for attempt in 1 2 3 4 5 6 7; do
+          for attempt in 1 2 3 4 5; do
             echo "frontend_ssh_attempt=$attempt" | tee -a "$RUN_DIR/frontend_ssh.log"
-            if ssh -i "$HOME/.ssh/id_rsa" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o PubkeyAcceptedAlgorithms=+ssh-rsa "$FIT_USERNAME@saclay.iot-lab.info" 'echo frontend_ssh=PASS' 2>&1 | tee -a "$RUN_DIR/frontend_ssh.log"; then
-              ok=1; break
-            fi
-            sleep 15
+            if ssh -i "$HOME/.ssh/id_rsa" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o PubkeyAcceptedAlgorithms=+ssh-rsa "$FIT_SSH_LOGIN@saclay.iot-lab.info" 'echo frontend_ssh=PASS' 2>&1 | tee -a "$RUN_DIR/frontend_ssh.log"; then ok=1; break; fi
+            sleep 10
           done
-          if [ "$ok" -ne 1 ]; then echo "frontend_ssh=FAIL" | tee -a "$RUN_DIR/frontend_ssh.log"; exit 5; fi
+          [ "$ok" -eq 1 ] || { echo "frontend_ssh=FAIL" | tee -a "$RUN_DIR/frontend_ssh.log"; exit 5; }
 
       - name: Inventory and reserve one A8 node
         shell: bash
@@ -99,29 +93,23 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          items=json.loads(Path('fit-smoke/a8_alive.json').read_text()).get('items',[])
-          seen=[]
+          items=json.loads(Path('fit-smoke/a8_alive.json').read_text()).get('items',[]); seen=[]
           for item in items:
-              addr=item.get('network_address',''); arch=item.get('archi') or 'a8:at86rf231'; parts=addr.split('.')
-              if len(parts)>=2 and 'a8-' in parts[0] and (parts[1],arch) not in seen: seen.append((parts[1],arch))
+              addr=item.get('network_address',''); arch=item.get('archi') or 'a8:at86rf231'; p=addr.split('.')
+              if len(p)>=2 and 'a8-' in p[0] and (p[1],arch) not in seen: seen.append((p[1],arch))
           pref=['saclay','grenoble','paris','strasbourg']; seen.sort(key=lambda x:(pref.index(x[0]) if x[0] in pref else 99,x[0]))
-          Path('fit-smoke/candidate_sites.txt').write_text(''.join(f'{s}|{a}\n' for s,a in seen))
-          print('Alive A8 rows:',len(items)); print('Candidate sites:',', '.join(s for s,_ in seen))
+          Path('fit-smoke/candidate_sites.txt').write_text(''.join(f'{s}|{a}\n' for s,a in seen)); print('Alive A8 rows:',len(items)); print('Candidate sites:',', '.join(s for s,_ in seen))
           PY
           EXP_ID=''; SITE=''; ARCHI=''
           while IFS='|' read -r candidate_site candidate_archi; do
             [ -n "$candidate_site" ] || continue
-            set +e
-            out=$(iotlab-experiment submit -n "EAS-plumbing-${GITHUB_RUN_ID}-${candidate_site}" -d 10 -l "1,archi=${candidate_archi}+site=${candidate_site}" 2>&1); rc=$?
-            set -e
-            printf '%s\n' "$out" >> "$RUN_DIR/reservation_attempts.log"
-            [ "$rc" -eq 0 ] || continue
-            cid=$(printf '%s' "$out" | python -c 'import re,sys; m=re.search(r"\"id\"\s*:\s*(\d+)",sys.stdin.read()); print(m.group(1) if m else "")')
-            [ -n "$cid" ] || continue
+            set +e; out=$(iotlab-experiment submit -n "EAS-plumbing-${GITHUB_RUN_ID}-${candidate_site}" -d 10 -l "1,archi=${candidate_archi}+site=${candidate_site}" 2>&1); rc=$?; set -e
+            printf '%s\n' "$out" >> "$RUN_DIR/reservation_attempts.log"; [ "$rc" -eq 0 ] || continue
+            cid=$(printf '%s' "$out" | python -c 'import re,sys; m=re.search(r"\"id\"\s*:\s*(\d+)",sys.stdin.read()); print(m.group(1) if m else "")'); [ -n "$cid" ] || continue
             set +e; iotlab-experiment wait -i "$cid" --timeout 120 --cancel-on-timeout >> "$RUN_DIR/reservation_attempts.log" 2>&1; wrc=$?; set -e
             if [ "$wrc" -eq 0 ]; then EXP_ID="$cid"; SITE="$candidate_site"; ARCHI="$candidate_archi"; break; fi
           done < "$RUN_DIR/candidate_sites.txt"
-          [ -n "$EXP_ID" ] || { echo "No A8 reservation obtained." >&2; exit 6; }
+          [ -n "$EXP_ID" ] || exit 6
           echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"; echo "SITE=$SITE" >> "$GITHUB_ENV"; echo "ARCHI=$ARCHI" >> "$GITHUB_ENV"
           printf 'experiment_id=%s\nsite=%s\narchi=%s\n' "$EXP_ID" "$SITE" "$ARCHI" | tee "$RUN_DIR/selected_experiment.txt"
 
@@ -133,8 +121,7 @@ jobs:
           python - <<'PY'
           import json,os,re
           from pathlib import Path
-          item=json.loads(Path('fit-smoke/experiment_nodes.json').read_text())['items'][0]; addr=item['network_address']
-          m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+          item=json.loads(Path('fit-smoke/experiment_nodes.json').read_text())['items'][0]; addr=item['network_address']; m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
           if not m: raise SystemExit('Cannot parse '+addr)
           nid=m.group(1); site=os.environ['SITE']; node=f'node-a8-{nid}.{site}.iot-lab.info'
           with open(os.environ['GITHUB_ENV'],'a') as f: f.write(f'NODE_ID={nid}\nNODE_ADDRESS={addr}\nNODE_SSH={node}\n')
@@ -148,7 +135,7 @@ jobs:
           cat > "$HOME/.ssh/config" <<EOF
           Host fit-frontend
             HostName ${SITE}.iot-lab.info
-            User ${FIT_USERNAME}
+            User ${FIT_SSH_LOGIN}
             IdentityFile ${HOME}/.ssh/id_rsa
             IdentitiesOnly yes
             PubkeyAcceptedAlgorithms +ssh-rsa
@@ -176,7 +163,7 @@ jobs:
             if ssh -o ConnectTimeout=8 fit-a8 'echo a8_ssh=PASS; uname -a' 2>&1 | tee -a "$RUN_DIR/a8_boot.log"; then ok=1; break; fi
             sleep 5
           done
-          [ "$ok" -eq 1 ] || { echo "a8_ssh=FAIL" | tee -a "$RUN_DIR/a8_boot.log"; exit 7; }
+          [ "$ok" -eq 1 ] || exit 7
 
       - name: Prestage official firmware and probe through shared NFS
         shell: bash
@@ -206,10 +193,7 @@ jobs:
           import json,os
           from datetime import datetime,timezone
           from pathlib import Path
-          Path('fit-smoke').mkdir(exist_ok=True)
-          out={k:os.getenv(k) for k in ['EXP_ID','SITE','ARCHI','NODE_ID','NODE_ADDRESS','NODE_SSH']}
-          out.update({'evidence_class':'EAS_A8M3_PLUMBING_NON_SCORED','eas_source_commit':'75e90de8d6ba72b834f84b0f2b58414550140672','github_run_id':os.getenv('GITHUB_RUN_ID'),'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')})
-          Path('fit-smoke/metadata.json').write_text(json.dumps(out,indent=2)+'\n')
+          Path('fit-smoke').mkdir(exist_ok=True); out={k:os.getenv(k) for k in ['EXP_ID','SITE','ARCHI','NODE_ID','NODE_ADDRESS','NODE_SSH','FIT_SSH_LOGIN']}; out.update({'evidence_class':'EAS_A8M3_PLUMBING_NON_SCORED','eas_source_commit':'75e90de8d6ba72b834f84b0f2b58414550140672','github_run_id':os.getenv('GITHUB_RUN_ID'),'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}); Path('fit-smoke/metadata.json').write_text(json.dumps(out,indent=2)+'\n')
           PY
 
       - name: Cleanup experiment and ephemeral key
