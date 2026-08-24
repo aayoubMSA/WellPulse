@@ -12,7 +12,7 @@ on:
       - "tests/**"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   unittest:
@@ -25,8 +25,55 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run deterministic unit tests
+      - name: Run deterministic unit tests and write evidence
+        id: tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/local
+          set +e
+          python -m unittest discover -s tests -v > /tmp/unit-tests.log 2>&1
+          RC=$?
+          set -e
+          {
+            echo "# Local unit-test gate — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Python: $(python --version 2>&1)"
+            if [[ "$RC" -eq 0 ]]; then
+              echo "- Gate: **PASS**"
+            else
+              echo "- Gate: **FAIL**"
+              echo "- Exit code: \`$RC\`"
+            fi
+            echo
+            echo '```text'
+            tail -n 120 /tmp/unit-tests.log
+            echo '```'
+          } > evidence/local/unit-tests-latest.md
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+
+      - name: Commit sanitized test evidence
+        if: github.event_name == 'push' && always()
         shell: bash
         run: |
           set -euo pipefail
-          python -m unittest discover -s tests -v
+          if [[ ! -f evidence/local/unit-tests-latest.md ]]; then
+            exit 0
+          fi
+          if git diff --quiet -- evidence/local/unit-tests-latest.md && git ls-files --error-unmatch evidence/local/unit-tests-latest.md >/dev/null 2>&1; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/local/unit-tests-latest.md
+          git commit -m "Record local unit-test evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Enforce unit-test result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.tests.outputs.rc }}" = "0"
