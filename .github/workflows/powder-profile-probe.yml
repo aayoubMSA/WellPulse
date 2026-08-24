@@ -17,6 +17,7 @@ jobs:
     env:
       PORTAL_HTTP: https://boss.emulab.net:43794
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      HANDOVER_PROFILE_ID: d7d95166-c42a-11eb-b1eb-e4434b2381fc
     steps:
       - uses: actions/checkout@v4
       - name: Install official Portal API client
@@ -26,33 +27,51 @@ jobs:
           [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-      - name: Capture read-only CLI help
+      - name: Resolve published srsRAN handover profile UUID
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/powder
+          set +e
+          portal-cli profile get --profile-id "$HANDOVER_PROFILE_ID" >/tmp/profile.json 2>/tmp/profile.err
+          RC=$?
+          set -e
           OUT=evidence/powder/profile-probe.md
           {
-            echo "# POWDER API create-options probe"
+            echo "# POWDER profile identity probe"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
             echo "- Resource action attempted: **NONE**"
             echo "- Token content recorded: **NO**"
-            echo
-            echo "## experiment create help"
-            echo '```text'
-            NO_COLOR=1 portal-cli experiment create --help 2>&1
-            echo '```'
+            echo "- Requested profile UUID: \`$HANDOVER_PROFILE_ID\`"
+            if [[ "$RC" -eq 0 ]]; then
+              echo "- Profile-get gate: **PASS**"
+              echo "- Returned JSON keys: \`$(jq -r 'keys | join(",")' /tmp/profile.json)\`"
+              echo "- Profile ID: \`$(jq -r '.id // "unknown"' /tmp/profile.json)\`"
+              echo "- Profile name: \`$(jq -r '.name // "unknown"' /tmp/profile.json)\`"
+              echo "- Profile project: \`$(jq -r '.project // .profile_project // "unknown"' /tmp/profile.json)\`"
+              echo "- Creator: \`$(jq -r '.creator // "unknown"' /tmp/profile.json)\`"
+              echo "- Version: \`$(jq -r '.version // .version_uuid // "unknown"' /tmp/profile.json)\`"
+              echo "- Repository URL: \`$(jq -r '.repository_url // .repository // "unknown"' /tmp/profile.json)\`"
+            else
+              echo "- Profile-get gate: **FAIL**"
+              echo "- CLI exit code: \`$RC\`"
+              echo "- Diagnostic: profile UUID did not resolve through the current Portal API."
+            fi
           } > "$OUT"
+          [[ "$RC" -eq 0 ]] || exit "$RC"
       - name: Commit probe evidence
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
+          OUT=evidence/powder/profile-probe.md
+          [[ -f "$OUT" ]] || exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add evidence/powder/profile-probe.md
+          git add "$OUT"
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Record POWDER API create-options probe"
+          git commit -m "Record POWDER profile identity probe"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
