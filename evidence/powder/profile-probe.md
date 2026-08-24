@@ -1,23 +1,9 @@
-# POWDER profile/API create probe
+# POWDER API create-options probe
 
-- Checked UTC: 2026-08-24T17:26:21Z
-- GitHub SHA: 52f2a189e7009a206b91dcdddc43ed64b2986ddc
+- Checked UTC: 2026-08-24T17:26:59Z
+- GitHub SHA: 5abb72d82129647112b8acbd1ee1b8acbc282904
 - Resource action attempted: **NONE**
 - Token content recorded: **NO**
-
-## profile get help
-```text
-[1m                                                                                [0m
-[1m [0m[1mUsage: [0m[1mportal-cli profile get [OPTIONS][0m[1m                                       [0m[1m [0m
-[1m                                                                                [0m
- Retrieve a specific profile                                                    
-                                                                                
-[2m╭─[0m[2m Options [0m[2m───────────────────────────────────────────────────────────────────[0m[2m─╮[0m
-[2m│[0m *  [1m-[0m[1m-profile[0m[1m-id[0m        [1mTEXT[0m  The target experiment ID. [2m[required][0m            [2m│[0m
-[2m│[0m    [1m-[0m[1m-help[0m              [1m    [0m  Show this message and exit.                     [2m│[0m
-[2m╰──────────────────────────────────────────────────────────────────────────────╯[0m
-
-```
 
 ## experiment create help
 ```text
@@ -78,23 +64,4 @@
 [2m│[0m                                                     exit.                    [2m│[0m
 [2m╰──────────────────────────────────────────────────────────────────────────────╯[0m
 
-```
-
-## ExperimentCreate schema excerpt
-```text
-schema: ExperimentCreate
-required: ['name', 'project', 'profile_name', 'profile_project']
-name default= None nullable= None description= A human readable name for the experiment
-project default= None nullable= None description= The project the experiment is instantiated in.
-group default= None nullable= True description= The project subgroup the experiment is instantiated in.
-profile_name default= None nullable= None description= The name of the profile.
-profile_project default= None nullable= None description= The name of the profile project
-start_at default= None nullable= True description= Schedule experiment to start at a future time
-stop_at default= None nullable= True description= Schedule experiment to stop at a future time
-duration default= None nullable= True description= Initial experiment duration in hours
-paramset_name default= None nullable= True description= Optional name of a parameter set to apply to the profile
-paramset_owner default= None nullable= True description= The owner of the parameter set
-bindings default= None nullable= None description= Optional bindings to apply to the profile as a JSON object
-refspec default= None nullable= None description= For a repository based profile, optionally specify a refspec[:hash] to use instead of the HEAD of the default branch
-sshpubkey default= None nullable= True description= Additional ssh public key for the experiment.
 ```
