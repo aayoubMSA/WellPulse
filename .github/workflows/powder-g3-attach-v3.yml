@@ -1,0 +1,59 @@
+name: POWDER G3 Attach v3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - powder/g3-trigger-v3.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-g3-attach-v3
+  cancel-in-progress: false
+
+jobs:
+  g3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run isolated attach-only G3
+        id: g3
+        continue-on-error: true
+        shell: bash
+        run: bash powder/g3_attach_v3.sh powder/g3-trigger-v3.json
+
+      - name: Commit sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/g3-simstack-latest.md evidence/powder/g3/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record POWDER G3 attach v3 evidence'
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Final G3 verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -f /tmp/wellpulse-g3-v3/final.env ]] || { echo 'Missing final.env'; exit 30; }
+          source /tmp/wellpulse-g3-v3/final.env
+          echo "G3 process gate: $PROCESS_GATE"
+          echo "G3 cleanup gate: $CLEANUP"
+          [[ "$PROCESS_GATE" == PASS && "$CLEANUP" == PASS ]] || exit 30
+          echo G3_SIMSTACK_PASS
