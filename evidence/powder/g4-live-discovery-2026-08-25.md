@@ -1,6 +1,6 @@
 # POWDER G4 live controlled-RF discovery — 2026-08-25
 
-Status: **DISCOVERY PASS / ALLOCATION BLOCKED AT CURRENT TIME**
+Status: **DISCOVERY PASS / RESERVATION APPROVED / LIFECYCLE PENDING**
 
 Evidence class: **INFRASTRUCTURE_DISCOVERY_ONLY_NON_SCORED**
 
@@ -31,7 +31,7 @@ For the WellPulse controlled-RF lane, `srsLTE UE (B210)` is the preferred candid
 
 The B210 selection exposes a topology with `rue1` and `enb1`, corresponding to the controlled-RF NUC5300/B210 path.
 
-No experiment has yet been created during this G4 qualification attempt.
+No G4 experiment has yet been instantiated.
 
 ## Live resource-availability snapshot
 
@@ -60,16 +60,33 @@ and advancing to the Schedule step, the live Portal displayed this admission-con
 
 The Portal therefore exposed an actual hidden/late-bound dependency relevant to this profile: **`nuc5300` availability/admission control**.
 
-No `Finish` action was taken and no G4 experiment/resource allocation was created.
+No `Finish` action was taken at the time of this warning and no G4 experiment/resource allocation was created.
+
+## Reservation result
+
+A manual reservation request was then created under project `WellPulse` for two NUC5300/B210 resources represented by individual nodes:
+
+- `Emulab / nuc1 / 1`
+- `Emulab / nuc2 / 1`
+
+Reservation settings:
+
+- OTA Lab: **not selected**
+- frequency-range fields: left blank for this conducted-RF qualification request
+- class reservation: **No**
+- requested window: **2026-08-25 19:00 to 22:00** (Portal-local / Africa-Cairo context used by the operator)
+- purpose: non-scored G4 infrastructure qualification only
+
+The POWDER Schedule page subsequently showed the reservation row with status **Approved** and the same start/end window.
+
+This approved reservation is per-project. It does not itself instantiate the G4 experiment and does not constitute a G4 lifecycle PASS.
 
 ## Interpretation
 
 **G4 discovery sub-gate: PASS.**
 
-**Immediate allocation at the observed time: BLOCKED by `nuc5300` usage/reservations.**
+**Required controlled-RF reservation: APPROVED for 2026-08-25 19:00–22:00.**
 
-This is not an entitlement failure and not a scientific failure. The next defensible action is to use the POWDER reservation/scheduling mechanism to identify and reserve a future window for the required `nuc5300` resources under project `WellPulse`, then instantiate exactly one manual non-scored G4 lifecycle qualification inside that reservation.
+G4 overall remains **PENDING** until the scheduled/manual experiment reaches READY and passes topology/manifest verification, explicit-key SSH, controlled-RF lifecycle sanity, clean termination, and zero active usage.
 
-G4 overall remains **PENDING** until READY -> topology/manifest verification -> explicit-key SSH -> controlled-RF lifecycle sanity -> clean termination -> zero active usage all pass.
-
-No scientific claim is supported by this discovery step. Scientific completion remains **20%** and `scored_runs_authorized=false`.
+No scientific claim is supported by this discovery/reservation step. Scientific completion remains **20%** and `scored_runs_authorized=false`.
