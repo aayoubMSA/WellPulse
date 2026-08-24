@@ -1,0 +1,321 @@
+name: POWDER Lifecycle Plumbing
+
+on:
+  push:
+    paths:
+      - ".powder-lifecycle-trigger"
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Type PLUMBING to authorize one non-scored lifecycle dry run"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-lifecycle
+  cancel-in-progress: false
+
+jobs:
+  plumbing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_PROJECT: WellPulse
+      PROFILE_NAME: srs-rf-matrix
+      PROFILE_PROJECT: PowderTeam
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate explicit plumbing authorization
+        shell: bash
+        env:
+          INPUT_EXECUTE: ${{ github.event.inputs.execute }}
+        run: |
+          set -euo pipefail
+          AUTH="${INPUT_EXECUTE:-}"
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            [[ -f .powder-lifecycle-trigger ]] || { echo "Missing lifecycle trigger."; exit 2; }
+            AUTH="$(awk -F= '$1=="execute" {print $2}' .powder-lifecycle-trigger | tail -n1 | tr -d '\r')"
+          fi
+          [[ "$AUTH" == "PLUMBING" ]] || { echo "Lifecycle not authorized: expected PLUMBING."; exit 2; }
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN."; exit 2; }
+          [[ -n "$POWDER_USERNAME" ]] || { echo "Missing POWDER_USERNAME."; exit 2; }
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "Missing POWDER_SSH_PRIVATE_KEY."; exit 2; }
+          echo "Non-scored plumbing lifecycle explicitly authorized."
+
+      - name: Install official Portal API client and SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          mkdir -p "$HOME/.ssh" evidence/powder /tmp/powder-life
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Create one-hour non-scored POWDER experiment
+        id: create
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUFFIX="${GITHUB_RUN_ID: -7}"
+          EXPNAME="wpplmb${SUFFIX}"
+          # Hard guard against the portal's 16-character experiment-name limit.
+          [[ ${#EXPNAME} -le 16 ]] || { echo "Generated experiment name is too long."; exit 2; }
+          echo "$EXPNAME" > /tmp/powder-life/name
+
+          portal-cli experiment create \
+            --name "$EXPNAME" \
+            --project "$POWDER_PROJECT" \
+            --profile-name "$PROFILE_NAME" \
+            --profile-project "$PROFILE_PROJECT" \
+            --duration 1 \
+            > /tmp/powder-life/create.json
+
+          EXPID="$(jq -r '.id // empty' /tmp/powder-life/create.json)"
+          [[ -n "$EXPID" ]] || { echo "Create returned no experiment ID."; cat /tmp/powder-life/create.json; exit 3; }
+          printf '%s\n' "$EXPID" > /tmp/powder-life/experiment_id
+          echo "experiment_id=$EXPID" >> "$GITHUB_OUTPUT"
+          echo "Experiment created; ID recorded for mandatory cleanup."
+
+      - name: Wait for experiment READY
+        id: ready
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPID="$(cat /tmp/powder-life/experiment_id)"
+          READY=0
+          for i in $(seq 1 60); do
+            set +e
+            portal-cli experiment get --experiment-id "$EXPID" > /tmp/powder-life/status.json 2>/tmp/powder-life/status.err
+            RC=$?
+            set -e
+            if [[ "$RC" -ne 0 ]]; then
+              echo "Status query attempt $i failed; retrying."
+              sleep 20
+              continue
+            fi
+            STATUS="$(jq -r '.status // "unknown"' /tmp/powder-life/status.json)"
+            echo "POWDER status: $STATUS"
+            if [[ "$STATUS" == "ready" ]]; then
+              READY=1
+              break
+            fi
+            if [[ "$STATUS" =~ ^(failed|error|terminated)$ ]]; then
+              echo "Experiment entered terminal failure state: $STATUS"
+              exit 4
+            fi
+            sleep 20
+          done
+          [[ "$READY" -eq 1 ]] || { echo "Experiment did not reach READY within 20 minutes."; exit 5; }
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Retrieve manifest and discover SSH logins
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPID="$(cat /tmp/powder-life/experiment_id)"
+          portal-cli experiment manifests get --experiment-id "$EXPID" > /tmp/powder-life/manifests.json
+
+          python - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          obj = json.loads(Path('/tmp/powder-life/manifests.json').read_text())
+          xml_strings = []
+          def walk(x):
+              if isinstance(x, dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x, list):
+                  for v in x: walk(v)
+              elif isinstance(x, str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()):
+                  xml_strings.append(x)
+          walk(obj)
+
+          logins = []
+          client_ids = []
+          for text in xml_strings:
+              try:
+                  root = ET.fromstring(text)
+              except Exception:
+                  continue
+              for el in root.iter():
+                  tag = el.tag.rsplit('}',1)[-1]
+                  if tag == 'node' and el.attrib.get('client_id'):
+                      client_ids.append(el.attrib['client_id'])
+                  if tag == 'login' and el.attrib.get('hostname'):
+                      logins.append((el.attrib.get('username',''), el.attrib['hostname'], el.attrib.get('port','22')))
+
+          seen=set(); unique=[]
+          for item in logins:
+              if item not in seen:
+                  seen.add(item); unique.append(item)
+          Path('/tmp/powder-life/logins.tsv').write_text(''.join(f'{u}\t{h}\t{p}\n' for u,h,p in unique))
+          Path('/tmp/powder-life/client_ids.txt').write_text('\n'.join(dict.fromkeys(client_ids)) + ('\n' if client_ids else ''))
+          print(f'XML manifests parsed: {len(xml_strings)}')
+          print(f'Logical nodes found: {len(set(client_ids))}')
+          print(f'SSH login endpoints found: {len(unique)}')
+          PY
+
+          [[ -s /tmp/powder-life/logins.tsv ]] || { echo "No SSH login endpoint found in manifest."; exit 6; }
+          echo "login_count=$(wc -l < /tmp/powder-life/logins.tsv | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Verify SSH on one allocated experiment node
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=0
+          : > /tmp/powder-life/ssh-success.txt
+          while IFS=$'\t' read -r MANIFEST_USER HOST PORT; do
+            [[ -n "$HOST" ]] || continue
+            USERNAME="${MANIFEST_USER:-$POWDER_USERNAME}"
+            echo "Trying allocated endpoint $HOST:$PORT"
+            set +e
+            ssh \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              -o ServerAliveInterval=10 \
+              -o ServerAliveCountMax=2 \
+              -o StrictHostKeyChecking=accept-new \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              -p "$PORT" \
+              "$USERNAME@$HOST" \
+              'printf "REMOTE_HOST="; hostname; printf "REMOTE_USER="; whoami; printf "UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf "KERNEL="; uname -srmo' \
+              > /tmp/powder-life/ssh.out 2>/tmp/powder-life/ssh.err
+            RC=$?
+            set -e
+            if [[ "$RC" -eq 0 ]]; then
+              printf '%s\t%s\t%s\n' "$USERNAME" "$HOST" "$PORT" > /tmp/powder-life/ssh-success.txt
+              PASS=1
+              break
+            fi
+          done < /tmp/powder-life/logins.tsv
+          [[ "$PASS" -eq 1 ]] || { echo "SSH failed on all allocated login endpoints."; tail -n 20 /tmp/powder-life/ssh.err || true; exit 7; }
+          cat /tmp/powder-life/ssh.out
+          echo "pass=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build sanitized lifecycle evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/lifecycle-latest.md
+          NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          EXPID="$(cat /tmp/powder-life/experiment_id 2>/dev/null || true)"
+          EXPNAME="$(cat /tmp/powder-life/name 2>/dev/null || true)"
+          STATUS="$(jq -r '.status // "unknown"' /tmp/powder-life/status.json 2>/dev/null || echo unknown)"
+          PROFILE_ID="$(jq -r '.profile_id // "not_captured"' /tmp/powder-life/status.json 2>/dev/null || echo not_captured)"
+          PROFILE_NAME_ACTUAL="$(jq -r '.profile_name // "unknown"' /tmp/powder-life/status.json 2>/dev/null || echo unknown)"
+          PROFILE_PROJECT_ACTUAL="$(jq -r '.profile_project // "unknown"' /tmp/powder-life/status.json 2>/dev/null || echo unknown)"
+          BINDINGS="$(jq -c '.bindings // {}' /tmp/powder-life/status.json 2>/dev/null || echo '{}')"
+          LOGIN_COUNT="$(wc -l < /tmp/powder-life/logins.tsv 2>/dev/null | tr -d ' ' || echo 0)"
+          SUCCESS_ENDPOINT="$(cut -f2 /tmp/powder-life/ssh-success.txt 2>/dev/null || true)"
+          {
+            echo "# POWDER automated lifecycle plumbing — latest"
+            echo
+            echo "- Checked UTC: $NOW"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Evidence class: **INFRASTRUCTURE_ONLY_NON_SCORED**"
+            echo "- Project: \`$POWDER_PROJECT\`"
+            echo "- Requested profile: \`$PROFILE_PROJECT/$PROFILE_NAME\`"
+            echo "- Experiment name: \`$EXPNAME\`"
+            echo "- Experiment ID: \`$EXPID\`"
+            echo "- Last observed status: \`$STATUS\`"
+            echo "- Actual profile: \`$PROFILE_PROJECT_ACTUAL/$PROFILE_NAME_ACTUAL\`"
+            echo "- Actual profile ID: \`$PROFILE_ID\`"
+            echo "- Returned bindings/defaults: \`$BINDINGS\`"
+            echo "- Manifest SSH endpoints discovered: \`$LOGIN_COUNT\`"
+            if [[ -n "$SUCCESS_ENDPOINT" ]]; then
+              echo "- SSH gate: **PASS**"
+              echo "- Successful allocated endpoint: \`$SUCCESS_ENDPOINT\`"
+            else
+              echo "- SSH gate: **NOT_PASSING_YET**"
+            fi
+            if [[ -s /tmp/powder-life/client_ids.txt ]]; then
+              echo "- Logical node IDs: \`$(paste -sd, /tmp/powder-life/client_ids.txt)\`"
+            fi
+            echo "- RF manipulation attempted: **NO**"
+            echo "- Scientific telemetry run attempted: **NO**"
+            echo "- Portal token/private key recorded: **NO**"
+            if [[ -s /tmp/powder-life/ssh.out ]]; then
+              echo
+              echo "## Read-only remote metadata"
+              echo '```text'
+              cat /tmp/powder-life/ssh.out
+              echo '```'
+            fi
+          } > "$OUT"
+
+      - name: Mandatory terminate allocated experiment
+        if: always()
+        id: terminate
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [[ ! -s /tmp/powder-life/experiment_id ]]; then
+            echo "No experiment ID exists; nothing to terminate."
+            echo "terminated=not_created" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          EXPID="$(cat /tmp/powder-life/experiment_id)"
+          set +e
+          portal-cli experiment terminate --experiment-id "$EXPID" > /tmp/powder-life/terminate.out 2>/tmp/powder-life/terminate.err
+          RC=$?
+          set -e
+          if [[ "$RC" -eq 0 ]]; then
+            echo "Termination request accepted."
+            echo "terminated=requested" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A get returning no experiment after a failed terminate request is also safe.
+          set +e
+          portal-cli experiment get --experiment-id "$EXPID" > /tmp/powder-life/postterm.json 2>/tmp/powder-life/postterm.err
+          GETRC=$?
+          set -e
+          if [[ "$GETRC" -ne 0 ]]; then
+            echo "Experiment no longer resolves; cleanup considered complete."
+            echo "terminated=already_absent" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "CRITICAL: experiment still resolves after termination failure."
+          cat /tmp/powder-life/terminate.err >&2 || true
+          exit 20
+
+      - name: Append cleanup state to evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/lifecycle-latest.md
+          [[ -f "$OUT" ]] || echo "# POWDER automated lifecycle plumbing — latest" > "$OUT"
+          echo "- Cleanup gate: **${{ steps.terminate.outputs.terminated || 'UNKNOWN' }}**" >> "$OUT"
+
+      - name: Commit sanitized lifecycle evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/lifecycle-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record POWDER automated lifecycle plumbing evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
