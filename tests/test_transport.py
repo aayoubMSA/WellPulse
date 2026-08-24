@@ -11,6 +11,8 @@ from wellpulse.transport import PahoQoS1Config, PahoQoS1Session
 
 
 class PahoTransportTests(unittest.TestCase):
+    """Broker-free checks for the frozen WP-PWD01 low-level transport contract."""
+
     def test_frozen_public_config_is_reproducible_and_secret_safe(self):
         cfg = PahoQoS1Config(
             host="broker.example",
