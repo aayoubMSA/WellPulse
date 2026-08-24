@@ -1,0 +1,17 @@
+{
+  "actual_newline_count": 0,
+  "base64_decoded_starts_private_header": false,
+  "base64_decoded_starts_public_key": false,
+  "base64_decoded_starts_putty_key": false,
+  "contains_cr": false,
+  "contains_literal_backslash_n": false,
+  "length_chars": 108,
+  "normalized_starts_private_header": false,
+  "normalized_starts_public_key": true,
+  "normalized_starts_putty_key": false,
+  "raw_starts_private_header": false,
+  "raw_starts_public_key": true,
+  "raw_starts_putty_key": false,
+  "secret_present": true,
+  "whole_secret_is_strict_base64": false
+}
