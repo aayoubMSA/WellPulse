@@ -1,6 +1,6 @@
 # WP0 — Novelty & Venue Lock — 2026-08-24
 
-**Status:** DESIGN LOCK FOR THE POWDER CAMPAIGN. This is not a submission decision and does not claim a current quartile without re-verification at submission.
+**Status:** DESIGN LOCK FOR THE POWDER CAMPAIGN, WITH PRE-SCORE COMPARATOR REVIEW OPENED 2026-08-25. This is not a submission decision and does not claim a current quartile without re-verification at submission.
 
 ## Publication objective
 
@@ -27,15 +27,15 @@ The contribution is **not** "we invented buffering" or "we used MQTT over 5G".
 The defensible contribution package is:
 
 1. **C1 — Lightweight durable telemetry semantics.** A record-identity preserving edge path with durable local queueing, checksums, explicit pending/sent state, and an idempotent sink/reconciliation path suitable for read-only industrial telemetry.
-2. **C2 — Strong matched baseline.** The primary comparison is against standard MQTT QoS 1 with automatic reconnect and no application-level disk durability/reconciliation. The legacy publish-only baseline remains a lower-bound/sanity reference only and is not the primary inferential comparator.
+2. **C2 — Matched primary baseline plus durable-client sensitivity requirement.** The primary causal comparison remains standard MQTT QoS 1 with automatic reconnect using the same low-level Paho Python transport as WellPulse, but without application-level disk durability/reconciliation. A deeper 2026-08-25 audit established that other standard Eclipse Paho clients provide file-backed persistence and persistent disconnected buffering, so B1 must not be described as the strongest durability configuration available in the MQTT ecosystem. A targeted durable-client comparator/sensitivity check must be resolved before scored execution.
 3. **C3 — Cross-layer validation ladder.** Real embedded hardware (FIT IoT-LAB) -> controlled physical RF impairment (POWDER attenuator matrix) -> compact over-the-air replication. Each layer answers a different validity question; evidence is not pooled as if it came from one population.
-4. **C4 — Failure-model separation.** Distinguish network-only impairment from compound network + gateway-process restart so the value of volatile MQTT state versus application-level durable state is measurable rather than assumed.
+4. **C4 — Failure-model separation.** Distinguish network-only impairment from compound network + gateway-process restart so the value of volatile transport state versus application-level durable record semantics is measured rather than assumed.
 5. **C5 — Publication-grade reproducibility.** Run-level manifests, frozen randomization, radio state, raw telemetry, packet/RAN logs where available, system overhead, checksums, and one-command reconstruction of paper tables/figures.
 
 ## Primary research questions
 
-- **RQ1 — Network resilience:** Under controlled real RF intermittency and hard outage, how do standard MQTT QoS 1 + reconnect and WellPulse differ in unique telemetry completeness, recovery behavior, and overhead?
-- **RQ2 — Durable recovery:** When a gateway process restarts during a real RF outage, does application-level disk durability + idempotent reconciliation preserve records that a memory-only MQTT path cannot guarantee across client restart?
+- **RQ1 — Network resilience:** Under controlled real RF intermittency and hard outage, how do a matched MQTT QoS 1 + reconnect baseline and WellPulse differ in unique telemetry completeness, recovery behavior, integrity, and overhead?
+- **RQ2 — Durable recovery:** When a gateway process restarts during a real RF outage, what additional record-level integrity/reconciliation value does WellPulse provide relative to volatile matched MQTT behavior, and does that value remain meaningful against a standard client configured with durable MQTT persistence?
 - **RQ3 — Transportability:** Are the observed effects consistent across the existing real embedded FIT evidence, POWDER conducted RF, and a compact POWDER OTA replication without claiming field/agricultural validation?
 
 ## Venue-fit lock
@@ -61,7 +61,7 @@ Use if the final emphasis is IoT + edge/cloud + experimental testbeds/research p
 
 Provisional story:
 
-> WellPulse is a lightweight offline-first IIoT telemetry gateway whose value is tested not by simulation alone but through a validation ladder spanning real embedded hardware, controlled physical RF impairment, and over-the-air replication. The study quantifies reliability, recovery, integrity, and resilience overhead against a standard MQTT reconnect baseline while preserving complete run-level provenance.
+> WellPulse is a lightweight offline-first IIoT telemetry gateway whose value is tested not by simulation alone but through a validation ladder spanning real embedded hardware, controlled physical RF impairment, and over-the-air replication. The study isolates application-level record durability and idempotent reconciliation from matched MQTT transport behavior, and stress-tests the interpretation against a durable standard MQTT-client comparator while preserving complete run-level provenance.
 
 Possible working title:
 
@@ -75,26 +75,43 @@ The POWDER/FIT campaign does not validate:
 - crop/agronomic outcomes;
 - field deployment reliability;
 - rural generalization unless a later outdoor experiment is explicitly added;
-- novelty of MQTT, generic store-and-forward, 5G, or buffering as standalone mechanisms.
+- novelty of MQTT, generic store-and-forward, 5G, buffering, client-side persistence, or offline buffering as standalone mechanisms.
 
 ## Kill/redirect criteria
 
 Before manuscript submission, redirect the paper if any of the following holds:
-- the strong MQTT baseline matches WellPulse on both network-only and restart scenarios with no meaningful integrity/recovery/overhead distinction;
+- a strong durable standard MQTT comparator eliminates any meaningful WellPulse distinction in integrity/recovery/overhead;
 - POWDER cannot produce a controlled physical-RF impairment trace distinguishable from software-only impairment;
 - OTA replication cannot be obtained and the final story overstates generalization;
 - the final contribution reduces to an implementation demo without a publishable empirical question.
 
 Negative or null results do **not** by themselves trigger a kill; a rigorously bounded negative result may still be publishable if the cross-testbed evidence is informative.
 
-## 2026-08-25 pre-G4 benchmark reaffirmation
+## 2026-08-25 pre-G4 benchmark status
 
-A broader manuscript-grade rapid structured benchmark was completed before G4 physical-RF execution and is preserved in:
+A broader manuscript-grade rapid structured benchmark is preserved in:
 
 `docs/WP0_RELATED_WORK_BENCHMARK_2026-08-25.md`
 
-The expanded benchmark covered current MQTT robustness/retransmission work, DTN/offline-first systems, edge/cloud reconciliation, cellular smart-farming, 5G store-and-forward, IIoT store-and-forward, reproducible FIT/POWDER testbed methodology, agricultural MQTT deployments, and official Eclipse Paho persistent-session limitations.
+The expanded benchmark covered current MQTT robustness/retransmission work, DTN/offline-first systems, edge/cloud reconciliation, cellular smart-farming, 5G store-and-forward, IIoT store-and-forward, reproducible FIT/POWDER testbed methodology, agricultural MQTT deployments, and official MQTT-client implementation semantics.
 
-**Outcome:** C1-C5 remain defensible only as a **compound architectural + causal experimental contribution package**. No individual buffering, MQTT, offline-first, reconciliation, 5G/LTE, or agriculture mechanism is claimed as unprecedented. No pre-G4 protocol amendment is required.
+A subsequent deeper comparator audit is preserved in:
 
-One mandatory manuscript-stage literature check remains: obtain and fully compare Gaspar et al., *The Price of Reliability: Stress-Testing MQTT in Practical IoT Communications*, IEEE Internet of Things Magazine (2026), DOI `10.1109/MIOT.2026.3681190`. Its metadata is confirmed, but its methods/results were not sufficiently exposed by the sources available during the 2026-08-25 benchmark and therefore were not inferred.
+`docs/WP0_COMPARATOR_AUDIT_2026-08-25.md`
+
+### Material finding
+
+The official Eclipse Paho Python documentation confirms that the current B1 implementation does not persist its MQTT client session across a process restart. However, official Eclipse Paho Java documentation provides file-backed client persistence, and its disconnected-buffer API supports a persist option; source-level inspection shows buffered outgoing messages can be written to the persistence layer.
+
+Therefore:
+
+- the C1-C5 contribution package remains viable, but its interpretation is narrower;
+- B1 remains useful as the **matched same-implementation causal comparator**;
+- B1 is no longer described as the strongest durable MQTT client configuration available generally;
+- a candidate `B2_MQTT_DURABLE_CLIENT` sensitivity comparator must be qualified locally and resolved before the scored scientific matrix is authorized;
+- G4 controlled-RF infrastructure qualification is unaffected and should proceed as scheduled;
+- `scored_runs_authorized=false` remains mandatory.
+
+The preferred provisional route is to retain B1 for the full matched primary comparison and add only a compact B2 sensitivity experiment in the failure scenarios where durable client persistence matters most, if a non-scored local semantics gate confirms B2's behavior. Exact B2 implementation, replication, and analysis remain **unfrozen** until that gate is completed.
+
+One additional mandatory manuscript-stage literature check remains: obtain and fully compare Gaspar et al., *The Price of Reliability: Stress-Testing MQTT in Practical IoT Communications*, IEEE Internet of Things Magazine (2026), DOI `10.1109/MIOT.2026.3681190`. Its bibliographic metadata is confirmed, but its methods/results were not sufficiently exposed by the sources available during this review and therefore were not inferred.
