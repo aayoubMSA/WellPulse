@@ -20,6 +20,8 @@
   - `srsran-handover` exploratory attempt `wphnd8201533`: not accepted as a controlled-RF baseline; do not treat its prior lifecycle output as current feasibility evidence.
   - two earlier `WP-G1-SIM` runs were troubleshooting attempts before the final Golden-key baseline and are not canonical evidence.
 - Current next manual gate: **G3 — simulated radio/data-path validation** using a current profile verified in the POWDER UI. Do not infer a current profile name from stale automation code or prior memory.
+- G3 safe attach automation: **PREPARED / NOT YET EXECUTED** in `.github/workflows/powder-g3-attach.yml`. Manual creation of a fresh `WP-G3-SIMSTACK` experiment remains required; after READY, the workflow may validate the exact experiment/profile/hardware/image, discover SSH from the manifest, execute the profile-authoritative file-based simulated path, capture sanitized evidence, and fail-safe terminate the validated experiment. It does not create POWDER resources.
+- Full resource-creating G3 workflow `.github/workflows/powder-g3-simstack.yml`: **UNAPPROVED / DO NOT RUN YET**. Its existence does not override the manual-first freeze.
 - Controlled physical-RF profile: **NOT YET FROZEN**. Selection must occur only after current manual UI/profile verification and a successful non-scored lifecycle/data-path gate.
 - WP0 novelty/venue design: **PASS / LOCKED FOR CAMPAIGN DESIGN**.
 - Primary venue-fit target: **Internet of Things (Elsevier)**; Computer Networks and Computer Communications retained as fit-dependent backups. Current Q1/indexing/APC status must be re-verified at submission.
@@ -54,7 +56,7 @@ Any older file that describes `srsran-handover` as a live/current feasible contr
 
 ### Next gates before any scored POWDER run
 
-1. **G3:** manually verify a current simulated radio/data-path profile and execute a non-scored simulated end-to-end path check.
+1. **G3:** create one fresh `srsLTE-SIM:9` experiment manually and, after READY, use the attach-only G3 workflow to execute the non-scored simulated end-to-end path check, capture evidence, and terminate cleanly.
 2. Identify a current controlled physical-RF profile through the live POWDER UI; freeze exact profile revision and hardware only after manual provisioning succeeds.
 3. Establish controlled-RF lifecycle manually: READY -> manifest -> SSH -> fail-safe terminate.
 4. Reproduce the frozen Paho session settings in the remote runtime manifest.
