@@ -1,7 +1,18 @@
 experiment_id: WP-PWD01
-protocol_version: v0.2
-status: DESIGN_FROZEN_PENDING_CALIBRATION_AND_BASELINE_GATE
+protocol_version: v0.3
+status: DESIGN_FROZEN_PENDING_LIFECYCLE_AND_RF_CALIBRATION
 scored_runs_authorized: false
+
+controlled_rf_profile:
+  selected_profile: TBD_AFTER_NON_SCORED_FEASIBILITY
+  rejected_current_profile:
+    name: PowderTeam/srs-rf-matrix
+    reason: current topology requires n310; WellPulse entitlement is 0 and portal says unchanged resubmission will always fail
+  candidate_profile:
+    name: srsran-handover
+    role: feasibility_only_until_lifecycle_gate_passes
+    rat: LTE
+    scientific_requirement: programmable physical RF attenuation; RAT is not itself a novelty claim
 
 randomization:
   paired_blocks: true
@@ -9,14 +20,28 @@ randomization:
   unit_of_analysis: run
   rule: randomize B1/W1 order within each paired block before scored execution
 
+matched_mqtt_transport:
+  implementation: PahoQoS1Session
+  package: paho-mqtt==2.1.0
+  protocol: MQTTv311
+  qos: 1
+  tls_scored_path: true
+  clean_session: false
+  keepalive_s: 60
+  reconnect_min_delay_s: 1
+  reconnect_max_delay_s: 8
+  max_queued_messages: 4096
+  max_inflight_messages: 20
+  application_level_persistence: false
+  matching_rule: identical low-level session for B1 and W1; only W1 adds application-level disk durability/reconciliation
+
 modes:
   B1_MQTT_QOS1:
     role: PRIMARY_COMPARATOR
-    description: Standard MQTT v3.1.1 QoS1 TLS with automatic reconnect and no application-level disk durability/reconciliation
-    exact_client_semantics: TBD_BEFORE_SCORE_GATE
+    description: Frozen matched Paho MQTTv311 QoS1 session with automatic reconnect and bounded volatile queue; no application-level disk durability/reconciliation
   W1_OFFLINE_FIRST:
     role: TREATMENT
-    description: WellPulse durable SQLite queue + record identity/checksum + reconnect/replay + idempotent receiver/reconciliation
+    description: Same frozen Paho session plus WellPulse durable SQLite queue, record identity/checksum, replay and idempotent reconciliation
   B0_PUBLISH_ONLY:
     role: LEGACY_SANITY_ONLY
     description: Historical non-durable lower-bound baseline; excluded from primary POWDER scored matrix
@@ -41,6 +66,7 @@ rf_states:
 
 workload:
   telemetry_rate_hz: 1
+  generation_must_not_block_on_puback: true
   warmup_duration_s: 30
   pre_impairment_q0_s: 60
   impairment_window_s: 120
@@ -111,11 +137,12 @@ ota_replication:
   paired_blocks_per_scenario: 3
   scored_runs: 12
   do_not_repeat: S3_OUTAGE_RESTART
+  rat_matching_preference: use same RAT as conducted layer when a scientifically adequate current OTA profile is executable
 
 freeze_requirements:
-  - Automated POWDER lifecycle passes create-ready-manifest-SSH-terminate with fail-safe cleanup
-  - Implement and locally verify B1 strong MQTT baseline
-  - Freeze exact Paho MQTT version/session/reconnect/queue semantics
+  - Select one executable controlled physical-RF profile and pass automated create-ready-manifest-SSH-terminate with fail-safe cleanup
+  - Pass pinned Paho 2.1.0 local transport tests and reproduce exact settings in remote runtime manifest
+  - Verify payload traverses experimental cellular data path rather than POWDER control network
   - Calibrate numeric Q0-Q3 and record observed RF context
   - Freeze recovery horizon H
   - Freeze exact profile identifier/version/bindings and node classes
