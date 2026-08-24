@@ -1,0 +1,87 @@
+name: POWDER API Probe
+
+on:
+  push:
+    paths:
+      - ".powder-api-probe-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-api-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout WellPulse
+        uses: actions/checkout@v4
+
+      - name: Probe official Portal API client without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/portal-api
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+
+          OUT="evidence/powder/api-probe.md"
+          mkdir -p "$(dirname "$OUT")"
+
+          {
+            echo "# POWDER Portal API probe"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- WellPulse SHA: ${GITHUB_SHA}"
+            echo "- Source: official emulab/portal-api repository"
+            echo "- Credentials used: **NONE**"
+            echo "- Resource action attempted: **NONE**"
+            echo
+            echo "## Repository top level"
+            echo '```text'
+            find /tmp/portal-api -maxdepth 2 -type f | sed 's#^/tmp/portal-api/##' | sort | head -n 120
+            echo '```'
+            echo
+            echo "## README command/auth excerpts"
+            echo '```text'
+            if [[ -f /tmp/portal-api/README.md ]]; then
+              grep -nEi -C 3 'install|token|auth|cli|experiment|instantiate|terminate|profile|project|manifest|status' /tmp/portal-api/README.md | head -n 260 || true
+            else
+              echo "README.md not found"
+            fi
+            echo '```'
+            echo
+            echo "## Python/package metadata"
+            echo '```text'
+            for f in pyproject.toml setup.py setup.cfg requirements.txt; do
+              if [[ -f "/tmp/portal-api/$f" ]]; then
+                echo "--- $f ---"
+                sed -n '1,220p' "/tmp/portal-api/$f"
+              fi
+            done
+            echo '```'
+            echo
+            echo "## Candidate CLI entry points and examples"
+            echo '```text'
+            grep -RInE --exclude-dir=.git 'console_scripts|entry_points|argparse|click\.group|Typer|tokenRefresh|instantiate|terminate|manifest|experiment' /tmp/portal-api 2>/dev/null | head -n 320 || true
+            echo '```'
+          } > "$OUT"
+
+      - name: Commit sanitized probe evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- evidence/powder/api-probe.md && git ls-files --error-unmatch evidence/powder/api-probe.md >/dev/null 2>&1; then
+            echo "No probe evidence change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/api-probe.md
+          git commit -m "Record POWDER Portal API probe"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
