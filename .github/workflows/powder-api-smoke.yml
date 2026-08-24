@@ -1,0 +1,97 @@
+name: POWDER API Smoke
+
+on:
+  push:
+    paths:
+      - ".powder-api-smoke-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-api-smoke
+  cancel-in-progress: false
+
+jobs:
+  api-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+
+    steps:
+      - name: Checkout WellPulse
+        uses: actions/checkout@v4
+
+      - name: Validate API secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN secret"; exit 2; }
+          echo "POWDER API token secret is configured."
+
+      - name: Install official Portal API client
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          portal-cli --help >/dev/null
+
+      - name: Run read-only experiment-list API call
+        id: smoke
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/powder
+          set +e
+          portal-cli experiment list >/tmp/powder-experiments.json 2>/tmp/powder-api.err
+          RC=$?
+          set -e
+
+          OUT=evidence/powder/api-smoke.md
+          {
+            echo "# POWDER Portal API smoke — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- WellPulse SHA: ${GITHUB_SHA}"
+            echo "- API action: \`experiment list\` (read-only)"
+            echo "- Resource action attempted: **NONE**"
+            if [[ "$RC" -eq 0 ]]; then
+              COUNT=$(jq 'length' /tmp/powder-experiments.json 2>/dev/null || echo unknown)
+              WP_COUNT=$(jq '[.[] | select(.project == "WellPulse")] | length' /tmp/powder-experiments.json 2>/dev/null || echo unknown)
+              echo "- Gate: **POWDER_API_AUTH_PASS**"
+              echo "- Visible experiment count: \`$COUNT\`"
+              echo "- Visible WellPulse experiment count: \`$WP_COUNT\`"
+              echo "- Token content recorded: **NO**"
+            else
+              echo "- Gate: **POWDER_API_AUTH_FAIL**"
+              echo "- CLI exit code: \`$RC\`"
+              echo "- Token content recorded: **NO**"
+              echo "- Diagnostic: API call failed; inspect masked GitHub Actions log if needed."
+            fi
+          } > "$OUT"
+          exit "$RC"
+
+      - name: Commit sanitized API smoke evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f evidence/powder/api-smoke.md ]]; then
+            echo "No API smoke evidence produced."
+            exit 0
+          fi
+          if git diff --quiet -- evidence/powder/api-smoke.md && git ls-files --error-unmatch evidence/powder/api-smoke.md >/dev/null 2>&1; then
+            echo "No evidence change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/api-smoke.md
+          git commit -m "Record POWDER API smoke evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
