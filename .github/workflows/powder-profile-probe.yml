@@ -26,28 +26,43 @@ jobs:
           [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-      - name: Capture profile command help only
+      - name: Capture read-only CLI/schema evidence
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/powder
           OUT=evidence/powder/profile-probe.md
           {
-            echo "# POWDER profile API probe"
+            echo "# POWDER profile/API create probe"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
             echo "- Resource action attempted: **NONE**"
             echo "- Token content recorded: **NO**"
             echo
-            echo "## profile help"
-            echo '```text'
-            NO_COLOR=1 portal-cli profile --help 2>&1 || true
-            echo '```'
-            echo
             echo "## profile get help"
             echo '```text'
             NO_COLOR=1 portal-cli profile get --help 2>&1 || true
+            echo '```'
+            echo
+            echo "## experiment create help"
+            echo '```text'
+            NO_COLOR=1 portal-cli experiment create --help 2>&1 || true
+            echo '```'
+            echo
+            echo "## ExperimentCreate schema excerpt"
+            echo '```text'
+            python - <<'PY'
+          import json
+          p='/tmp/portal-api/openapi.json'
+          d=json.load(open(p, encoding='utf-8'))
+          for name,schema in d.get('components',{}).get('schemas',{}).items():
+              if name.lower() == 'experimentcreate':
+                  print('schema:', name)
+                  print('required:', schema.get('required'))
+                  for k,v in schema.get('properties',{}).items():
+                      print(k, 'default=', v.get('default'), 'nullable=', v.get('nullable'), 'description=', v.get('description',''))
+          PY
             echo '```'
           } > "$OUT"
       - name: Commit probe evidence
