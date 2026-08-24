@@ -1,0 +1,101 @@
+name: POWDER Plumbing
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Optional POWDER SSH hostname; otherwise use powder/target.env"
+        required: false
+        type: string
+  push:
+    paths:
+      - "powder/target.env"
+      - ".powder-plumbing-trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-plumbing
+  cancel-in-progress: false
+
+jobs:
+  verify-ssh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configured secrets
+        env:
+          POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$POWDER_USERNAME" ]] || { echo "Missing POWDER_USERNAME secret"; exit 2; }
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "Missing POWDER_SSH_PRIVATE_KEY secret"; exit 2; }
+          echo "Required POWDER secrets are configured."
+
+      - name: Resolve POWDER target
+        id: target
+        env:
+          INPUT_HOST: ${{ github.event.inputs.host }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="${INPUT_HOST:-}"
+          if [[ -z "$HOST" ]]; then
+            HOST="$(awk -F= '$1=="POWDER_HOST" {print substr($0,index($0,"=")+1)}' powder/target.env | tail -n1)"
+          fi
+          [[ -n "$HOST" ]] || { echo "No active POWDER_HOST configured."; exit 2; }
+          if [[ ! "$HOST" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "POWDER_HOST contains unexpected characters."
+            exit 2
+          fi
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "Target resolved."
+
+      - name: Install dedicated SSH key
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Run read-only POWDER plumbing check
+        env:
+          POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash powder/verify_connection.sh "${{ steps.target.outputs.host }}" evidence/powder/latest.md
+
+      - name: Commit sanitized plumbing evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f evidence/powder/latest.md ]]; then
+            echo "No evidence file was produced."
+            exit 0
+          fi
+          if git diff --quiet -- evidence/powder/latest.md; then
+            echo "No evidence change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/latest.md
+          git commit -m "Record POWDER plumbing evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
