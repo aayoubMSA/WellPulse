@@ -1,0 +1,42 @@
+name: G3 Actions Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - powder/g3-actions-diag-trigger.txt
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture G3 workflow run metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/powder
+          {
+            echo '{'
+            echo '  "v2": '
+            gh run list --repo "$GITHUB_REPOSITORY" --workflow powder-g3-attach-v2.yml --limit 5 --json databaseId,status,conclusion,headSha,createdAt,updatedAt,url
+            echo ', "attach_v1": '
+            gh run list --repo "$GITHUB_REPOSITORY" --workflow powder-g3-attach.yml --limit 5 --json databaseId,status,conclusion,headSha,createdAt,updatedAt,url
+            echo '}'
+          } > evidence/powder/g3-actions-diagnostic.json
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/g3-actions-diagnostic.json
+          git commit -m 'Record G3 Actions diagnostic'
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
