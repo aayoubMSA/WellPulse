@@ -1,13 +1,13 @@
 # AGENT HANDOVER — WellPulse POWDER Validation Owner
 
-**Handover timestamp:** 2026-08-24 22:44 Africa/Cairo  
+**Handover timestamp:** 2026-08-24 23:56 Africa/Cairo  
 **Canonical repository:** `aayoubMSA/WellPulse`  
 **Current scientific completion:** **20%**  
-**Current execution gate:** **G3 — Simulated stack/data-path validation — NEXT / NOT STARTED**
+**Current execution gate:** **G4 — Controlled physical-RF lifecycle discovery and qualification — NEXT**
 
 ## Mandate
 
-You now own the continuation of the WellPulse POWDER validation lane. Your job is to advance the project from the verified manual infrastructure baseline through the minimum defensible POWDER evidence needed for publication, while preserving reproducibility and refusing evidence inflation.
+Own continuation of the WellPulse POWDER validation lane from the accepted G0–G3 infrastructure baseline through the minimum defensible publication-grade controlled-RF/OTA evidence. Preserve reproducibility, security boundaries, scientific discipline, and exact milestone accounting.
 
 Optimize for:
 
@@ -23,13 +23,14 @@ Read these files in this order before taking any action:
 2. `docs/MILESTONE_STATUS.md`
 3. `docs/STATUS.md`
 4. `docs/DECISIONS.md`
-5. `powder/MANUAL_GOLDEN_PATH.md`
-6. `evidence/powder/manual-golden-path-2026-08-24.md`
-7. `experiments/WP-PWD01/protocol.md`
-8. `experiments/WP-PWD01/analysis-plan.md`
-9. `experiments/WP-PWD01/evidence-schema.md`
-10. `experiments/WP-PWD01/randomization-plan.csv`
-11. `experiments/WP-PWD01/run-matrix.yaml`
+5. `evidence/powder/g3-simstack-2026-08-24.md`
+6. `powder/MANUAL_GOLDEN_PATH.md`
+7. `evidence/powder/manual-golden-path-2026-08-24.md`
+8. `experiments/WP-PWD01/protocol.md`
+9. `experiments/WP-PWD01/analysis-plan.md`
+10. `experiments/WP-PWD01/evidence-schema.md`
+11. `experiments/WP-PWD01/randomization-plan.csv`
+12. `experiments/WP-PWD01/run-matrix.yaml`
 
 Treat GitHub and the Drive handover index as canonical state. Do not reconstruct project status from chat memory.
 
@@ -37,102 +38,113 @@ Treat GitHub and the Drive handover index as canonical state. Do not reconstruct
 
 - WP0 — Novelty & Venue Lock — **8/8 complete**.
 - WP1 — Confirmatory Protocol & Statistics Freeze — **12/12 complete**.
-- WP2 — RF Calibration & Measurement Validation — **0/15 — NEXT scientific WP**.
+- WP2 — RF Calibration & Measurement Validation — **0/15 — NEXT scientific WP**, blocked until G4 establishes a valid controlled physical-RF lifecycle/user-plane.
 - WP3 — Conducted-RF Confirmatory Campaign — **0/30 — blocked by WP2**.
 - WP4 — OTA External Replication — **0/15 — blocked by WP3**.
-- WP5 — Analysis + Artifact + Paper Closure — **0/20 scientific closure**; analysis/reproducibility scaffolding exists but is intentionally not counted yet.
+- WP5 — Analysis + Artifact + Paper Closure — **0/20 scientific closure**.
 
 Weighted scientific completion: **20%**.
 
-Planning estimate remaining: **~28–50 active hours**, realistically **~5–8 calendar days**, extending to **~1–2 weeks** if compatible controlled-RF or OTA resources require waiting.
+Planning estimate remaining: **~27–48 active hours**, realistically **~5–8 calendar days**, extending to **~1–2 weeks** if compatible controlled-RF or OTA resources require waiting.
 
 ## POWDER infrastructure state
 
 - G0 Account + WellPulse project — **PASS**.
 - G1 Manual compute provisioning — **PASS**.
 - G2 Explicit-key SSH + node verification + clean teardown — **PASS**.
-- G3 Simulated stack/data path — **NEXT / NOT STARTED**.
-- G4 Controlled physical-RF lifecycle — **PENDING**.
+- G3 Simulated stack/data path — **PASS**.
+- G4 Controlled physical-RF lifecycle — **NEXT**.
 - G5 RF impairment plumbing — **PENDING**.
 
-G0–G2 are enabling infrastructure only. They do not add scientific WP percentage.
+G0–G3 are enabling infrastructure only. They do not add scientific WP percentage.
 
-## Accepted manual golden baseline
+## Accepted G3 baseline
 
-Canonical accepted experiment:
+Canonical evidence:
 
-- experiment: `WP-G1-SIM`
-- UUID: `0dc233d7-44a0-4e6c-9734-6d4c8ea0e2ad`
+`evidence/powder/g3-simstack-2026-08-24.md`
+
+Accepted experiment:
+
+- experiment: `WP-G3-SIMSTACK`
+- UUID: `3484b01d-7eca-48e7-9e34-866680057b0d`
 - profile: `srsLTE-SIM:9`
 - profile UUID: `80dda605-7e5f-11e9-8006-e4434b2381fc`
-- hardware: `d430`
-- allocated node: `pc734`
+- hardware: one `d430`
+- node: `pc757`
 - image: `PowderProfiles:gnuradio-srslte`
-- SSH endpoint: `pc734.emulab.net:22`
-- remote user: `aayoub`
-- canonical remote hostname: `node.wp-g1-sim.wellpulse.emulab.net`
-- OS: Ubuntu 18.04.1 LTS
-- kernel: Linux 4.15.0-33-generic x86_64
-- teardown: PASS; portal returned to `Current Usage: 0 Node Hours`
+- remote hostname: `node.wp-g3-simstack.wellpulse.emulab.net`
+- explicit Golden-key SSH: PASS
+- transmitter: completed with `Done`
+- receiver: MIB/PDCCH/PDSCH decoded, multiple `TB decoded OK`, `RX_RC=0`
+- waveform bytes: `2304000`
+- waveform SHA-256: `103de59d52e75252e916d7ed62c5c9b76401e817ffec3178363879e0bed71678`
+- temporary output cleanup: PASS
+- portal teardown: PASS; `Current Usage: 0 Node Hours`, no active experiments
 
-Canonical manual SSH key label:
+Evidence boundary: G3 is a **file-based simulated LTE path only**. No SDR, no physical RF, no attenuation, no OTA, no MQTT/WellPulse scored science.
 
-`WellPulse-POWDER-Golden`
+## Exact next gate — G4
 
-Public fingerprint:
-
-`SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs`
-
-The private key and its passphrase are local-only secrets and must never be requested, echoed, committed, or copied into evidence.
-
-## Exact next gate — G3
-
-Goal: prove that the profile-authoritative file-based srsLTE simulated eNodeB/UE path executes correctly on POWDER. This remains **non-scored**, **no SDR**, **no RF**, and **not scientific evidence**.
+Goal: discover and manually qualify a **current controlled physical-RF lifecycle** on POWDER before any WP2 calibration.
 
 Procedure:
 
-1. Manually instantiate a fresh `srsLTE-SIM:9` experiment under project `WellPulse` with a distinct name such as `WP-G3-SIMSTACK`.
-2. Use one `d430`; no reservation unless the portal requires it.
-3. Wait for `State: ready`.
-4. Open List View and record the **actual** active SSH endpoint. Never guess or reuse a historical hostname.
-5. SSH from Windows using the explicit Golden key and `IdentitiesOnly=yes`.
-6. Execute only the profile-authoritative file-based example:
+1. Use the live authenticated POWDER UI to inspect current controlled physical-RF example/profile candidates.
+2. Verify exact profile name, owner/project, revision, requested radio/hardware resources, WellPulse entitlement and live availability.
+3. Do not infer compatibility from stale repository code, remembered profile names or earlier exploratory attempts.
+4. Do not reuse `srsran-handover` as a baseline without fresh verification.
+5. Do not resubmit `srs-rf-matrix` unchanged; its previous topology required an unavailable `n310` entitlement.
+6. Select the smallest current profile that can prove the required controlled physical-RF lifecycle.
+7. Provision **one manual, non-scored qualification experiment only**.
+8. Verify READY and exact resource bindings from the live portal/manifest.
+9. SSH using an explicit registered key and the current live endpoint.
+10. Capture only sanitized reproducibility metadata.
+11. Terminate cleanly and verify zero active usage.
+12. Save a durable G4 PASS/FAIL artifact and update GitHub + Drive before proceeding.
 
-```bash
-/usr/local/srsLTE/build/lib/examples/pdsch_enodeb -o foo -n 5 -m 9 -v
-/usr/local/srsLTE/build/lib/examples/pdsch_ue -i foo -n 5 -r 1234 -v -d
-```
+No automation of G4 resource creation is authorized at this stage.
 
-7. Capture stdout/stderr, exit codes, output-file metadata and SHA-256 checksum.
-8. Verify expected simulated receive behavior without introducing WellPulse/MQTT yet.
-9. Remove only temporary test output created by G3 if safe and unambiguous.
-10. Exit, terminate manually, verify `Current Usage: 0 Node Hours`.
-11. Write sanitized G3 evidence and update `HANDOVER_CURRENT.md`, `docs/MILESTONE_STATUS.md`, `docs/STATUS.md`, and the Drive handover index.
+G4 PASS still does not authorize scored work.
 
-G3 PASS does not authorize scored work.
+## After G4
 
-## After G3
+Only after a valid controlled physical-RF lifecycle is established:
 
-Proceed to G4 only through the live POWDER UI:
+- prove the experimental cellular user-plane rather than POWDER control-network bypass;
+- reproduce the frozen Paho session settings;
+- run non-scored RF calibration;
+- freeze Q0–Q3 plus observed radio context;
+- freeze recovery horizon H;
+- validate analyzer timing/evidence completeness;
+- only then consider explicit `scored_runs_authorized=true`.
 
-- discover a **current** controlled physical-RF profile;
-- verify owner/project/profile revision and hardware from current portal state;
-- manually provision it before trusting automation;
-- prove READY -> manifest -> SSH -> clean terminate;
-- then prove the experimental user-plane rather than POWDER control-network bypass;
-- only after that begin WP2 calibration and freeze Q0–Q3 plus H.
+## Automation troubleshooting — quarantine
 
-Do not infer a current usable profile from old workflow names or remembered examples.
+The attach-only G3 workflow exists at `.github/workflows/powder-g3-attach.yml`, but its repository SSH credential is currently not trustworthy.
+
+Sanitized diagnosis:
+
+`evidence/powder/g3-key-format-diag.json`
+
+Known issue:
+
+- `POWDER_SSH_PRIVATE_KEY` contains a public key rather than an usable private key;
+- earlier CI attempts failed before target validation;
+- they did not execute the G3 workload;
+- they did not terminate the target;
+- accepted G3 evidence was completed manually with `WellPulse-POWDER-Golden`.
+
+Do not rerun CI merely to duplicate an already accepted G3 result.
+
+The full resource-creating workflow `.github/workflows/powder-g3-simstack.yml` remains **FROZEN / DO NOT RUN** under the owner mandate.
 
 ## Known failed/exploratory history — quarantine
 
-Do not silently reuse or promote these:
-
-- `wpplmb6787317` / `srs-rf-matrix` — failed because topology requested an `n310` while WellPulse had entitlement 0. **Do not resubmit unchanged.**
-- `wphnd8201533` / `srsran-handover` — exploratory/invalid feasibility attempt. Not an accepted current controlled-RF baseline.
-- earlier `WP-G1-SIM` runs before the Golden-key reset — troubleshooting only.
-
-Only the final 22:07–22:17 `WP-G1-SIM` run is the canonical G1/G2 PASS reference.
+- `wpplmb6787317` / `srs-rf-matrix` — failed because topology requested an `n310` while WellPulse entitlement was 0. **Do not resubmit unchanged.**
+- `wphnd8201533` / `srsran-handover` — exploratory/invalid feasibility attempt. Not an accepted current RF baseline.
+- earlier pre-Golden `WP-G1-SIM` runs — troubleshooting only.
+- failed G3 CI attach attempts — credential troubleshooting only.
 
 ## Frozen scientific design — do not drift
 
@@ -167,8 +179,6 @@ POWDER may support claims about networking, radio-link resilience, edge/cloud re
 
 It does **not** validate pump mechanics, hydraulics, groundwater, crop physiology, Siwa conditions, agricultural field performance or rural generalization.
 
-Do not inflate remote-testbed evidence into field evidence.
-
 ## Security / reproducibility rules
 
 Never commit or expose:
@@ -180,24 +190,11 @@ Never commit or expose:
 - certificate blocks;
 - raw credential-like portal material.
 
-Preserve sanitized reproducibility fields instead:
-
-- experiment/profile UUIDs and revisions;
-- project and node bindings;
-- image/software identity;
-- actual SSH endpoint/auth mode;
-- state transitions and timestamps;
-- commands and exit codes;
-- output hashes;
-- acceptance/rejection verdict;
-- evidence boundary;
-- clean teardown state.
-
-Raw POWDER portal logs may contain credential-like encrypted material. Do not blindly commit them. Preserve only the minimum sanitized extract necessary for audit/reproduction.
+Preserve sanitized reproducibility fields instead: experiment/profile IDs, resource bindings, image/software identity, actual endpoint/auth mode, state transitions, timestamps, commands, exit codes, hashes, verdicts, evidence boundaries and teardown state.
 
 ## Manual-first rule
 
-Resource-creating POWDER automation remains **FROZEN** until the equivalent manual path has passed and been documented. Automation may later clone a proven path; it may not discover the path by trial and error.
+Resource-creating POWDER automation remains **FROZEN by owner mandate**. Each new infrastructure/profile layer must be qualified manually before automation is considered.
 
 ## Required handover discipline
 
@@ -205,29 +202,23 @@ At the end of every material work block:
 
 1. update `HANDOVER_CURRENT.md`;
 2. update `docs/MILESTONE_STATUS.md`;
-3. update `docs/STATUS.md` and `docs/DECISIONS.md` if state/decision changed;
+3. update `docs/STATUS.md` and `docs/DECISIONS.md` only if a decision changed;
 4. save sanitized evidence under `evidence/powder/`;
-5. update the Drive `WellPulse — Current Handover Index` including the `MILESTONES` tab;
-6. preserve any publication-relevant raw evidence in the Drive validation/raw-evidence workspace with hashes;
+5. update the Drive `WellPulse — Current Handover Index` including `MILESTONES`;
+6. preserve publication-relevant raw evidence without secrets;
 7. ensure exact next action is recoverable without chat history.
 
 ## Stop conditions
 
 Stop rather than improvise if:
 
-- live profile/resource identity does not match expectation;
+- live profile/resource identity differs from expectation;
 - a hidden hardware entitlement appears;
-- the experimental user-plane cannot be distinguished from control-network traffic;
+- user-plane cannot be distinguished from control-network traffic;
 - mandatory evidence cannot be reconstructed;
-- the protocol would need a scientific amendment;
-- a result is unfavorable — never rerun merely to improve the result.
-
-Technical-invalid reruns are allowed only under the frozen invalidity rules and the invalid raw run must remain preserved.
+- protocol amendment is required;
+- a scientific result is unfavorable — never rerun merely to improve it.
 
 ## Immediate acceptance target
 
-The next owner should first produce exactly one new durable artifact:
-
-`evidence/powder/g3-simstack-<date>.md`
-
-with a PASS/FAIL verdict for the file-based simulated srsLTE path and a clean teardown record. Only after that should G4 controlled physical-RF discovery begin.
+Produce exactly one durable G4 lifecycle qualification artifact with a PASS/FAIL verdict and clean teardown before beginning G5/WP2 RF calibration.
