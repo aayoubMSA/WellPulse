@@ -1,0 +1,40 @@
+name: POWDER G3 Trigger Launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - powder/g3-trigger.env
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate trigger and dispatch attach workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ -f powder/g3-trigger.env ]] || { echo "Missing trigger file."; exit 2; }
+          # shellcheck disable=SC1091
+          source powder/g3-trigger.env
+          [[ "${EXECUTE:-}" == "G3ATTACH" ]] || { echo "Trigger not authorized."; exit 2; }
+          [[ "${EXPERIMENT_ID:-}" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid experiment UUID."; exit 2; }
+          [[ "${EXPERIMENT_NAME:-}" == "WP-G3-SIMSTACK" ]] || { echo "Unexpected experiment name."; exit 2; }
+
+          gh workflow run powder-g3-attach.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f experiment_id="$EXPERIMENT_ID" \
+            -f execute=G3ATTACH
+
+          echo "Dispatched POWDER G3 attach workflow for $EXPERIMENT_NAME ($EXPERIMENT_ID)."
