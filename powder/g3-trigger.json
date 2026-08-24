@@ -1,0 +1,5 @@
+{
+  "experiment_id": "3484b01d-7eca-48e7-9e34-866680057b0d",
+  "execute": "G3ATTACH",
+  "mode": "ATTACH_ONLY_NO_RESOURCE_CREATE"
+}
