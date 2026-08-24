@@ -1,47 +1,125 @@
 experiment_id: WP-PWD01
-status: PRE_FREEZE
+protocol_version: v0.2
+status: DESIGN_FROZEN_PENDING_CALIBRATION_AND_BASELINE_GATE
 scored_runs_authorized: false
 
+randomization:
+  paired_blocks: true
+  seed: 26082401
+  unit_of_analysis: run
+  rule: randomize B1/W1 order within each paired block before scored execution
+
 modes:
-  B0:
-    description: Matched baseline without durable application buffering/reconciliation
-  W1:
-    description: Existing WellPulse offline-first resilience path
+  B1_MQTT_QOS1:
+    role: PRIMARY_COMPARATOR
+    description: Standard MQTT v3.1.1 QoS1 TLS with automatic reconnect and no application-level disk durability/reconciliation
+    exact_client_semantics: TBD_BEFORE_SCORE_GATE
+  W1_OFFLINE_FIRST:
+    role: TREATMENT
+    description: WellPulse durable SQLite queue + record identity/checksum + reconnect/replay + idempotent receiver/reconciliation
+  B0_PUBLISH_ONLY:
+    role: LEGACY_SANITY_ONLY
+    description: Historical non-durable lower-bound baseline; excluded from primary POWDER scored matrix
 
 rf_states:
   Q0:
     meaning: strong/stable
     numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+    observed_radio_context: TBD
   Q1:
-    meaning: degraded but connected
+    meaning: degraded_but_continuously_connected_characterization_only
     numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+    observed_radio_context: TBD
   Q2:
-    meaning: near-threshold/intermittent
+    meaning: near_threshold_intermittent
     numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+    observed_radio_context: TBD
   Q3:
-    meaning: effective outage
+    meaning: effective_application_data_outage
     numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+    observed_radio_context: TBD
 
-planned_scenarios:
+workload:
+  telemetry_rate_hz: 1
+  warmup_duration_s: 30
+  pre_impairment_q0_s: 60
+  impairment_window_s: 120
+  recovery_horizon_s: TBD_AFTER_NON_SCORED_CALIBRATION
+  recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); review_if_over_300s
+
+scenarios:
   S0_HEALTHY:
-    schedule: "Q0 x 480s"
-  S1_PROGRESSIVE:
-    schedule: "Q0 60s -> Q1 120s -> Q2 120s -> Q0 180s"
+    scored_schedule: "Q0 60s -> Q0 120s -> Q0 H"
+    paired_blocks_min: 3
+    paired_blocks_max: 3
+    purpose: healthy integrity and overhead control
+  S1_INTERMITTENT:
+    scored_schedule: "Q0 60s -> [Q2 20s / Q0 20s] x3 -> Q0 H"
+    paired_blocks_min: 3
+    paired_blocks_max: 5
+    purpose: repeated RF-caused near-threshold disruption and recovery
   S2_HARD_OUTAGE:
-    schedule: "Q0 60s -> Q3 120s -> Q0 300s"
-  S3_FLAPPING:
-    schedule: "Q0 60s -> [Q3 30s / Q0 30s] x4 -> Q0 180s"
+    scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
+    paired_blocks_min: 3
+    paired_blocks_max: 5
+    purpose: deterministic RF-induced outage and recovery
+  S3_OUTAGE_RESTART:
+    scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
+    restart_event: "gateway process restart 60s into Q3; not node reboot"
+    paired_blocks_min: 3
+    paired_blocks_max: 5
+    purpose: volatile MQTT state versus durable application state under compound failure
 
-planned_repetitions_per_mode_per_scenario: 5
-planned_total_scored_runs: 40
-telemetry_rate_hz: 1
-scored_duration_s: 480
-warmup_duration_s: 60
+precision_stopping_rule:
+  applies_to: [S1_INTERMITTENT, S2_HARD_OUTAGE, S3_OUTAGE_RESTART]
+  evaluate_after_valid_pairs: 3
+  estimand: paired_run_level_unique_completeness_difference_W1_minus_B1
+  interval: two_sided_95_percent_t_interval
+  stop_if_ci_half_width_percentage_points_le: 2
+  additional_pairs_if_not_precise: 2
+  maximum_pairs: 5
+  forbidden_basis_for_stopping: [effect_direction, p_value, favorable_result]
+
+planned_conducted_scored_runs:
+  minimum: 24
+  maximum: 36
+
+primary_endpoint:
+  name: unique_telemetry_completeness_at_H
+  formula: unique_valid_expected_records_received_by_H / generated_scored_records
+  integrity_requirement: record_identity_and_checksum_match
+
+secondary_endpoints:
+  - permanent_missing_rate
+  - duplicate_attempt_and_final_duplicate_rate
+  - checksum_mismatch_count
+  - out_of_order_rate
+  - reconnect_time_s
+  - first_successful_post_recovery_delivery_s
+  - backlog_drain_time_s
+  - reconciliation_completion_time_s
+  - latency_p50_p95_p99_when_valid
+  - cpu_utilization
+  - rss_memory
+  - durable_queue_occupancy_and_disk_bytes
+  - network_bytes_packets_and_retransmission_indicators
+  - radio_metrics_when_exposed
+
+ota_replication:
+  required_after_conducted_gate: true
+  scenarios: [S1_INTERMITTENT, S2_HARD_OUTAGE]
+  paired_blocks_per_scenario: 3
+  scored_runs: 12
+  do_not_repeat: S3_OUTAGE_RESTART
 
 freeze_requirements:
-  - Calibrate numeric Q0-Q3 settings using non-scored runs
-  - Freeze recovery window
-  - Freeze exact profile/version and node classes
-  - Verify B0/W1 implementation matching
+  - Automated POWDER lifecycle passes create-ready-manifest-SSH-terminate with fail-safe cleanup
+  - Implement and locally verify B1 strong MQTT baseline
+  - Freeze exact Paho MQTT version/session/reconnect/queue semantics
+  - Calibrate numeric Q0-Q3 and record observed RF context
+  - Freeze recovery horizon H
+  - Freeze exact profile identifier/version/bindings and node classes
+  - Audit B1/W1 matching
   - Verify evidence capture and clock alignment
-  - Set scored_runs_authorized true only after protocol gate closes
+  - Verify analysis reconstructs primary endpoint from pilot bundle
+  - Set scored_runs_authorized true only after all gates close
