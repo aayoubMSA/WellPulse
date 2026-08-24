@@ -1,0 +1,49 @@
+name: POWDER G3 Attach Trigger
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - powder/g3-trigger.json
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: powder-g3-attach-trigger
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate request and dispatch attach workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUEST=powder/g3-trigger.json
+          [[ -f "$REQUEST" ]] || { echo "Missing $REQUEST"; exit 2; }
+
+          EXPID="$(jq -r '.experiment_id // empty' "$REQUEST")"
+          EXECUTE="$(jq -r '.execute // empty' "$REQUEST")"
+          MODE="$(jq -r '.mode // empty' "$REQUEST")"
+
+          [[ "$EXPID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid experiment UUID."; exit 2; }
+          [[ "$EXECUTE" == "G3ATTACH" ]] || { echo "Missing explicit G3ATTACH authorization."; exit 2; }
+          [[ "$MODE" == "ATTACH_ONLY_NO_RESOURCE_CREATE" ]] || { echo "Wrong trigger mode."; exit 2; }
+
+          echo "Dispatching attach-only G3 for experiment $EXPID"
+          gh workflow run powder-g3-attach.yml \
+            --ref main \
+            -f experiment_id="$EXPID" \
+            -f execute="$EXECUTE"
+
+          echo "Attach workflow dispatched. This trigger creates no POWDER resources."
