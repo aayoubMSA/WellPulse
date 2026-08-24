@@ -1,6 +1,6 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-24 22:58 Africa/Cairo
+Last updated: 2026-08-24 23:56 Africa/Cairo
 
 This file is the canonical compact dashboard for scientific WP completion, infrastructure gates, critical path, and planning time remaining.
 
@@ -36,32 +36,40 @@ WP5 already has substantial scaffolding prepared — analysis plan, evidence sch
 G0 Account + WellPulse project      ████████████████████ PASS
 G1 Manual compute provisioning      ████████████████████ PASS
 G2 Explicit-key SSH + teardown      ████████████████████ PASS
-G3 Simulated stack/data path        ░░░░░░░░░░░░░░░░░░░ NEXT
-G4 Controlled physical-RF lifecycle ░░░░░░░░░░░░░░░░░░░ PENDING
+G3 Simulated stack/data path        ████████████████████ PASS
+G4 Controlled physical-RF lifecycle ░░░░░░░░░░░░░░░░░░░ NEXT
 G5 RF impairment plumbing           ░░░░░░░░░░░░░░░░░░░ PENDING
 ```
 
-G0–G2 are enabling infrastructure and do **not** add scientific WP percentage. G3 is also an enabling infrastructure gate and receives no scientific percentage when it passes.
+G0–G3 are enabling infrastructure gates and do **not** add scientific WP percentage.
 
 Canonical G1/G2 evidence:
 
 - `evidence/powder/manual-golden-path-2026-08-24.md`
 - `powder/MANUAL_GOLDEN_PATH.md`
 
-Accepted reference allocation:
+Canonical G3 evidence:
 
-- experiment UUID `0dc233d7-44a0-4e6c-9734-6d4c8ea0e2ad`;
-- profile `srsLTE-SIM:9`;
-- d430 node `pc734`;
-- explicit Golden-key SSH PASS;
-- manual teardown PASS;
-- portal returned to zero active node usage.
+- `evidence/powder/g3-simstack-2026-08-24.md`
+- experiment `WP-G3-SIMSTACK`
+- UUID `3484b01d-7eca-48e7-9e34-866680057b0d`
+- profile `srsLTE-SIM:9`
+- one `d430`, live node `pc757`
+- manual explicit-key SSH PASS
+- `pdsch_enodeb -> IQ file -> pdsch_ue` PASS
+- `RX_RC=0`
+- waveform bytes `2304000`
+- waveform SHA-256 `103de59d52e75252e916d7ed62c5c9b76401e817ffec3178363879e0bed71678`
+- temporary waveform cleanup PASS
+- portal teardown PASS; `Current Usage: 0 Node Hours`
+
+G3 evidence is non-scored, no-SDR, no-RF infrastructure evidence only.
 
 ## Time remaining
 
 From the current milestone to a paper-ready POWDER package, planning estimate:
 
-- **active hands-on work:** ~28–50 hours;
+- **active hands-on work:** ~27–48 hours;
 - **best case:** ~3–4 intensive working days if compatible resources are immediately available;
 - **realistic elapsed:** ~5–8 calendar days;
 - **resource-constrained:** ~1–2 weeks if controlled-RF/OTA resources require waiting.
@@ -71,11 +79,9 @@ These are planning estimates rather than commitments. The main elapsed-time unce
 ## Critical path
 
 ```text
-G3 simulated stack/data path
-        ↓ ~1–2 h
-current controlled-RF profile + manual lifecycle
+G4 current controlled-RF profile + manual lifecycle
         ↓ ~2–6 h, availability-dependent
-WP2 calibration + freeze Q0–Q3 and H
+G5 / WP2 calibration + freeze Q0–Q3 and H
         ↓ ~4–8 h
 WP3 24–36 conducted scored runs
         ↓ ~6–10 h
@@ -87,29 +93,23 @@ WP5 deterministic analysis + artifact + manuscript closure
 
 ## Current exact next gate
 
-**G3 — Simulated stack/data-path validation.**
+**G4 — Controlled physical-RF lifecycle discovery and qualification.**
 
-Non-scored; no SDR; no RF; no scientific claim.
+Non-scored; no scientific corpus entry; manual-first.
 
-Approved execution mode: **manual resource creation + automated attach/test/evidence/teardown**.
+1. Use the live authenticated POWDER UI to discover current controlled physical-RF example/profile candidates.
+2. Verify the exact current profile name, owner/project, revision, requested hardware/radio resources and WellPulse entitlement/availability before provisioning.
+3. Do not reuse stale `srsran-handover` assumptions.
+4. Do not resubmit the blocked `srs-rf-matrix` topology unchanged; its prior `n310` requirement was incompatible with WellPulse entitlement.
+5. Select the smallest current profile that can prove a controlled physical-RF lifecycle relevant to the scientific design.
+6. Manually qualify one lifecycle first: provision -> READY -> inspect manifest/resource bindings -> explicit-key SSH -> clean terminate -> verify zero active usage.
+7. Only after a valid G4 lifecycle may the project establish the real experimental user-plane and proceed into G5/WP2 calibration.
 
-1. Confirm the live POWDER portal shows `Current Usage: 0 Node Hours`.
-2. Instantiate a fresh `srsLTE-SIM:9` experiment manually under project `WellPulse`, using one `d430` and a distinct name beginning `WP-G3-SIMSTACK`.
-3. Wait for `State: ready` and copy the experiment UUID. No historical hostname is needed.
-4. Run GitHub Action **POWDER G3 Attach to Manual Experiment** from `.github/workflows/powder-g3-attach.yml`, supplying that UUID and typing `G3ATTACH`.
-5. Before test execution or automated teardown, the workflow must verify:
-   - profile UUID `80dda605-7e5f-11e9-8006-e4434b2381fc`;
-   - hardware `d430`;
-   - image `PowderProfiles:gnuradio-srslte`;
-   - project/name when exposed by the Portal API.
-6. The workflow obtains the active SSH endpoint from the current manifest, uses the registered automation SSH identity, and executes only the profile-authoritative file-based `pdsch_enodeb -> waveform file -> pdsch_ue` example.
-7. It retains credential-free stdout/stderr, exit codes, remote metadata, waveform byte count and SHA-256; the temporary waveform is removed.
-8. It fail-safe terminates only after target identity validation and polls until the experiment is absent or terminal.
-9. G3 PASS requires `PROCESS_GATE=PASS` and `cleanup=PASS` and produces sanitized evidence under `evidence/powder/g3/` plus `evidence/powder/g3-simstack-latest.md`.
+Resource-creating automation remains **FROZEN by owner mandate**. G3 PASS does not by itself authorize automatic resource creation for G4 or scored runs.
 
-The existing full resource-creating workflow `.github/workflows/powder-g3-simstack.yml` remains **FROZEN / UNAPPROVED / DO NOT RUN** until the equivalent G3 manual layer has passed and the canonical handover explicitly changes that authorization state.
+## Automation troubleshooting note
 
-After G3 PASS, discover and verify a **current** controlled physical-RF profile through the live POWDER UI. Do not retry `srs-rf-matrix` unchanged because the prior attempt exposed an unusable `n310` requirement, and do not promote remembered `srsran-handover` assumptions into current state.
+The attach-only G3 GitHub Actions path remains untrusted for execution until its SSH credential is repaired. Sanitized diagnosis established that repository secret `POWDER_SSH_PRIVATE_KEY` contains a public key rather than an usable private key. Earlier CI attempts failed before target validation; they did not execute G3 or terminate the experiment. The accepted G3 evidence is the manual run recorded above.
 
 ## Scientific authorization state
 
@@ -119,4 +119,4 @@ No POWDER run currently belongs to the scored scientific corpus.
 
 ## Evidence boundary
 
-Current POWDER G0–G2 evidence proves project access, d430 provisioning, SSH-key injection/authentication, remote metadata capture and clean teardown. A future G3 PASS will add only evidence that the profile-authoritative file-based simulated stack/data path executes correctly on POWDER compute. It still will not prove LTE/5G over physical RF, SDR operation, attenuation control, OTA behavior, WellPulse/MQTT resilience, field performance, hydraulics, groundwater or agronomic outcomes.
+Current POWDER G0–G3 evidence proves project access, d430 provisioning, explicit-key SSH, remote metadata capture, the profile-authoritative file-based simulated LTE stack/data path, temporary-artifact cleanup and clean teardown. It does **not** prove LTE/5G over physical RF, SDR operation, attenuation control, OTA behavior, WellPulse/MQTT resilience, field performance, hydraulics, groundwater or agronomic outcomes.
