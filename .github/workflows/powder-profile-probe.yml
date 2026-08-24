@@ -26,43 +26,23 @@ jobs:
           [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-      - name: Capture read-only CLI/schema evidence
+      - name: Capture read-only CLI help
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/powder
           OUT=evidence/powder/profile-probe.md
           {
-            echo "# POWDER profile/API create probe"
+            echo "# POWDER API create-options probe"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
             echo "- Resource action attempted: **NONE**"
             echo "- Token content recorded: **NO**"
             echo
-            echo "## profile get help"
-            echo '```text'
-            NO_COLOR=1 portal-cli profile get --help 2>&1 || true
-            echo '```'
-            echo
             echo "## experiment create help"
             echo '```text'
-            NO_COLOR=1 portal-cli experiment create --help 2>&1 || true
-            echo '```'
-            echo
-            echo "## ExperimentCreate schema excerpt"
-            echo '```text'
-            python - <<'PY'
-          import json
-          p='/tmp/portal-api/openapi.json'
-          d=json.load(open(p, encoding='utf-8'))
-          for name,schema in d.get('components',{}).get('schemas',{}).items():
-              if name.lower() == 'experimentcreate':
-                  print('schema:', name)
-                  print('required:', schema.get('required'))
-                  for k,v in schema.get('properties',{}).items():
-                      print(k, 'default=', v.get('default'), 'nullable=', v.get('nullable'), 'description=', v.get('description',''))
-          PY
+            NO_COLOR=1 portal-cli experiment create --help 2>&1
             echo '```'
           } > "$OUT"
       - name: Commit probe evidence
@@ -73,6 +53,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add evidence/powder/profile-probe.md
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Record POWDER profile API probe"
+          git commit -m "Record POWDER API create-options probe"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
