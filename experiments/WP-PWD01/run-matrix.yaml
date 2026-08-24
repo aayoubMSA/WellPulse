@@ -1,0 +1,47 @@
+experiment_id: WP-PWD01
+status: PRE_FREEZE
+scored_runs_authorized: false
+
+modes:
+  B0:
+    description: Matched baseline without durable application buffering/reconciliation
+  W1:
+    description: Existing WellPulse offline-first resilience path
+
+rf_states:
+  Q0:
+    meaning: strong/stable
+    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+  Q1:
+    meaning: degraded but connected
+    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+  Q2:
+    meaning: near-threshold/intermittent
+    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+  Q3:
+    meaning: effective outage
+    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
+
+planned_scenarios:
+  S0_HEALTHY:
+    schedule: "Q0 x 480s"
+  S1_PROGRESSIVE:
+    schedule: "Q0 60s -> Q1 120s -> Q2 120s -> Q0 180s"
+  S2_HARD_OUTAGE:
+    schedule: "Q0 60s -> Q3 120s -> Q0 300s"
+  S3_FLAPPING:
+    schedule: "Q0 60s -> [Q3 30s / Q0 30s] x4 -> Q0 180s"
+
+planned_repetitions_per_mode_per_scenario: 5
+planned_total_scored_runs: 40
+telemetry_rate_hz: 1
+scored_duration_s: 480
+warmup_duration_s: 60
+
+freeze_requirements:
+  - Calibrate numeric Q0-Q3 settings using non-scored runs
+  - Freeze recovery window
+  - Freeze exact profile/version and node classes
+  - Verify B0/W1 implementation matching
+  - Verify evidence capture and clock alignment
+  - Set scored_runs_authorized true only after protocol gate closes
