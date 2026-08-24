@@ -1,0 +1,110 @@
+name: POWDER Targeted Cleanup
+
+on:
+  push:
+    paths:
+      - ".powder-cleanup-trigger"
+  workflow_dispatch:
+    inputs:
+      experiment_id:
+        description: "POWDER experiment UUID to terminate if it still exists"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve target
+        id: target
+        shell: bash
+        env:
+          INPUT_ID: ${{ github.event.inputs.experiment_id }}
+        run: |
+          set -euo pipefail
+          ID="${INPUT_ID:-}"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            ID="$(awk -F= '$1=="experiment_id" {print $2}' .powder-cleanup-trigger | tail -n1 | tr -d '\r')"
+          fi
+          [[ "$ID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid experiment UUID."; exit 2; }
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+      - name: Install official Portal API client
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing API token."; exit 2; }
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+      - name: Terminate if present and verify absence
+        id: cleanup
+        shell: bash
+        run: |
+          set -uo pipefail
+          ID="${{ steps.target.outputs.id }}"
+          mkdir -p evidence/powder
+          set +e
+          portal-cli experiment get --experiment-id "$ID" > /tmp/pre.json 2>/tmp/pre.err
+          PRE_RC=$?
+          set -e
+          PRE_STATUS="absent"
+          if [[ "$PRE_RC" -eq 0 ]]; then
+            PRE_STATUS="$(jq -r '.status // "unknown"' /tmp/pre.json)"
+            echo "Experiment still present in state: $PRE_STATUS"
+            portal-cli experiment terminate --experiment-id "$ID" > /tmp/term.out 2>/tmp/term.err || true
+          else
+            echo "Experiment already absent."
+          fi
+
+          ABSENT=0
+          for i in $(seq 1 18); do
+            set +e
+            portal-cli experiment get --experiment-id "$ID" > /tmp/post.json 2>/tmp/post.err
+            RC=$?
+            set -e
+            if [[ "$RC" -ne 0 ]]; then ABSENT=1; break; fi
+            sleep 10
+          done
+
+          OUT=evidence/powder/cleanup-latest.md
+          {
+            echo "# POWDER targeted cleanup — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Experiment ID: \`$ID\`"
+            echo "- Pre-cleanup state: \`$PRE_STATUS\`"
+            if [[ "$ABSENT" -eq 1 ]]; then
+              echo "- Cleanup gate: **PASS — experiment absent**"
+            else
+              echo "- Cleanup gate: **FAIL — experiment still resolves**"
+            fi
+            echo "- Scientific action attempted: **NO**"
+            echo "- Token content recorded: **NO**"
+          } > "$OUT"
+          [[ "$ABSENT" -eq 1 ]] || exit 20
+      - name: Commit cleanup evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/cleanup-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record POWDER targeted cleanup evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
