@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-24 22:58 Africa/Cairo
+Last updated: 2026-08-24 23:56 Africa/Cairo
 
 ## Standing handover rule
 
@@ -8,16 +8,22 @@ No material project state may exist only in chat. Decisions, results, artifacts,
 
 ## Executive state
 
-WellPulse has one completed embedded-hardware validation layer on FIT IoT-LAB and has now completed the first POWDER manual infrastructure golden path.
+WellPulse has completed:
 
-Current scientific progress is deliberately conservative: **20%**.
+- FIT IoT-LAB embedded-hardware evidence layer;
+- POWDER G0 account/project gate;
+- POWDER G1 compute provisioning gate;
+- POWDER G2 explicit-key SSH + teardown gate;
+- POWDER G3 file-based simulated LTE stack/data-path gate.
+
+Current scientific progress remains deliberately conservative: **20%**.
 
 - WP0 Novelty & Venue Lock: **8/8 complete**.
 - WP1 Confirmatory Protocol & Statistics Freeze: **12/12 complete**.
-- WP2 RF Calibration & Measurement Validation: **0/15 — next scientific WP**.
+- WP2 RF Calibration & Measurement Validation: **0/15 — next scientific WP**, blocked until a controlled physical-RF lifecycle/user-plane exists.
 - WP3 Conducted-RF Confirmatory Campaign: **0/30 — blocked by WP2**.
 - WP4 OTA External Replication: **0/15 — blocked by WP3**.
-- WP5 Analysis + Artifact + Paper Closure: **0/20 scientific closure**; substantial analysis/reproducibility scaffolding is already prepared but is not counted as completed scientific WP credit.
+- WP5 Analysis + Artifact + Paper Closure: **0/20 scientific closure**.
 
 Canonical milestone dashboard: `docs/MILESTONE_STATUS.md`.
 
@@ -26,13 +32,14 @@ Current POWDER infrastructure state:
 - G0 account/project baseline: **PASS**.
 - G1 simple compute provisioning: **PASS**.
 - G2 explicit-key manual SSH + node identity + clean teardown: **PASS**.
-- G3 simulated radio/data-path validation: **NEXT / NOT STARTED**.
-- Controlled physical-RF lifecycle: **NOT STARTED**.
+- G3 simulated stack/data-path validation: **PASS**.
+- G4 controlled physical-RF lifecycle discovery/qualification: **NEXT**.
+- G5 RF impairment plumbing: **PENDING**.
 - Scored POWDER campaign: **NOT AUTHORIZED**.
 
-Resource-creating POWDER automation remains **FROZEN** until the equivalent manual layer has passed.
+`scored_runs_authorized = false`.
 
-A safe attach-only helper is now prepared at `.github/workflows/powder-g3-attach.yml`. It creates no POWDER resources. For the current G3 gate, the user still creates a fresh `srsLTE-SIM:9` experiment manually; after READY, the helper may attach to the exact experiment UUID, validate the expected profile/hardware/image, discover SSH from the live manifest, execute the profile-authoritative file-based simulated stack check, capture sanitized evidence, and fail-safe terminate the validated experiment. The existing `.github/workflows/powder-g3-simstack.yml` resource-creating workflow remains **UNAPPROVED / DO NOT RUN** until an equivalent G3 manual gate has passed and this handover explicitly unfreezes it.
+Resource-creating POWDER automation remains **FROZEN by owner mandate**. G3 PASS does not automatically unfreeze G4 provisioning or scored runs.
 
 ## Canonical repositories and workspaces
 
@@ -53,7 +60,7 @@ Frozen position:
 
 - Do not claim novelty for generic MQTT, store-and-forward, buffering, offline-first operation, or 5G/LTE.
 - Contribution is durable record identity + idempotent reconciliation + strong matched MQTT baseline + causal real-RF manipulation + OTA replication + reproducible cross-testbed evidence ladder.
-- Primary manuscript-fit target: `Internet of Things (Elsevier)`; `Computer Networks` and `Computer Communications` remain fit-dependent backups. Re-verify venue metadata at submission.
+- Primary manuscript-fit target: `Internet of Things (Elsevier)`; `Computer Networks` and `Computer Communications` are fit-dependent backups. Re-verify venue metadata at submission.
 
 ### WP1 — Confirmatory Protocol & Statistics Freeze — 12%
 
@@ -70,8 +77,8 @@ Frozen essentials:
 - Run is the statistical unit.
 - Conducted campaign: 24–36 scored runs under precision-based replication.
 - OTA replication: 12 scored runs for S1/S2 only.
-- Primary cohort closes at final Q0 restoration; arrivals observed through frozen recovery horizon H.
-- `scored_runs_authorized` remains false until all pre-score RF/runtime/evidence gates pass.
+- Primary cohort closes at final Q0 restoration; arrivals are observed through frozen recovery horizon H.
+- No scored run before all pre-score RF/runtime/evidence gates pass.
 
 Supporting files:
 
@@ -84,7 +91,7 @@ Supporting files:
 
 Status: **0% / NEXT SCIENTIFIC WP**.
 
-Cannot start until manual infrastructure sequence reaches a valid controlled physical-RF profile and user-plane path.
+Cannot begin until G4 establishes a current controlled physical-RF lifecycle and a valid experimental user-plane.
 
 Required outputs:
 
@@ -95,7 +102,7 @@ Required outputs:
 - non-scored recovery trials sufficient to freeze H;
 - complete evidence bundle and deterministic analyzer validation.
 
-Planning estimate after G3/controlled-RF access is available: **~4–8 active hours**.
+Planning estimate after G4 access is established: **~4–8 active hours**.
 
 ### WP3 — Conducted-RF Confirmatory Campaign — 30%
 
@@ -125,14 +132,14 @@ Planning estimate after data acquisition: **~12–20 active hours**.
 
 Scientific completion: **20%**.
 
-Planning estimate from current state to a paper-ready POWDER package:
+Planning estimate from the current state to a paper-ready POWDER package:
 
-- active hands-on work: **~28–50 hours**;
+- active hands-on work: **~27–48 hours**;
 - best case with immediate resource availability: **~3–4 intensive working days**;
 - realistic elapsed time: **~5–8 calendar days**;
-- resource-constrained case: **~1–2 weeks** if conducted-RF or OTA resources are unavailable.
+- resource-constrained case: **~1–2 weeks** if controlled-RF or OTA resources are unavailable.
 
-These are planning estimates, not commitments. The largest elapsed-time uncertainty is current compatible controlled-RF/OTA resource availability, not local software or SSH plumbing.
+These are planning estimates, not commitments. The largest elapsed-time uncertainty is current compatible controlled-RF/OTA resource availability.
 
 ## FIT IoT-LAB — completed prior evidence layer
 
@@ -151,62 +158,110 @@ Evidence class: `FINAL_WP_RT01_FIT_A8`.
 
 Evidence boundary: communications, buffering, process-restart recovery and reconciliation on real embedded hardware under controlled connectivity impairment only. No pump/hydraulic/groundwater/agronomic/Siwa-field claim.
 
-## POWDER canonical manual golden path — G0/G1/G2 PASS
+## POWDER G0/G1/G2 canonical manual golden path
 
 Canonical evidence: `evidence/powder/manual-golden-path-2026-08-24.md`.
 
 Canonical runbook: `powder/MANUAL_GOLDEN_PATH.md`.
 
-Accepted reference run:
+Accepted G1/G2 reference run:
 
-- experiment: `WP-G1-SIM`;
-- experiment UUID: `0dc233d7-44a0-4e6c-9734-6d4c8ea0e2ad`;
-- profile: `srsLTE-SIM:9`;
-- profile UUID: `80dda605-7e5f-11e9-8006-e4434b2381fc`;
-- hardware: one `d430`;
-- allocated node: `pc734`;
-- disk image: `PowderProfiles:gnuradio-srslte`;
-- SSH endpoint: `pc734.emulab.net:22`;
-- remote user: `aayoub`;
-- canonical remote hostname: `node.wp-g1-sim.wellpulse.emulab.net`;
-- observed OS: Ubuntu 18.04.1 LTS;
-- observed kernel: Linux 4.15.0-33-generic x86_64;
-- observed UTC check: Mon Aug 24 19:15:48 UTC 2026;
-- history start: 2026-08-24 22:07 portal-local;
-- destroyed: 2026-08-24 22:17 portal-local;
-- portal history PHours: 0.16;
-- teardown: `Current Usage: 0 Node Hours`.
+- experiment `WP-G1-SIM`;
+- UUID `0dc233d7-44a0-4e6c-9734-6d4c8ea0e2ad`;
+- profile `srsLTE-SIM:9`;
+- profile UUID `80dda605-7e5f-11e9-8006-e4434b2381fc`;
+- one `d430`;
+- node `pc734`;
+- image `PowderProfiles:gnuradio-srslte`;
+- explicit Golden-key SSH PASS;
+- clean teardown PASS;
+- portal returned to `Current Usage: 0 Node Hours`.
 
 Canonical manual SSH key:
 
-- label: `WellPulse-POWDER-Golden`;
-- fingerprint: `SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs`;
-- local private-key path: `%USERPROFILE%\.ssh\wellpulse_powder_golden`;
-- private key and passphrase must never be committed, pasted into evidence, or requested by a future agent.
+- label `WellPulse-POWDER-Golden`;
+- fingerprint `SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs`;
+- local private-key path `%USERPROFILE%\.ssh\wellpulse_powder_golden`.
 
-Successful acceptance command pattern:
+Never request, echo, commit or copy the private key or its passphrase.
 
-```powershell
-ssh -o IdentitiesOnly=yes `
-  -i "$HOME\.ssh\wellpulse_powder_golden" `
-  aayoub@ACTUAL_HOSTNAME_FROM_POWDER_LIST_VIEW
+Never reuse historical node hostnames. Always take the endpoint from the current live POWDER experiment.
+
+## POWDER G3 — PASS
+
+Canonical evidence: `evidence/powder/g3-simstack-2026-08-24.md`.
+
+Accepted G3 run:
+
+- experiment `WP-G3-SIMSTACK`;
+- UUID `3484b01d-7eca-48e7-9e34-866680057b0d`;
+- profile `srsLTE-SIM:9`;
+- profile UUID `80dda605-7e5f-11e9-8006-e4434b2381fc`;
+- one `d430`;
+- allocated node `pc757`;
+- image `PowderProfiles/gnuradio-srslte`;
+- SSH endpoint used `pc757.emulab.net:22`;
+- remote hostname `node.wp-g3-simstack.wellpulse.emulab.net`;
+- Ubuntu 18.04.1 / kernel 4.15.0-33;
+- manual SSH with the Golden key: PASS.
+
+Profile-authoritative commands:
+
+```bash
+/usr/local/srsLTE/build/lib/examples/pdsch_enodeb -o /tmp/wellpulse_g3.iq -n 5 -m 9 -v
+/usr/local/srsLTE/build/lib/examples/pdsch_ue -i /tmp/wellpulse_g3.iq -n 5 -r 1234 -v -d
 ```
 
-Never reuse historical hostnames. Always obtain the active endpoint from List View.
+Observed acceptance evidence:
 
-Profile evidence boundary: `srsLTE-SIM:9` is a one-node srsLTE file-based simulation profile with **no SDR and no RF**. G1/G2 therefore prove provisioning, key injection, SSH and teardown only.
+- transmitter completed with `Done`;
+- MIB decoded;
+- CFI/PDCCH/PDSCH decoded;
+- code-block CRCs reported `CRC=OK`;
+- multiple `TB decoded OK`;
+- receiver exited `RX_RC=0`;
+- waveform size `2304000` bytes;
+- waveform SHA-256 `103de59d52e75252e916d7ed62c5c9b76401e817ffec3178363879e0bed71678`;
+- temporary waveform deletion verified `IQ_CLEANUP=PASS`;
+- SSH exited cleanly;
+- manual experiment termination verified in the live dashboard;
+- final dashboard: `Current Usage: 0 Node Hours` and no active experiments.
+
+One first-block diagnostic line `Error in TB parity: par_tx=0x0, par_rx=0x0` is preserved in evidence. Subsequent transport blocks decoded successfully and receiver exit status was zero; it is not treated as a fatal G3 failure.
+
+G3 evidence boundary: the path is **file-based simulation only**:
+
+`pdsch_enodeb -> IQ file -> pdsch_ue`
+
+It proves no SDR, no RF propagation, no attenuation, no OTA behavior, no MQTT/WellPulse scientific performance, and no field/agronomic outcome.
+
+G3 contributes **0% scientific completion**.
+
+## G3 automation troubleshooting — quarantined
+
+A safe attach-only helper exists at `.github/workflows/powder-g3-attach.yml`, but earlier attach attempts failed before target validation.
+
+Sanitized diagnosis: `evidence/powder/g3-key-format-diag.json`.
+
+Current known issue:
+
+- GitHub repository secret `POWDER_SSH_PRIVATE_KEY` contains a public key rather than an usable private key;
+- failed attach attempts did not execute the G3 workload;
+- failed attach attempts did not terminate the experiment;
+- accepted G3 evidence is the manual Golden-key run above.
+
+Do not rerun CI just to obtain a more automated copy of an already accepted G3 result.
+
+The full resource-creating workflow `.github/workflows/powder-g3-simstack.yml` remains **FROZEN / DO NOT RUN** under the owner mandate.
 
 ## POWDER troubleshooting history — quarantined
 
 Do not promote any of these into scientific evidence:
 
-1. `wpplmb6787317` / `srs-rf-matrix`: failed before READY; hidden `n310` requirement with zero availability/entitlement; re-submitting unchanged is prohibited.
+1. `wpplmb6787317` / `srs-rf-matrix`: failed before READY because topology requested `n310` while WellPulse entitlement was 0; do not resubmit unchanged.
 2. `wphnd8201533` / `srsran-handover`: exploratory/invalid feasibility attempt; not a current controlled-RF baseline.
-3. `WP-G1-SIM` started 21:06: provisioning passed but intended local key was not the registered POWDER key; destroyed 21:42.
-4. `WP-G1-SIM` started 21:45: troubleshooting rerun before Golden-key reset; destroyed 22:04.
-5. `WP-G1-SIM` started 22:07: **canonical G1/G2 PASS**; destroyed 22:17.
-
-Portal-history troubleshooting usage is provenance only, not scientific evidence.
+3. Earlier pre-Golden `WP-G1-SIM` attempts: troubleshooting only.
+4. Failed G3 GitHub attach attempts: credential troubleshooting only; no target validation/test/teardown.
 
 ## Security and log-minimization rule
 
@@ -219,75 +274,68 @@ Never commit or copy into handover artifacts:
 - certificate blocks;
 - raw portal credential-like material.
 
-Raw POWDER logs may contain encrypted token/certificate material. Preserve sanitized extracts containing only the fields required for reproducibility: experiment/profile IDs, resource bindings, image/runtime identity, state transitions, SSH endpoint/auth mode, timestamps and acceptance outcomes.
+Preserve sanitized experiment/profile IDs, resource bindings, image/runtime identity, state transitions, endpoint/auth mode, timestamps, commands, exit codes, hashes and acceptance outcomes.
 
-Existing GitHub Actions secret names include `POWDER_SSH_PRIVATE_KEY`, `POWDER_USERNAME`, and `POWDER_API_TOKEN`. Do not echo their values.
-
-## Exact next gate — G3 simulated stack/data-path validation
+## Exact next gate — G4 controlled physical-RF lifecycle
 
 Status: **NEXT / NOT STARTED**.
 
-Purpose: prove that a current simulated radio-stack/data-path experiment works before selecting/automating a physical-RF path. G3 remains non-scored and no RF.
+Purpose: identify and manually qualify a **current** POWDER controlled physical-RF path before any WP2 calibration or scored run.
 
-Current approved execution mode is **manual create + automated attach**:
+Manual-first procedure:
 
-1. Confirm `Current Usage: 0 Node Hours` in the live POWDER portal.
-2. Instantiate `srsLTE-SIM:9` manually under project `WellPulse` with a distinct name beginning `WP-G3-SIMSTACK` and one `d430`; do not create a reservation unless required.
-3. Wait for READY and copy the experiment UUID.
-4. Run GitHub Action **POWDER G3 Attach to Manual Experiment** (`.github/workflows/powder-g3-attach.yml`) with that UUID and authorization token `G3ATTACH`.
-5. The action must validate profile UUID `80dda605-7e5f-11e9-8006-e4434b2381fc`, hardware `d430`, and image `PowderProfiles:gnuradio-srslte` before it may run or terminate the target.
-6. The action discovers the active SSH endpoint from the live manifest; it must not reuse a historical hostname.
-7. It executes only the profile-authoritative file-based example via `powder/g3_simstack_remote.sh`:
+1. Use the live authenticated POWDER UI to inspect current example/project profiles relevant to controlled physical RF.
+2. Verify exact profile name, owner/project, revision, requested radio/hardware resources, WellPulse entitlement and current availability.
+3. Do not infer the current baseline from stale names or code.
+4. Do not reuse `srsran-handover` without fresh live verification.
+5. Do not resubmit `srs-rf-matrix` unchanged because its previous topology required unavailable `n310` resources.
+6. Select the smallest current profile that can prove the required controlled physical-RF lifecycle.
+7. Provision **one manual non-scored qualification experiment only**.
+8. Verify READY and exact resource bindings in the live manifest/list view.
+9. SSH using an explicit registered key and the current endpoint.
+10. Capture only credential-free metadata needed for reproducibility.
+11. Terminate cleanly and verify zero active usage.
+12. Record a G4 PASS/FAIL artifact before any move into experimental user-plane or RF calibration.
 
-```bash
-/usr/local/srsLTE/build/lib/examples/pdsch_enodeb -o <temp-file> -n 5 -m 9 -v
-/usr/local/srsLTE/build/lib/examples/pdsch_ue -i <temp-file> -n 5 -r 1234 -v -d
-```
+No automation of G4 resource creation is authorized at this stage.
 
-8. It captures credential-free stdout/stderr evidence, remote metadata, exit codes, waveform byte count and SHA-256, removes the temporary waveform, and retains sanitized evidence under `evidence/powder/g3/` plus `evidence/powder/g3-simstack-latest.md`.
-9. It fail-safe terminates only after target identity validation and polls for destroyed/terminated/absent state.
-10. G3 PASS requires both `PROCESS_GATE=PASS` and `cleanup=PASS`.
-11. A G3 PASS still does not authorize scored work and does not add scientific percentage.
+After G4 lifecycle PASS:
 
-The full resource-creating workflow `.github/workflows/powder-g3-simstack.yml` exists but remains **UNAPPROVED / DO NOT RUN** under D-010/D-014 until the equivalent G3 manual gate has passed and the canonical handover explicitly unfreezes it.
-
-After G3 PASS, manually discover a **current** controlled physical-RF profile through the live POWDER UI. Do not trust stale remembered profile names. `srs-rf-matrix` remains blocked as-is because of its `n310` dependency.
-
-## Other remote-testbed lanes
-
-### ARA rural OTA
-
-Status: qualified access lane / not executed. Preserve for a distinct rural/outdoor OTA claim only; do not use it to duplicate the entire conducted matrix.
-
-### COSMOS/ORBIT
-
-Status in the prior handover was activation/access work. It remains a fallback lane if POWDER controlled-RF access stalls. Re-verify live account state before acting; do not assume the 2026-08-23 activation status is still the current operational state.
+- establish the real experimental cellular user-plane rather than POWDER control-network bypass;
+- reproduce the frozen Paho runtime/session;
+- execute non-scored G5/WP2 RF calibration;
+- freeze Q0/Q1/Q2/Q3 and recovery horizon H;
+- validate evidence timing/analyzer;
+- only then consider explicit scored-run authorization.
 
 ## Reproducibility read order for a new agent
 
-A new agent should read, in this order:
+Read in this order before acting:
 
-1. `HANDOVER_CURRENT.md` — canonical operational state.
-2. `docs/MILESTONE_STATUS.md` — WP progress, gates and time estimate.
-3. `docs/STATUS.md` — current validation/science status.
-4. `docs/DECISIONS.md` — frozen decisions and anti-drift rules.
-5. `powder/MANUAL_GOLDEN_PATH.md` — verified POWDER access procedure.
-6. `evidence/powder/manual-golden-path-2026-08-24.md` — accepted reference evidence.
-7. `experiments/WP-PWD01/protocol.md` — scientific protocol v0.4.
-8. `experiments/WP-PWD01/analysis-plan.md`.
-9. `experiments/WP-PWD01/evidence-schema.md`.
-10. `experiments/WP-PWD01/run-matrix.yaml` and `randomization-plan.csv`.
+1. `HANDOVER_CURRENT.md`
+2. `docs/MILESTONE_STATUS.md`
+3. `docs/STATUS.md`
+4. `docs/DECISIONS.md`
+5. `evidence/powder/g3-simstack-2026-08-24.md`
+6. `powder/MANUAL_GOLDEN_PATH.md`
+7. `evidence/powder/manual-golden-path-2026-08-24.md`
+8. `experiments/WP-PWD01/protocol.md`
+9. `experiments/WP-PWD01/analysis-plan.md`
+10. `experiments/WP-PWD01/evidence-schema.md`
+11. `experiments/WP-PWD01/randomization-plan.csv`
+12. `experiments/WP-PWD01/run-matrix.yaml`
 
-The new agent should not infer current testbed availability or current profile compatibility from historical files; verify the live POWDER UI before provisioning each new layer.
+Do not infer current testbed availability or profile compatibility from historical files; verify the live POWDER UI before provisioning each new infrastructure layer.
 
 ## Handover completion checklist
 
 Before ending any material WellPulse work block:
 
 1. Update this file.
-2. Update `docs/MILESTONE_STATUS.md` when a WP/gate/progress/time estimate materially changes.
-3. Update the relevant protocol/result/evidence file.
-4. Update the Drive Current Handover Index and milestone tab.
-5. Preserve durable raw evidence where appropriate without committing secrets.
-6. Record exact PASS/FAIL, exclusions, evidence boundary, teardown state and next action.
-7. Verify that a new agent can resume without reading chat history.
+2. Update `docs/MILESTONE_STATUS.md` when a WP/gate/progress/time estimate changes.
+3. Update `docs/STATUS.md`.
+4. Update `docs/DECISIONS.md` only if a decision changed.
+5. Update relevant sanitized evidence.
+6. Update the Drive Current Handover Index and `MILESTONES` tab.
+7. Preserve exact PASS/FAIL, exclusions, evidence boundary, teardown state and next action.
+8. Ensure a new agent can resume without reading chat history.
