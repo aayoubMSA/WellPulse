@@ -1,5 +1,5 @@
 experiment_id: WP-PWD01
-protocol_version: v0.3
+protocol_version: v0.4
 status: DESIGN_FROZEN_PENDING_LIFECYCLE_AND_RF_CALIBRATION
 scored_runs_authorized: false
 
@@ -9,7 +9,9 @@ controlled_rf_profile:
     name: PowderTeam/srs-rf-matrix
     reason: current topology requires n310; WellPulse entitlement is 0 and portal says unchanged resubmission will always fail
   candidate_profile:
-    name: srsran-handover
+    name: PowderProfiles/srsran-handover
+    profile_uuid_published: d7d95166-c42a-11eb-b1eb-e4434b2381fc
+    creator: dmaas
     role: feasibility_only_until_lifecycle_gate_passes
     rat: LTE
     scientific_requirement: programmable physical RF attenuation; RAT is not itself a novelty claim
@@ -18,7 +20,8 @@ randomization:
   paired_blocks: true
   seed: 26082401
   unit_of_analysis: run
-  rule: randomize B1/W1 order within each paired block before scored execution
+  frozen_order_file: experiments/WP-PWD01/randomization-plan.csv
+  rule: use the pre-generated B1/W1 order within each paired block; reserve pairs 4-5 execute only under the precision rule
 
 matched_mqtt_transport:
   implementation: PahoQoS1Session
@@ -67,11 +70,21 @@ rf_states:
 workload:
   telemetry_rate_hz: 1
   generation_must_not_block_on_puback: true
+  generation_continues_during_recovery_horizon: true
   warmup_duration_s: 30
   pre_impairment_q0_s: 60
   impairment_window_s: 120
   recovery_horizon_s: TBD_AFTER_NON_SCORED_CALIBRATION
   recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); review_if_over_300s
+
+primary_cohort:
+  cutoff: final_Q0_restoration_after_impairment
+  s0_cutoff: pseudo_restoration_after_first_180s
+  manifest_field: cohort_cutoff_utc
+  horizon_field: horizon_end_utc
+  inclusion: generated_ts_utc <= cohort_cutoff_utc
+  observation: received_ts_utc <= horizon_end_utc
+  post_cutoff_generation: retained_as_realistic_load_but_excluded_from_primary_denominator
 
 scenarios:
   S0_HEALTHY:
@@ -111,14 +124,16 @@ planned_conducted_scored_runs:
   maximum: 36
 
 primary_endpoint:
-  name: unique_telemetry_completeness_at_H
-  formula: unique_valid_expected_records_received_by_H / generated_scored_records
+  name: unique_primary_cohort_telemetry_completeness_at_H
+  formula: unique_valid_primary_cohort_records_received_by_horizon_end_utc / primary_cohort_generated_records
   integrity_requirement: record_identity_and_checksum_match
+  reference_implementation: wellpulse.powder_analysis.reconstruct_primary_endpoint
 
 secondary_endpoints:
   - permanent_missing_rate
   - duplicate_attempt_and_final_duplicate_rate
   - checksum_mismatch_count
+  - unexpected_record_attempt_count
   - out_of_order_rate
   - reconnect_time_s
   - first_successful_post_recovery_delivery_s
@@ -144,9 +159,9 @@ freeze_requirements:
   - Pass pinned Paho 2.1.0 local transport tests and reproduce exact settings in remote runtime manifest
   - Verify payload traverses experimental cellular data path rather than POWDER control network
   - Calibrate numeric Q0-Q3 and record observed RF context
-  - Freeze recovery horizon H
+  - Freeze recovery horizon H and verify cohort_cutoff_utc/horizon_end_utc timing
   - Freeze exact profile identifier/version/bindings and node classes
   - Audit B1/W1 matching
   - Verify evidence capture and clock alignment
-  - Verify analysis reconstructs primary endpoint from pilot bundle
+  - Verify analysis reconstructs primary endpoint from a non-scored pilot bundle
   - Set scored_runs_authorized true only after all gates close
