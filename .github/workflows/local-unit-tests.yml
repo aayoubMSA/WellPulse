@@ -5,11 +5,13 @@ on:
     paths:
       - "src/wellpulse/**"
       - "tests/**"
+      - "pyproject.toml"
       - ".github/workflows/local-unit-tests.yml"
   pull_request:
     paths:
       - "src/wellpulse/**"
       - "tests/**"
+      - "pyproject.toml"
 
 permissions:
   contents: write
@@ -17,7 +19,7 @@ permissions:
 jobs:
   unittest:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +27,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install pinned MQTT extra
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet -e '.[mqtt]'
+          python -c "import importlib.metadata as m; assert m.version('paho-mqtt') == '2.1.0'; print('paho-mqtt', m.version('paho-mqtt'))"
       - name: Run deterministic unit tests and write evidence
         id: tests
         shell: bash
@@ -41,6 +49,7 @@ jobs:
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
             echo "- Python: $(python --version 2>&1)"
+            echo "- Paho MQTT: $(python -c \"import importlib.metadata as m; print(m.version('paho-mqtt'))\")"
             if [[ "$RC" -eq 0 ]]; then
               echo "- Gate: **PASS**"
             else
@@ -49,7 +58,7 @@ jobs:
             fi
             echo
             echo '```text'
-            tail -n 120 /tmp/unit-tests.log
+            tail -n 160 /tmp/unit-tests.log
             echo '```'
           } > evidence/local/unit-tests-latest.md
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
