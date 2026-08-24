@@ -1,0 +1,385 @@
+name: POWDER G3 Simulated Stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Type G3SIM to authorize one non-scored automated G3 run"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-g3-simstack
+  cancel-in-progress: false
+
+jobs:
+  g3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_PROJECT: WellPulse
+      PROFILE_NAME: srsLTE-SIM
+      PROFILE_PROJECT: PowderProfiles
+      EXPECTED_AUTOMATION_FP: SHA256:jQGQvU86rtuEchT50N1HuB4Cmizpvbmp0zSBR4rowxY
+      EXPECTED_HARDWARE: d430
+      EXPECTED_IMAGE_FRAGMENT: PowderProfiles:gnuradio-srslte
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate explicit authorization and secrets
+        shell: bash
+        env:
+          INPUT_EXECUTE: ${{ github.event.inputs.execute }}
+        run: |
+          set -euo pipefail
+          [[ "$INPUT_EXECUTE" == "G3SIM" ]] || { echo "Not authorized: type G3SIM."; exit 2; }
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN."; exit 2; }
+          [[ -n "$POWDER_USERNAME" ]] || { echo "Missing POWDER_USERNAME."; exit 2; }
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "Missing POWDER_SSH_PRIVATE_KEY."; exit 2; }
+          echo "One non-scored G3 simulation run explicitly authorized."
+
+      - name: Install Portal API client and preflight automation SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+
+          mkdir -p "$HOME/.ssh" /tmp/powder-g3 evidence/powder/g3
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          # Fail BEFORE creating any POWDER resources if the automation secret
+          # cannot be used non-interactively or is not the registered key we expect.
+          timeout 5 ssh-keygen -y -P "" -f "$HOME/.ssh/id_ed25519" > /tmp/powder-g3/automation.pub
+          ACTUAL_FP="$(ssh-keygen -lf /tmp/powder-g3/automation.pub | awk '{print $2}')"
+          echo "Automation key fingerprint: $ACTUAL_FP"
+          [[ "$ACTUAL_FP" == "$EXPECTED_AUTOMATION_FP" ]] || {
+            echo "Automation SSH secret fingerprint mismatch; no experiment created."
+            exit 3
+          }
+          echo "$ACTUAL_FP" > /tmp/powder-g3/automation-fingerprint.txt
+
+      - name: Create one-hour non-scored G3 experiment
+        id: create
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUFFIX="${GITHUB_RUN_ID: -8}"
+          EXPNAME="wpg3${SUFFIX}"
+          [[ ${#EXPNAME} -le 16 ]] || { echo "Generated experiment name too long."; exit 2; }
+          printf '%s\n' "$EXPNAME" > /tmp/powder-g3/name
+
+          portal-cli experiment create \
+            --name "$EXPNAME" \
+            --project "$POWDER_PROJECT" \
+            --profile-name "$PROFILE_NAME" \
+            --profile-project "$PROFILE_PROJECT" \
+            --duration 1 \
+            > /tmp/powder-g3/create.json
+
+          EXPID="$(jq -r '.id // empty' /tmp/powder-g3/create.json)"
+          [[ -n "$EXPID" ]] || { echo "Create returned no experiment ID."; cat /tmp/powder-g3/create.json; exit 4; }
+          printf '%s\n' "$EXPID" > /tmp/powder-g3/experiment_id
+          echo "experiment_id=$EXPID" >> "$GITHUB_OUTPUT"
+          echo "Experiment created: $EXPNAME ($EXPID)"
+
+      - name: Wait for READY
+        id: ready
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPID="$(cat /tmp/powder-g3/experiment_id)"
+          READY=0
+          for i in $(seq 1 60); do
+            set +e
+            portal-cli experiment get --experiment-id "$EXPID" > /tmp/powder-g3/status.json 2>/tmp/powder-g3/status.err
+            RC=$?
+            set -e
+            if [[ "$RC" -ne 0 ]]; then
+              echo "Status query $i failed; retrying."
+              sleep 20
+              continue
+            fi
+            STATUS="$(jq -r '.status // "unknown"' /tmp/powder-g3/status.json)"
+            echo "POWDER status: $STATUS"
+            if [[ "$STATUS" == "ready" ]]; then READY=1; break; fi
+            if [[ "$STATUS" =~ ^(failed|error|terminated)$ ]]; then
+              echo "Terminal failure state: $STATUS"
+              exit 5
+            fi
+            sleep 20
+          done
+          [[ "$READY" -eq 1 ]] || { echo "Experiment did not reach READY within 20 minutes."; exit 6; }
+
+      - name: Retrieve and sanitize manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPID="$(cat /tmp/powder-g3/experiment_id)"
+          portal-cli experiment manifests get --experiment-id "$EXPID" > /tmp/powder-g3/manifests.json
+
+          python - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          obj = json.loads(Path('/tmp/powder-g3/manifests.json').read_text())
+          xmls=[]
+          def walk(x):
+              if isinstance(x, dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x, list):
+                  for v in x: walk(v)
+              elif isinstance(x, str) and '<' in x and 'rspec' in x.lower():
+                  xmls.append(x)
+          walk(obj)
+
+          nodes=[]
+          logins=[]
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for el in root.iter():
+                  tag=el.tag.rsplit('}',1)[-1]
+                  if tag == 'node':
+                      n={'client_id':el.attrib.get('client_id',''), 'component_id':el.attrib.get('component_id','')}
+                      for ch in el.iter():
+                          ctag=ch.tag.rsplit('}',1)[-1]
+                          if ctag == 'hardware_type' and not n.get('hardware_type'):
+                              n['hardware_type']=ch.attrib.get('name','')
+                          if ctag == 'disk_image' and not n.get('disk_image'):
+                              n['disk_image']=ch.attrib.get('name','')
+                          if ctag == 'login' and ch.attrib.get('hostname'):
+                              login={'username':ch.attrib.get('username',''), 'hostname':ch.attrib['hostname'], 'port':ch.attrib.get('port','22')}
+                              logins.append(login)
+                      if n.get('client_id') or n.get('component_id'): nodes.append(n)
+
+          # de-duplicate
+          uniq=[]; seen=set()
+          for x in logins:
+              k=(x['username'],x['hostname'],x['port'])
+              if k not in seen: seen.add(k); uniq.append(x)
+          summary={'nodes':nodes,'logins':uniq}
+          Path('/tmp/powder-g3/manifest-summary.json').write_text(json.dumps(summary,indent=2,sort_keys=True))
+          if uniq:
+              Path('/tmp/powder-g3/login.tsv').write_text(f"{uniq[0]['username']}\t{uniq[0]['hostname']}\t{uniq[0]['port']}\n")
+          PY
+
+          [[ -s /tmp/powder-g3/login.tsv ]] || { echo "No SSH endpoint in manifest."; exit 7; }
+
+          HARDWARE="$(jq -r '.nodes[0].hardware_type // empty' /tmp/powder-g3/manifest-summary.json)"
+          IMAGE="$(jq -r '.nodes[0].disk_image // empty' /tmp/powder-g3/manifest-summary.json)"
+          echo "Manifest hardware: $HARDWARE"
+          echo "Manifest image: $IMAGE"
+          [[ "$HARDWARE" == "$EXPECTED_HARDWARE" ]] || { echo "Unexpected hardware."; exit 8; }
+          [[ "$IMAGE" == *"$EXPECTED_IMAGE_FRAGMENT"* ]] || { echo "Unexpected disk image."; exit 8; }
+
+      - name: Execute official srsLTE simulated send/receive example
+        id: sim
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=$'\t' read -r MANIFEST_USER HOST PORT < /tmp/powder-g3/login.tsv
+          USERNAME="${MANIFEST_USER:-$POWDER_USERNAME}"
+          printf '%s\n' "$USERNAME" > /tmp/powder-g3/ssh-user
+          printf '%s\n' "$HOST" > /tmp/powder-g3/ssh-host
+          printf '%s\n' "$PORT" > /tmp/powder-g3/ssh-port
+
+          SSHOPTS=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=10
+            -o ServerAliveCountMax=2
+            -o StrictHostKeyChecking=accept-new
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts"
+            -i "$HOME/.ssh/id_ed25519"
+            -p "$PORT"
+          )
+
+          READY=0
+          for i in $(seq 1 18); do
+            if ssh "${SSHOPTS[@]}" "$USERNAME@$HOST" 'hostname; whoami' > /tmp/powder-g3/ssh-preflight.txt 2>/tmp/powder-g3/ssh-preflight.err; then
+              READY=1; break
+            fi
+            echo "SSH not ready yet ($i/18); retrying."
+            sleep 10
+          done
+          [[ "$READY" -eq 1 ]] || { echo "SSH never became ready."; cat /tmp/powder-g3/ssh-preflight.err; exit 9; }
+
+          SCP_OPTS=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o ConnectTimeout=15
+            -o StrictHostKeyChecking=accept-new
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts"
+            -i "$HOME/.ssh/id_ed25519"
+            -P "$PORT"
+          )
+
+          scp "${SCP_OPTS[@]}" powder/g3_simstack_remote.sh "$USERNAME@$HOST:/tmp/wellpulse_g3_simstack.sh"
+          ssh "${SSHOPTS[@]}" "$USERNAME@$HOST" "chmod 700 /tmp/wellpulse_g3_simstack.sh && /tmp/wellpulse_g3_simstack.sh '$GITHUB_RUN_ID'" \
+            > /tmp/powder-g3/remote-run.out 2>/tmp/powder-g3/remote-run.err
+
+          scp -r "${SCP_OPTS[@]}" "$USERNAME@$HOST:/tmp/wellpulse-g3-$GITHUB_RUN_ID" /tmp/powder-g3/
+
+          RUNDIR="/tmp/powder-g3/wellpulse-g3-$GITHUB_RUN_ID"
+          [[ -f "$RUNDIR/result.env" ]] || { echo "Missing remote result.env."; exit 10; }
+          # shellcheck disable=SC1090
+          source "$RUNDIR/result.env"
+          echo "TX_RC=$TX_RC RX_RC=$RX_RC IQ_BYTES=$IQ_BYTES PROCESS_GATE=$PROCESS_GATE"
+          [[ "$PROCESS_GATE" == "PASS" ]] || exit 11
+          [[ "$TX_RC" -eq 0 && "$RX_RC" -eq 0 && "$IQ_BYTES" -gt 0 ]] || exit 11
+
+      - name: Build sanitized G3 evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="evidence/powder/g3-simstack-latest.md"
+          RUNDEST="evidence/powder/g3/${GITHUB_RUN_ID}"
+          mkdir -p "$RUNDEST"
+
+          EXPID="$(cat /tmp/powder-g3/experiment_id 2>/dev/null || true)"
+          EXPNAME="$(cat /tmp/powder-g3/name 2>/dev/null || true)"
+          STATUS="$(jq -r '.status // "unknown"' /tmp/powder-g3/status.json 2>/dev/null || echo unknown)"
+          PROFILE_ID="$(jq -r '.profile_id // "not_captured"' /tmp/powder-g3/status.json 2>/dev/null || echo not_captured)"
+          HOST="$(cat /tmp/powder-g3/ssh-host 2>/dev/null || true)"
+          PORT="$(cat /tmp/powder-g3/ssh-port 2>/dev/null || true)"
+          AUTOF="$(cat /tmp/powder-g3/automation-fingerprint.txt 2>/dev/null || true)"
+          RUNDIR="/tmp/powder-g3/wellpulse-g3-$GITHUB_RUN_ID"
+
+          TX_RC="not_run"; RX_RC="not_run"; IQ_BYTES="0"; IQ_SHA256=""; PROCESS_GATE="FAIL"
+          if [[ -f "$RUNDIR/result.env" ]]; then
+            # shellcheck disable=SC1090
+            source "$RUNDIR/result.env"
+            cp "$RUNDIR/result.env" "$RUNDEST/result.env"
+            cp "$RUNDIR/remote-meta.txt" "$RUNDEST/remote-meta.txt"
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' "$RUNDIR/tx.log" > "$RUNDEST/tx.log" || true
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' "$RUNDIR/rx.log" > "$RUNDEST/rx.log" || true
+          fi
+          if [[ -f /tmp/powder-g3/manifest-summary.json ]]; then cp /tmp/powder-g3/manifest-summary.json "$RUNDEST/manifest-summary.json"; fi
+          if [[ -f /tmp/powder-g3/ssh-preflight.txt ]]; then cp /tmp/powder-g3/ssh-preflight.txt "$RUNDEST/ssh-preflight.txt"; fi
+
+          {
+            echo "# POWDER G3 simulated-stack validation — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub run ID: \`$GITHUB_RUN_ID\`"
+            echo "- GitHub SHA: \`$GITHUB_SHA\`"
+            echo "- Evidence class: **INFRASTRUCTURE_ONLY_NON_SCORED**"
+            echo "- Project: \`$POWDER_PROJECT\`"
+            echo "- Requested profile: \`$PROFILE_PROJECT/$PROFILE_NAME\`"
+            echo "- Experiment name: \`$EXPNAME\`"
+            echo "- Experiment ID: \`$EXPID\`"
+            echo "- Last observed portal status: \`$STATUS\`"
+            echo "- Portal-reported profile ID: \`$PROFILE_ID\`"
+            echo "- SSH endpoint: \`$HOST:$PORT\`"
+            echo "- Automation public-key fingerprint: \`$AUTOF\`"
+            echo "- Transmitter exit code: \`$TX_RC\`"
+            echo "- Receiver exit code: \`$RX_RC\`"
+            echo "- Generated simulated waveform bytes: \`$IQ_BYTES\`"
+            echo "- Generated simulated waveform SHA-256: \`$IQ_SHA256\`"
+            echo "- Process gate: **$PROCESS_GATE**"
+            echo "- SDR/RF used: **NO**"
+            echo "- WellPulse/MQTT scientific workload used: **NO**"
+            echo
+            echo "## Acceptance meaning"
+            echo
+            echo "PASS means the exact POWDER profile provisioned on expected d430/gnuradio-srslte instrumentation, SSH automation reached the allocated node, and the profile's official pdsch_enodeb -> file -> pdsch_ue example completed with zero exit codes and a non-empty generated waveform. It does not validate RF, LTE/5G over a radio, MQTT resilience, or any WP-PWD01 scientific endpoint."
+            echo
+            echo "## Retained run evidence"
+            echo
+            echo "Text logs and a credential-free manifest summary are retained under \`$RUNDEST/\`. The generated binary waveform itself is not committed; its byte count and SHA-256 are retained instead."
+          } > "$OUT"
+
+      - name: Mandatory terminate G3 experiment
+        if: always()
+        id: terminate
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [[ ! -s /tmp/powder-g3/experiment_id ]]; then
+            echo "cleanup=NOT_CREATED" > /tmp/powder-g3/cleanup.env
+            exit 0
+          fi
+          EXPID="$(cat /tmp/powder-g3/experiment_id)"
+          set +e
+          portal-cli experiment terminate --experiment-id "$EXPID" > /tmp/powder-g3/terminate.out 2>/tmp/powder-g3/terminate.err
+          TERMRC=$?
+          set -e
+          echo "Termination request rc=$TERMRC"
+
+          CLEAN=0
+          for i in $(seq 1 30); do
+            set +e
+            portal-cli experiment get --experiment-id "$EXPID" > /tmp/powder-g3/postterm.json 2>/tmp/powder-g3/postterm.err
+            GETRC=$?
+            set -e
+            if [[ "$GETRC" -ne 0 ]]; then CLEAN=1; break; fi
+            ST="$(jq -r '.status // "unknown"' /tmp/powder-g3/postterm.json)"
+            echo "Post-terminate status: $ST"
+            if [[ "$ST" =~ ^(terminated|destroyed)$ ]]; then CLEAN=1; break; fi
+            sleep 10
+          done
+          if [[ "$CLEAN" -eq 1 ]]; then
+            echo "cleanup=PASS" > /tmp/powder-g3/cleanup.env
+          else
+            echo "cleanup=FAIL" > /tmp/powder-g3/cleanup.env
+            echo "CRITICAL: experiment may still hold resources."
+            exit 20
+          fi
+
+      - name: Append cleanup state and commit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="evidence/powder/g3-simstack-latest.md"
+          CLEANUP="UNKNOWN"
+          if [[ -f /tmp/powder-g3/cleanup.env ]]; then
+            # shellcheck disable=SC1090
+            source /tmp/powder-g3/cleanup.env
+            CLEANUP="$cleanup"
+          fi
+          [[ -f "$OUT" ]] || echo "# POWDER G3 simulated-stack validation — latest" > "$OUT"
+          echo "- Cleanup gate: **$CLEANUP**" >> "$OUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/g3-simstack-latest.md evidence/powder/g3/
+          if ! git diff --cached --quiet; then
+            git commit -m "Record POWDER G3 simulated-stack evidence"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Final G3 verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLEANUP="UNKNOWN"
+          if [[ -f /tmp/powder-g3/cleanup.env ]]; then source /tmp/powder-g3/cleanup.env; CLEANUP="$cleanup"; fi
+          PROCESS="FAIL"
+          RUNDIR="/tmp/powder-g3/wellpulse-g3-$GITHUB_RUN_ID"
+          if [[ -f "$RUNDIR/result.env" ]]; then source "$RUNDIR/result.env"; PROCESS="$PROCESS_GATE"; fi
+          echo "G3 process gate: $PROCESS"
+          echo "G3 cleanup gate: $CLEANUP"
+          [[ "$PROCESS" == "PASS" && "$CLEANUP" == "PASS" ]] || exit 30
+          echo "G3_SIMSTACK_PASS"
