@@ -1,0 +1,63 @@
+name: POWDER Profile Probe
+
+on:
+  push:
+    paths:
+      - ".powder-profile-probe-trigger"
+      - ".github/workflows/powder-profile-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Portal API client
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+      - name: Capture profile command help only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/powder
+          OUT=evidence/powder/profile-probe.md
+          {
+            echo "# POWDER profile API probe"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Resource action attempted: **NONE**"
+            echo "- Token content recorded: **NO**"
+            echo
+            echo "## profile help"
+            echo '```text'
+            NO_COLOR=1 portal-cli profile --help 2>&1 || true
+            echo '```'
+            echo
+            echo "## profile get help"
+            echo '```text'
+            NO_COLOR=1 portal-cli profile get --help 2>&1 || true
+            echo '```'
+          } > "$OUT"
+      - name: Commit probe evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/profile-probe.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record POWDER profile API probe"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
