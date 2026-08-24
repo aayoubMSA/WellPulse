@@ -28,6 +28,7 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/portal-api
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
 
           OUT="evidence/powder/api-probe.md"
           mkdir -p "$(dirname "$OUT")"
@@ -48,26 +49,32 @@ jobs:
             echo
             echo "## README command/auth excerpts"
             echo '```text'
-            if [[ -f /tmp/portal-api/README.md ]]; then
-              grep -nEi -C 3 'install|token|auth|cli|experiment|instantiate|terminate|profile|project|manifest|status' /tmp/portal-api/README.md | head -n 260 || true
-            else
-              echo "README.md not found"
-            fi
+            grep -nEi -C 3 'install|token|auth|cli|experiment|instantiate|terminate|profile|project|manifest|status' /tmp/portal-api/README.md | head -n 280 || true
+            echo '```'
+            echo
+            echo "## CLI help — root"
+            echo '```text'
+            portal-cli --help 2>&1 | head -n 220
+            echo '```'
+            echo
+            echo "## CLI help — profile"
+            echo '```text'
+            portal-cli profile --help 2>&1 | head -n 260 || true
+            echo '```'
+            echo
+            echo "## CLI help — profile get"
+            echo '```text'
+            portal-cli profile get --help 2>&1 | head -n 260 || true
+            echo '```'
+            echo
+            echo "## CLI help — experiment create"
+            echo '```text'
+            portal-cli experiment create --help 2>&1 | head -n 320 || true
             echo '```'
             echo
             echo "## Python/package metadata"
             echo '```text'
-            for f in pyproject.toml setup.py setup.cfg requirements.txt; do
-              if [[ -f "/tmp/portal-api/$f" ]]; then
-                echo "--- $f ---"
-                sed -n '1,220p' "/tmp/portal-api/$f"
-              fi
-            done
-            echo '```'
-            echo
-            echo "## Candidate CLI entry points and examples"
-            echo '```text'
-            grep -RInE --exclude-dir=.git 'console_scripts|entry_points|argparse|click\.group|Typer|tokenRefresh|instantiate|terminate|manifest|experiment' /tmp/portal-api 2>/dev/null | head -n 320 || true
+            sed -n '1,240p' /tmp/portal-api/pyproject.toml
             echo '```'
           } > "$OUT"
 
