@@ -1,8 +1,8 @@
 # WP-PWD01 — POWDER Real-RF Resilience Validation
 
-**Protocol version:** v0.2
+**Protocol version:** v0.3
 
-**Status:** DESIGN_FROZEN_PENDING_CALIBRATION_AND_BASELINE_GATE. No scored run is authorized by this file yet.
+**Status:** DESIGN_FROZEN_PENDING_LIFECYCLE_AND_RF_CALIBRATION. No scored run is authorized by this file yet.
 
 ## Scientific purpose
 
@@ -22,26 +22,46 @@ It does **not** validate pump mechanics, hydraulics, groundwater, crop physiolog
 - **RQ2 — Durable recovery:** When the gateway process is restarted during an RF outage, does application-level disk durability + idempotent reconciliation preserve records that a memory-only MQTT path cannot guarantee across client restart?
 - **RQ3 — Transportability:** Are the observed patterns consistent with the existing FIT embedded-hardware evidence and reproducible in a compact POWDER OTA replication?
 
+## Matched low-level MQTT transport — frozen
+
+Both B1 and W1 use the same low-level session implementation, `PahoQoS1Session`, so the primary architectural contrast is application-level durability/reconciliation rather than transport tuning.
+
+Frozen session parameters:
+- package: `paho-mqtt==2.1.0`;
+- protocol: MQTT v3.1.1;
+- QoS: 1;
+- TLS: enabled for the scored path;
+- `clean_session=False`;
+- keepalive: 60 s;
+- automatic reconnect delay: minimum 1 s, maximum 8 s;
+- maximum queued outgoing messages: 4096;
+- maximum inflight QoS>0 messages: 20;
+- application-level persistence inside this low-level session: none.
+
+The Paho package version is pinned in `pyproject.toml`. Runtime manifests must record these values and the actual installed version. Credentials are never written to evidence.
+
+Paho's volatile outgoing/session state may survive a network-only disconnect while the process remains alive but is not treated as application-level durable storage. A process restart destroys local volatile client state that has not been durably captured elsewhere.
+
 ## Architecture modes
 
 ### `B1_MQTT_QOS1`
 
-**Primary comparator.** Standard MQTT v3.1.1 / QoS 1 / TLS with automatic reconnect and the same telemetry generation, broker, receiver-facing payload schema, keepalive, and network path as W1, but **without application-level disk queueing or application-level reconciliation**.
+**Primary comparator.** The generated telemetry is submitted directly to the frozen matched Paho QoS1 session above. B1 has **no application-level disk queue and no application-level reconciliation/replay layer**.
 
-The exact Paho MQTT package version, clean-session/session configuration, reconnect-delay settings, outgoing queue limits, and process-restart semantics must be recorded and frozen before scored runs.
-
-This is intentionally stronger than the legacy publish-only baseline.
+This is intentionally stronger than the legacy publish-only baseline: it has standard QoS1 behavior, bounded in-memory outgoing queueing, and automatic reconnect.
 
 ### `W1_OFFLINE_FIRST`
 
-Current WellPulse durable path:
+WellPulse uses the **same frozen Paho QoS1 session beneath** its application layer, plus:
 - SQLite-backed durable queue;
 - WAL journaling and synchronous durability setting;
 - stable record identity and SHA-256 payload checksum;
 - explicit pending/sent state;
-- reconnect/replay;
+- reconnect/replay from durable application state;
 - idempotent receiver keyed by record identity;
 - reconciliation/backlog drain.
+
+Thus B1/W1 differ in application-level durability and reconciliation, not in MQTT version, QoS, TLS, keepalive, reconnect delays, outgoing queue limit, inflight limit, broker, topic schema, RF path, or telemetry generator.
 
 ### `B0_PUBLISH_ONLY`
 
@@ -100,6 +120,7 @@ If the resulting H exceeds 300 s, stop and review the cause before authorizing s
 - Record identity must be deterministic and unique within a run.
 - Each record must preserve generated timestamp, sequence/record ID, canonical payload, and SHA-256 checksum.
 - The same generator configuration and payload distribution are used for B1 and W1 within each paired block.
+- Telemetry generation must continue according to the frozen schedule during RF impairment; transport calls must not serialize generation behind `wait_for_publish()`.
 
 ## Pairing and run order
 
@@ -193,7 +214,7 @@ with **3 paired blocks per scenario** = 12 scored OTA runs, subject to resource 
 Before `scored_runs_authorized` can become true:
 
 1. Automated POWDER lifecycle can create -> wait-ready -> retrieve manifest -> SSH -> terminate with fail-safe cleanup.
-2. B1 strong-baseline implementation exists, passes local tests, and its exact MQTT semantics are documented.
+2. Frozen `PahoQoS1Session` configuration passes local tests and is reproduced in the remote runtime manifest.
 3. End-to-end telemetry passes through the experimental radio/data path, not the POWDER control network.
 4. Record identity/checksum are preserved end-to-end.
 5. Q0–Q3 are calibrated and numerically frozen with observed radio context.
