@@ -2,124 +2,88 @@
 set -eu
 
 OUT="${1:-fit_probe_$(date -u +%Y%m%dT%H%M%SZ).log}"
-NETEM_ERR="/tmp/wellpulse_netem_probe.err"
-IPT_CHAIN="WELLPULSE_PROBE_$$"
-
-cleanup_probe() {
-  if command -v tc >/dev/null 2>&1; then
-    tc qdisc del dev lo root >/dev/null 2>&1 || true
-  fi
-  if command -v iptables >/dev/null 2>&1; then
-    iptables -F "$IPT_CHAIN" >/dev/null 2>&1 || true
-    iptables -X "$IPT_CHAIN" >/dev/null 2>&1 || true
-  fi
-  rm -f "$NETEM_ERR"
-}
-trap cleanup_probe EXIT INT TERM
+EAS_COMMIT="75e90de8d6ba72b834f84b0f2b58414550140672"
+FW="$HOME/shared/.iotlabsshcli/tutorial_a8_m3.elf"
+UART="/dev/ttyA8_M3"
 
 {
-  echo "evidence_class=CAPABILITY_SMOKE_NOT_FINAL_EXPERIMENT"
+  echo "evidence_class=EAS_A8M3_PLUMBING_NON_SCORED"
+  echo "eas_repo=aayoubMSA/empirical-architecture-synthesis"
+  echo "eas_commit=$EAS_COMMIT"
   echo "probe_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "hostname=$(hostname)"
+  echo "kernel=$(uname -a)"
+  echo "uptime=$(cat /proc/uptime 2>/dev/null || true)"
 
-  echo "--- uname ---"
-  uname -a || true
+  echo "--- required paths/tools ---"
+  command -v flash_a8_m3 || true
+  command -v wget || true
+  command -v stty || true
+  command -v timeout || true
+  ls -l "$UART" 2>&1 || true
 
-  echo "--- clock ---"
-  date -u +%Y-%m-%dT%H:%M:%SZ || true
-  cat /proc/uptime 2>/dev/null || true
+  echo "--- fetch official tutorial firmware ---"
+  mkdir -p "$(dirname "$FW")"
+  rm -f "$FW"
+  if command -v wget >/dev/null 2>&1; then
+    wget -q -O "$FW" https://raw.githubusercontent.com/wiki/iot-lab/iot-lab/firmwares/tutorial_a8_m3.elf || \
+    wget -q -O "$FW" https://iot-lab.github.io/assets/firmwares/tutorial_a8_m3.elf || true
+  fi
+  if [ ! -s "$FW" ]; then
+    echo "firmware_fetch=FAIL"
+    exit 21
+  fi
+  echo "firmware_fetch=PASS"
+  sha256sum "$FW" 2>/dev/null || true
 
-  echo "--- runtime/tools ---"
-  python3 --version 2>&1 || python --version 2>&1 || true
-  command -v python3 || true
-  command -v sqlite3 || true
-  command -v git || true
-  command -v openssl || true
-  command -v mosquitto_pub || true
-  command -v mosquitto_sub || true
-  command -v iptables || true
-  command -v nft || true
-
-  echo "--- disk ---"
-  df -h || true
-
-  echo "--- persistent/shared path ---"
-  ls -ld "$HOME/shared" "$HOME/shared/.iotlabsshcli" 2>/dev/null || true
-  PERSIST_TEST="$HOME/shared/.wellpulse_write_test_$$"
-  if : > "$PERSIST_TEST" 2>/dev/null; then
-    echo "shared_write_test=PASS"
-    rm -f "$PERSIST_TEST"
+  echo "--- flash M3 subsystem ---"
+  if flash_a8_m3 "$FW"; then
+    echo "m3_flash=PASS"
   else
-    echo "shared_write_test=FAIL"
+    echo "m3_flash=FAIL"
+    exit 22
   fi
+  sleep 2
 
-  echo "--- mounts of interest ---"
-  mount | grep -Ei 'shared|nfs|sshfs' || true
+  echo "--- UART configure ---"
+  if [ ! -c "$UART" ]; then
+    echo "uart_device=FAIL"
+    exit 23
+  fi
+  echo "uart_device=PASS"
+  stty -F "$UART" 500000 raw -echo 2>&1 || true
 
-  echo "--- network ---"
-  ip addr 2>/dev/null || ifconfig 2>/dev/null || true
+  echo "--- capture startup ---"
+  timeout 3 cat "$UART" > /tmp/eas_uart_startup.txt 2>/dev/null || true
+  cat /tmp/eas_uart_startup.txt || true
 
-  echo "--- route ---"
-  ip route 2>/dev/null || route -n 2>/dev/null || true
+  echo "--- deterministic request 1: h ---"
+  (timeout 3 cat "$UART" > /tmp/eas_uart_r1.txt 2>/dev/null || true) &
+  R1PID=$!
+  sleep 0.3
+  printf 'h\n' > "$UART"
+  wait "$R1PID" || true
+  cat /tmp/eas_uart_r1.txt || true
 
-  echo "--- tc/netem capability ---"
-  if command -v tc >/dev/null 2>&1; then
-    tc -V 2>&1 || true
-    tc qdisc show dev lo 2>&1 || true
-    if tc qdisc add dev lo root netem delay 5ms 2>"$NETEM_ERR"; then
-      echo "netem_loopback_add=PASS"
-      tc qdisc show dev lo 2>&1 || true
-      tc qdisc del dev lo root 2>&1 || true
-    else
-      echo "netem_loopback_add=FAIL"
-      cat "$NETEM_ERR" 2>/dev/null || true
-    fi
+  echo "--- deterministic request 2: h ---"
+  (timeout 3 cat "$UART" > /tmp/eas_uart_r2.txt 2>/dev/null || true) &
+  R2PID=$!
+  sleep 0.3
+  printf 'h\n' > "$UART"
+  wait "$R2PID" || true
+  cat /tmp/eas_uart_r2.txt || true
+
+  if grep -qi 'Type command\|print this help\|cmd' /tmp/eas_uart_r1.txt && grep -qi 'Type command\|print this help\|cmd' /tmp/eas_uart_r2.txt; then
+    echo "m3_a8_request_response=PASS"
   else
-    echo "tc_present=NO"
-    echo "netem_loopback_add=NOT_TESTED"
+    echo "m3_a8_request_response=REVIEW"
   fi
 
-  echo "--- iptables deterministic-outage capability ---"
-  if command -v iptables >/dev/null 2>&1; then
-    if iptables -N "$IPT_CHAIN" 2>/dev/null; then
-      echo "iptables_chain_create=PASS"
-      iptables -X "$IPT_CHAIN" 2>/dev/null || true
-    else
-      echo "iptables_chain_create=FAIL"
-    fi
-  else
-    echo "iptables_present=NO"
-    echo "iptables_chain_create=NOT_TESTED"
-  fi
+  echo "--- hashes ---"
+  sha256sum /tmp/eas_uart_startup.txt /tmp/eas_uart_r1.txt /tmp/eas_uart_r2.txt 2>/dev/null || true
 
-  echo "--- MQTT broker DNS ---"
-  getent hosts mqtt4.iot-lab.info 2>/dev/null || nslookup mqtt4.iot-lab.info 2>/dev/null || true
-
-  echo "--- TLS 8883 handshake probe ---"
-  CA_FILE=""
-  if [ -f "$HOME/shared/.iotlabsshcli/iot-lab-ca.pem" ]; then
-    CA_FILE="$HOME/shared/.iotlabsshcli/iot-lab-ca.pem"
-  elif [ -f /opt/iot-lab-ca.pem ]; then
-    CA_FILE=/opt/iot-lab-ca.pem
-  fi
-  if command -v openssl >/dev/null 2>&1 && [ -n "$CA_FILE" ]; then
-    echo "iotlab_ca_present=YES"
-    echo "iotlab_ca_source=$(basename "$CA_FILE")"
-    echo | openssl s_client \
-      -connect mqtt4.iot-lab.info:8883 \
-      -servername mqtt4.iot-lab.info \
-      -CAfile "$CA_FILE" \
-      2>&1 | grep -E 'Protocol|Cipher|Verify return code|Verification' || true
-  elif [ -z "$CA_FILE" ]; then
-    echo "iotlab_ca_present=NO"
-  else
-    echo "openssl_present=NO"
-  fi
-
-  echo "NOTE: authenticated MQTT publish/receive is a separate smoke step; no credentials are written to this log."
+  rm -f /tmp/eas_uart_startup.txt /tmp/eas_uart_r1.txt /tmp/eas_uart_r2.txt
 } > "$OUT" 2>&1
 
-if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum "$OUT" > "$OUT.sha256"
-fi
+sha256sum "$OUT" > "$OUT.sha256" 2>/dev/null || true
 printf '%s\n' "$OUT"
