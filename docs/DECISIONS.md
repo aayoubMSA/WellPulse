@@ -42,3 +42,8 @@ Do not commit raw POWDER portal logs when they contain experiment RPC tokens, ce
 
 ## D-013 — Troubleshooting runs are not evidence
 Failed or exploratory POWDER experiments remain visible in history and may be cited for troubleshooting provenance, but they are never silently promoted into the scientific corpus. The failed `srs-rf-matrix`, exploratory `srsran-handover`, and pre-Golden-key `WP-G1-SIM` attempts are explicitly excluded. Only a run that passes its frozen gate may become the canonical baseline for the next layer.
+
+## D-014 — G3 attach automation without resource-creation automation
+For the current G3 gate, manual resource creation remains mandatory. After a fresh `srsLTE-SIM:9` experiment is created manually and reaches READY, `.github/workflows/powder-g3-attach.yml` may attach to that exact experiment UUID and automate target validation, manifest/SSH discovery, the profile-authoritative file-based `pdsch_enodeb -> file -> pdsch_ue` check, sanitized evidence capture, and fail-safe termination.
+
+This does **not** unfreeze resource-creating automation. `.github/workflows/powder-g3-simstack.yml` remains unapproved for execution until the equivalent G3 manual gate has passed and the canonical handover explicitly changes that state. G3 remains non-scored/no-RF and adds no scientific percentage.
