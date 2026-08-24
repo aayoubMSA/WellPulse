@@ -1,0 +1,178 @@
+name: POWDER Existing Experiment Observer
+
+on:
+  push:
+    paths:
+      - ".powder-existing-observer-trigger"
+  workflow_dispatch:
+    inputs:
+      experiment_id:
+        description: "Existing POWDER experiment UUID to inspect read-only"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-existing-observer
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve existing experiment ID
+        id: target
+        shell: bash
+        env:
+          INPUT_ID: ${{ github.event.inputs.experiment_id }}
+        run: |
+          set -euo pipefail
+          ID="${INPUT_ID:-}"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            ID="$(awk -F= '$1=="experiment_id" {print $2}' .powder-existing-observer-trigger | tail -n1 | tr -d '\r')"
+          fi
+          [[ "$ID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid experiment UUID."; exit 2; }
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+      - name: Install official client and SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" && -n "$POWDER_USERNAME" && -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "Missing secret."; exit 2; }
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          mkdir -p "$HOME/.ssh" /tmp/powder-observe evidence/powder
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Read experiment state and manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="${{ steps.target.outputs.id }}"
+          portal-cli experiment get --experiment-id "$ID" > /tmp/powder-observe/status.json
+          STATUS="$(jq -r '.status // "unknown"' /tmp/powder-observe/status.json)"
+          echo "status=$STATUS"
+          [[ "$STATUS" == "ready" ]] || [[ "$STATUS" == "running" ]] || { echo "Experiment is not inspectable as ready/running."; exit 3; }
+          portal-cli experiment manifests get --experiment-id "$ID" > /tmp/powder-observe/manifests.json
+      - name: Parse manifest and verify one SSH endpoint
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/powder-observe/manifests.json').read_text())
+          xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xmls.append(x)
+          walk(obj)
+          logins=[]; nodes=[]; slivers=[]
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for el in root.iter():
+                  tag=el.tag.rsplit('}',1)[-1]
+                  if tag=='node':
+                      cid=el.attrib.get('client_id')
+                      if cid: nodes.append(cid)
+                      cmid=el.attrib.get('component_id')
+                      if cid and cmid: slivers.append((cid,cmid))
+                  if tag=='login' and el.attrib.get('hostname'):
+                      logins.append((el.attrib.get('username',''),el.attrib['hostname'],el.attrib.get('port','22')))
+          logins=list(dict.fromkeys(logins)); nodes=list(dict.fromkeys(nodes)); slivers=list(dict.fromkeys(slivers))
+          Path('/tmp/powder-observe/logins.tsv').write_text(''.join(f'{u}\t{h}\t{p}\n' for u,h,p in logins))
+          Path('/tmp/powder-observe/nodes.txt').write_text('\n'.join(nodes)+('\n' if nodes else ''))
+          Path('/tmp/powder-observe/slivers.tsv').write_text(''.join(f'{c}\t{p}\n' for c,p in slivers))
+          print('logical_nodes=', nodes)
+          print('ssh_endpoint_count=', len(logins))
+          PY
+          [[ -s /tmp/powder-observe/logins.tsv ]] || { echo "No SSH endpoints in manifest."; exit 4; }
+          PASS=0
+          while IFS=$'\t' read -r MU HOST PORT; do
+            USERNAME="${MU:-$POWDER_USERNAME}"
+            set +e
+            ssh -o BatchMode=yes -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -p "$PORT" "$USERNAME@$HOST" \
+              'printf "REMOTE_HOST="; hostname; printf "REMOTE_USER="; whoami; printf "UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf "KERNEL="; uname -srmo; if [ -r /etc/os-release ]; then . /etc/os-release; printf "OS=%s %s\n" "${NAME:-unknown}" "${VERSION_ID:-unknown}"; fi' \
+              > /tmp/powder-observe/ssh.out 2>/tmp/powder-observe/ssh.err
+            RC=$?
+            set -e
+            if [[ "$RC" -eq 0 ]]; then
+              printf '%s\t%s\t%s\n' "$USERNAME" "$HOST" "$PORT" > /tmp/powder-observe/ssh-success.tsv
+              PASS=1; break
+            fi
+          done < /tmp/powder-observe/logins.tsv
+          [[ "$PASS" -eq 1 ]] || { echo "SSH failed on all manifest endpoints."; tail -n 30 /tmp/powder-observe/ssh.err || true; exit 5; }
+          echo "pass=true" >> "$GITHUB_OUTPUT"
+      - name: Write sanitized observer evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/existing-observer-latest.md
+          ID="${{ steps.target.outputs.id }}"
+          STATUS="$(jq -r '.status // "unknown"' /tmp/powder-observe/status.json 2>/dev/null || echo unknown)"
+          NAME="$(jq -r '.name // "unknown"' /tmp/powder-observe/status.json 2>/dev/null || echo unknown)"
+          PROFILE_ID="$(jq -r '.profile_id // "unknown"' /tmp/powder-observe/status.json 2>/dev/null || echo unknown)"
+          PROFILE="$(jq -r '(.profile_project // "unknown") + "/" + (.profile_name // "unknown")' /tmp/powder-observe/status.json 2>/dev/null || echo unknown)"
+          BINDINGS="$(jq -c '.bindings // {}' /tmp/powder-observe/status.json 2>/dev/null || echo '{}')"
+          {
+            echo "# POWDER existing-experiment observer — latest"
+            echo
+            echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- GitHub SHA: ${GITHUB_SHA}"
+            echo "- Evidence class: **INFRASTRUCTURE_ONLY_NON_SCORED**"
+            echo "- Experiment ID: \`$ID\`"
+            echo "- Experiment name: \`$NAME\`"
+            echo "- State: \`$STATUS\`"
+            echo "- Profile: \`$PROFILE\`"
+            echo "- Profile ID: \`$PROFILE_ID\`"
+            echo "- Bindings: \`$BINDINGS\`"
+            if [[ -s /tmp/powder-observe/nodes.txt ]]; then echo "- Logical nodes: \`$(paste -sd, /tmp/powder-observe/nodes.txt)\`"; fi
+            if [[ -s /tmp/powder-observe/slivers.tsv ]]; then
+              echo "- Manifest physical-component mappings:"
+              while IFS=$'\t' read -r C P; do echo "  - \`$C\` -> \`$P\`"; done < /tmp/powder-observe/slivers.tsv
+            fi
+            if [[ -s /tmp/powder-observe/ssh-success.tsv ]]; then
+              echo "- SSH gate: **PASS**"
+              echo "- Successful endpoint: \`$(cut -f2 /tmp/powder-observe/ssh-success.tsv)\`"
+            else
+              echo "- SSH gate: **FAIL/NOT_REACHED**"
+            fi
+            echo "- Resource mutation by observer: **NONE**"
+            echo "- RF manipulation: **NONE**"
+            echo "- Scientific workload: **NONE**"
+            echo "- Credentials recorded: **NO**"
+            if [[ -s /tmp/powder-observe/ssh.out ]]; then echo; echo '```text'; cat /tmp/powder-observe/ssh.out; echo '```'; fi
+          } > "$OUT"
+      - name: Commit observer evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/existing-observer-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record POWDER existing-experiment observer evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
