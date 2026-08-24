@@ -1,2 +1,4 @@
 execute=FEASIBILITY
 purpose=WP-PWD01-candidate-controlled-RF-profile-feasibility
+attempt=2
+profile_project=PowderProfiles
