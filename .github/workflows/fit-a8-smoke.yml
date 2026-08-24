@@ -11,19 +11,19 @@ permissions:
 
 concurrency:
   group: wellpulse-fit-a8-smoke
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   fit-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       FIT_USERNAME: ${{ secrets.FIT_USERNAME }}
       FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
       RUN_DIR: fit-smoke
 
     steps:
-      - name: Checkout WellPulse
+      - name: Checkout WellPulse trigger branch
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -31,19 +31,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Require FIT secrets
+      - name: Require FIT secrets and initialize evidence
         shell: bash
         run: |
           set -eu
           mkdir -p "$RUN_DIR"
           if [ -z "${FIT_USERNAME:-}" ] || [ -z "${FIT_PASSWORD:-}" ]; then
-            echo "FIT_USERNAME and FIT_PASSWORD repository Actions secrets are required." >&2
+            echo "FIT Actions secrets are required." >&2
             exit 2
           fi
-          echo "evidence_class=CAPABILITY_SMOKE_NOT_FINAL_EXPERIMENT" > "$RUN_DIR/workflow_context.txt"
-          echo "github_run_id=$GITHUB_RUN_ID" >> "$RUN_DIR/workflow_context.txt"
-          echo "git_commit=$GITHUB_SHA" >> "$RUN_DIR/workflow_context.txt"
-          echo "start_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$RUN_DIR/workflow_context.txt"
+          {
+            echo "evidence_class=EAS_A8M3_PLUMBING_NON_SCORED"
+            echo "github_run_id=$GITHUB_RUN_ID"
+            echo "workflow_git_commit=$GITHUB_SHA"
+            echo "eas_source_commit=75e90de8d6ba72b834f84b0f2b58414550140672"
+            echo "start_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$RUN_DIR/workflow_context.txt"
 
       - name: Install official FIT CLI tools
         shell: bash
@@ -53,22 +56,36 @@ jobs:
           iotlab-auth --version | tee "$RUN_DIR/iotlabcli_version.txt"
           iotlab-ssh --version | tee "$RUN_DIR/iotlabsshcli_version.txt"
 
-      - name: Create ephemeral FIT auth file
+      - name: Create ephemeral FIT auth
         shell: bash
         run: |
           set -eu
           python - <<'PY'
-          import base64
-          import os
+          import base64, os
           from pathlib import Path
           p = Path.home() / '.iotlabrc'
-          user = os.environ['FIT_USERNAME']
-          password = os.environ['FIT_PASSWORD']
-          p.write_text(user + ':' + base64.b64encode(password.encode()).decode())
+          p.write_text(os.environ['FIT_USERNAME'] + ':' + base64.b64encode(os.environ['FIT_PASSWORD'].encode()).decode())
           p.chmod(0o600)
           PY
 
-      - name: Validate account and inventory live A8 nodes
+      - name: Register ephemeral SSH key and start agent
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "EAS-FIT-${GITHUB_RUN_ID}" >/dev/null
+          chmod 600 "$HOME/.ssh/id_rsa"
+          chmod 644 "$HOME/.ssh/id_rsa.pub"
+          cp "$HOME/.ssh/id_rsa.pub" "$RUNNER_TEMP/eas_fit_key.pub"
+          ssh-keygen -lf "$HOME/.ssh/id_rsa.pub" -E sha256 | tee "$RUN_DIR/ssh_key_fingerprint.txt"
+          iotlab-auth --add-ssh-key
+          eval "$(ssh-agent -s)"
+          ssh-add "$HOME/.ssh/id_rsa"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+
+      - name: Inventory and reserve one A8 node
         shell: bash
         run: |
           set -eu
@@ -78,79 +95,44 @@ jobs:
           from pathlib import Path
           data = json.loads(Path('fit-smoke/a8_alive.json').read_text())
           items = data.get('items', [])
-          seen = set()
-          pairs = []
+          seen, pairs = set(), []
           for item in items:
               addr = item.get('network_address', '')
-              archi = item.get('archi') or 'a8:at86rf231'
+              arch = item.get('archi') or 'a8:at86rf231'
               parts = addr.split('.')
-              if len(parts) >= 2 and ('a8-' in parts[0]):
-                  site = parts[1]
-                  key = (site, archi)
+              if len(parts) >= 2 and 'a8-' in parts[0]:
+                  key = (parts[1], arch)
                   if key not in seen:
-                      seen.add(key)
-                      pairs.append(key)
-          preferred = ['saclay', 'grenoble']
+                      seen.add(key); pairs.append(key)
+          preferred = ['saclay', 'grenoble', 'paris', 'strasbourg']
           pairs.sort(key=lambda x: (preferred.index(x[0]) if x[0] in preferred else 99, x[0]))
-          if not pairs:
-              pairs = [('saclay', 'a8:at86rf231'), ('grenoble', 'a8:at86rf231')]
-          Path('fit-smoke/candidate_sites.txt').write_text(''.join(f'{s}|{a}\n' for s, a in pairs))
-          print(f'Alive A8 inventory rows: {len(items)}')
-          print('Candidate sites:', ', '.join(s for s, _ in pairs))
+          Path('fit-smoke/candidate_sites.txt').write_text(''.join(f'{s}|{a}\n' for s,a in pairs))
+          print('Alive A8 rows:', len(items))
+          print('Candidate sites:', ', '.join(s for s,_ in pairs))
           PY
-
-      - name: Generate and register ephemeral SSH key
-        shell: bash
-        run: |
-          set -eu
-          mkdir -p "$HOME/.ssh"
-          chmod 700 "$HOME/.ssh"
-          ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-FIT-smoke-${GITHUB_RUN_ID}" >/dev/null
-          chmod 600 "$HOME/.ssh/id_rsa"
-          chmod 644 "$HOME/.ssh/id_rsa.pub"
-          cp "$HOME/.ssh/id_rsa.pub" "$RUNNER_TEMP/fit_smoke_key.pub"
-          ssh-keygen -lf "$HOME/.ssh/id_rsa.pub" -E sha256 | tee "$RUN_DIR/ssh_key_fingerprint.txt"
-          iotlab-auth --add-ssh-key
-
-      - name: Reserve one A8 node now
-        id: reserve
-        shell: bash
-        run: |
-          set -u
-          EXP_ID=''
-          SITE=''
-          ARCHI=''
+          EXP_ID=''; SITE=''; ARCHI=''
           while IFS='|' read -r candidate_site candidate_archi; do
             [ -n "$candidate_site" ] || continue
-            name="WP-RT01-smoke-${GITHUB_RUN_ID}-${candidate_site}"
-            echo "Trying site=$candidate_site archi=$candidate_archi" | tee -a "$RUN_DIR/reservation_attempts.log"
             set +e
-            submit_out=$(iotlab-experiment submit -n "$name" -d 15 -l "1,archi=${candidate_archi}+site=${candidate_site}" 2>&1)
-            submit_rc=$?
+            out=$(iotlab-experiment submit -n "EAS-plumbing-${GITHUB_RUN_ID}-${candidate_site}" -d 10 -l "1,archi=${candidate_archi}+site=${candidate_site}" 2>&1)
+            rc=$?
             set -e
-            printf '%s\n' "$submit_out" >> "$RUN_DIR/reservation_attempts.log"
-            if [ "$submit_rc" -ne 0 ]; then
-              continue
-            fi
-            candidate_id=$(printf '%s' "$submit_out" | python -c 'import re,sys; s=sys.stdin.read(); m=re.search(r"\"id\"\s*:\s*(\d+)", s); print(m.group(1) if m else "")')
+            printf '%s\n' "$out" >> "$RUN_DIR/reservation_attempts.log"
+            [ "$rc" -eq 0 ] || continue
+            candidate_id=$(printf '%s' "$out" | python -c 'import re,sys; m=re.search(r"\"id\"\s*:\s*(\d+)",sys.stdin.read()); print(m.group(1) if m else "")')
             [ -n "$candidate_id" ] || continue
             set +e
-            iotlab-experiment wait -i "$candidate_id" --timeout 180 --cancel-on-timeout >> "$RUN_DIR/reservation_attempts.log" 2>&1
+            iotlab-experiment wait -i "$candidate_id" --timeout 120 --cancel-on-timeout >> "$RUN_DIR/reservation_attempts.log" 2>&1
             wait_rc=$?
             set -e
             if [ "$wait_rc" -eq 0 ]; then
-              EXP_ID="$candidate_id"
-              SITE="$candidate_site"
-              ARCHI="$candidate_archi"
-              break
+              EXP_ID="$candidate_id"; SITE="$candidate_site"; ARCHI="$candidate_archi"; break
             fi
           done < "$RUN_DIR/candidate_sites.txt"
-
           if [ -z "$EXP_ID" ]; then
-            echo "No A8 node became available within the bounded smoke window." >&2
+            echo "No A8 reservation obtained." >&2
             exit 3
           fi
-
           echo "EXP_ID=$EXP_ID" >> "$GITHUB_ENV"
           echo "SITE=$SITE" >> "$GITHUB_ENV"
           echo "ARCHI=$ARCHI" >> "$GITHUB_ENV"
@@ -164,128 +146,95 @@ jobs:
           python - <<'PY'
           import json, os, re
           from pathlib import Path
-          data = json.loads(Path('fit-smoke/experiment_nodes.json').read_text())
-          items = data.get('items', [])
-          if not items:
-              raise SystemExit('No nodes returned for experiment')
-          addr = items[0]['network_address']
-          m = re.search(r'(?:node-)?a8-(\d+)\.', addr)
-          if not m:
-              raise SystemExit(f'Cannot parse A8 node id from {addr!r}')
-          node_id = m.group(1)
-          site = os.environ['SITE']
-          loc = f'{site},a8,{node_id}'
-          with open(os.environ['GITHUB_ENV'], 'a') as fh:
-              fh.write(f'NODE_ADDRESS={addr}\nNODE_ID={node_id}\nLOC={loc}\n')
+          data=json.loads(Path('fit-smoke/experiment_nodes.json').read_text())
+          item=data['items'][0]
+          addr=item['network_address']
+          m=re.search(r'(?:node-)?a8-(\d+)\.', addr)
+          if not m: raise SystemExit('Cannot parse node id: '+addr)
+          node_id=m.group(1); site=os.environ['SITE']; loc=f'{site},a8,{node_id}'
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write(f'NODE_ADDRESS={addr}\nNODE_ID={node_id}\nLOC={loc}\n')
           Path('fit-smoke/selected_node.txt').write_text(f'node_address={addr}\nnode_id={node_id}\nloc={loc}\n')
           PY
+
+      - name: Prove frontend SSH authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$FIT_USERNAME@$SITE.iot-lab.info" 'echo frontend_ssh=PASS' 2>&1 | tee "$RUN_DIR/frontend_ssh.log"
 
       - name: Wait for A8 Linux boot
         shell: bash
         run: |
-          set -o pipefail
-          iotlab-ssh --verbose wait-for-boot --max-wait 180 -l "$LOC" 2>&1 | tee "$RUN_DIR/wait_for_boot.log"
+          set -euo pipefail
+          iotlab-ssh --verbose wait-for-boot --max-wait 120 -l "$LOC" 2>&1 | tee "$RUN_DIR/wait_for_boot.log"
+          grep -q '"0"' "$RUN_DIR/wait_for_boot.log"
 
-      - name: Copy and execute capability probe
+      - name: Copy and execute EAS A8-M3 probe
         shell: bash
         run: |
           set -euo pipefail
           iotlab-ssh copy-file scripts/fit_probe.sh 2>&1 | tee "$RUN_DIR/copy_probe.log"
+          grep -q '"0"' "$RUN_DIR/copy_probe.log"
           iotlab-ssh --verbose run-cmd 'sh "$HOME/shared/.iotlabsshcli/fit_probe.sh" "$HOME/shared/.iotlabsshcli/fit_probe.log"; cat "$HOME/shared/.iotlabsshcli/fit_probe.log"; echo "--- probe sha256 ---"; cat "$HOME/shared/.iotlabsshcli/fit_probe.log.sha256" 2>/dev/null || true' -l "$LOC" 2>&1 | tee "$RUN_DIR/probe_remote.log"
+          grep -q '"0"' "$RUN_DIR/probe_remote.log"
 
-      - name: Retrieve raw capability probe from shared storage
+      - name: Evaluate plumbing evidence
         shell: bash
         run: |
           set -eu
-          SCP_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa)
-          scp "${SCP_OPTS[@]}" "$FIT_USERNAME@$SITE.iot-lab.info:shared/.iotlabsshcli/fit_probe.log" "$RUN_DIR/fit_probe.log"
-          scp "${SCP_OPTS[@]}" "$FIT_USERNAME@$SITE.iot-lab.info:shared/.iotlabsshcli/fit_probe.log.sha256" "$RUN_DIR/fit_probe.log.sha256" || true
-          sha256sum "$RUN_DIR/fit_probe.log" | tee "$RUN_DIR/fit_probe.local.sha256"
+          grep -E 'firmware_fetch=|m3_flash=|uart_device=|uart_config=|m3_a8_request_response=|plumbing_status=|plumbing_fail_code=' "$RUN_DIR/probe_remote.log" | tee "$RUN_DIR/plumbing_summary.txt" || true
+          if grep -q '^plumbing_status=PASS$' "$RUN_DIR/probe_remote.log"; then
+            echo "P2_A8M3_SMOKE=PASS" | tee -a "$RUN_DIR/plumbing_summary.txt"
+          else
+            echo "P2_A8M3_SMOKE=FAIL" | tee -a "$RUN_DIR/plumbing_summary.txt"
+            exit 10
+          fi
 
-      - name: Authenticated MQTT smoke from A8
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          AUTH_FILE="$RUNNER_TEMP/mqtt_auth.conf"
-          umask 077
-          printf '%s\n%s\n' "-u $FIT_USERNAME" "-P $FIT_PASSWORD" > "$AUTH_FILE"
-          iotlab-ssh copy-file "$AUTH_FILE" >/dev/null
-          TOPIC="iotlab/${FIT_USERNAME}/wellpulse/smoke/${GITHUB_RUN_ID}"
-          PAYLOAD="WP_SMOKE_${GITHUB_RUN_ID}"
-          CMD='set -eu; if ! command -v mosquitto_pub >/dev/null 2>&1 || ! command -v mosquitto_sub >/dev/null 2>&1; then echo mqtt_authenticated=CLIENTS_NOT_AVAILABLE; exit 4; fi; mkdir -p "$HOME/.config"; cp "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_pub"; cp "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_sub"; chmod 600 "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"; topic='"'"$TOPIC"'"'; payload='"'"$PAYLOAD"'"'; rm -f /tmp/wellpulse_mqtt_msg; mosquitto_sub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -C 1 -W 12 -t "$topic" > /tmp/wellpulse_mqtt_msg & subpid=$!; sleep 2; mosquitto_pub --cafile /opt/iot-lab-ca.pem -h mqtt4.iot-lab.info -p 8883 -t "$topic" -m "$payload"; wait "$subpid"; if grep -Fx "$payload" /tmp/wellpulse_mqtt_msg >/dev/null 2>&1; then echo mqtt_authenticated=PASS; else echo mqtt_authenticated=FAIL; exit 5; fi; rm -f /tmp/wellpulse_mqtt_msg "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub"'
-          set +e
-          iotlab-ssh --verbose run-cmd "$CMD" -l "$LOC" 2>&1 | tee "$RUN_DIR/mqtt_authenticated.log"
-          rc=${PIPESTATUS[0]}
-          set -e
-          rm -f "$AUTH_FILE"
-          iotlab-ssh --verbose run-cmd 'rm -f "$HOME/shared/.iotlabsshcli/mqtt_auth.conf" "$HOME/.config/mosquitto_pub" "$HOME/.config/mosquitto_sub" /tmp/wellpulse_mqtt_msg' -l "$LOC" >/dev/null 2>&1 || true
-          exit "$rc"
-
-      - name: Write smoke metadata
+      - name: Write run metadata
         if: always()
         shell: bash
         run: |
-          set -eu
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
           from pathlib import Path
-          out = {
-              'evidence_class': 'CAPABILITY_SMOKE_NOT_FINAL_EXPERIMENT',
-              'github_run_id': os.getenv('GITHUB_RUN_ID'),
-              'git_commit': os.getenv('GITHUB_SHA'),
-              'experiment_id': os.getenv('EXP_ID'),
-              'site': os.getenv('SITE'),
-              'archi': os.getenv('ARCHI'),
-              'node_id': os.getenv('NODE_ID'),
-              'node_address': os.getenv('NODE_ADDRESS'),
-              'end_utc': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-          }
           Path('fit-smoke').mkdir(exist_ok=True)
-          Path('fit-smoke/metadata.json').write_text(json.dumps(out, indent=2) + '\n')
+          out={k:os.getenv(k) for k in ['EXP_ID','SITE','ARCHI','NODE_ID','NODE_ADDRESS','LOC']}
+          out.update({'evidence_class':'EAS_A8M3_PLUMBING_NON_SCORED','eas_source_commit':'75e90de8d6ba72b834f84b0f2b58414550140672','github_run_id':os.getenv('GITHUB_RUN_ID'),'end_utc':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')})
+          Path('fit-smoke/metadata.json').write_text(json.dumps(out,indent=2)+'\n')
           PY
 
-      - name: Stop experiment and remove ephemeral FIT SSH key
+      - name: Stop experiment and remove ephemeral credentials
         if: always()
         shell: bash
         run: |
           set +e
-          if [ -n "${EXP_ID:-}" ] && [ -f "$HOME/.iotlabrc" ]; then
-            iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
-          fi
-          if [ -f "$HOME/.iotlabrc" ] && [ -f "$RUNNER_TEMP/fit_smoke_key.pub" ]; then
+          if [ -n "${EXP_ID:-}" ] && [ -f "$HOME/.iotlabrc" ]; then iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true; fi
+          if [ -f "$HOME/.iotlabrc" ] && [ -f "$RUNNER_TEMP/eas_fit_key.pub" ]; then
             python - <<'PY'
           from pathlib import Path
           from iotlabcli import auth
           from iotlabcli.rest import Api
-          key_file = Path.home() / '.ssh' / 'id_rsa.pub'
+          key_file=Path.home()/'.ssh'/'id_rsa.pub'
           if key_file.exists():
-              key = key_file.read_text().strip()
-              user, password = auth._read_password_file()
-              if user and password:
-                  api = Api(user, password)
-                  obj = api.get_ssh_keys()
-                  keys = obj.get('sshkeys', [])
+              key=key_file.read_text().strip(); user,pw=auth._read_password_file()
+              if user and pw:
+                  api=Api(user,pw); obj=api.get_ssh_keys(); keys=obj.get('sshkeys',[])
                   if key in keys:
-                      obj['sshkeys'] = [k for k in keys if k != key]
-                      api.set_ssh_keys(obj)
+                      obj['sshkeys']=[k for k in keys if k!=key]; api.set_ssh_keys(obj)
           PY
           fi
-          rm -f "$RUNNER_TEMP/mqtt_auth.conf" "$RUNNER_TEMP/fit_smoke_key.pub"
-          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub"
-          if command -v shred >/dev/null 2>&1; then
-            shred -u "$HOME/.iotlabrc" 2>/dev/null || rm -f "$HOME/.iotlabrc"
-          else
-            rm -f "$HOME/.iotlabrc"
-          fi
+          [ -z "${SSH_AGENT_PID:-}" ] || kill "$SSH_AGENT_PID" >/dev/null 2>&1 || true
+          rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$RUNNER_TEMP/eas_fit_key.pub"
+          if command -v shred >/dev/null 2>&1; then shred -u "$HOME/.iotlabrc" 2>/dev/null || rm -f "$HOME/.iotlabrc"; else rm -f "$HOME/.iotlabrc"; fi
           echo "end_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$RUN_DIR/workflow_context.txt" 2>/dev/null || true
 
-      - name: Upload smoke evidence bundle
+      - name: Upload EAS plumbing evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: wellpulse-fit-a8-smoke-${{ github.run_id }}
+          name: eas-a8m3-plumbing-${{ github.run_id }}
           path: fit-smoke/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
