@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-25 late session, Africa/Cairo
+Last updated: 2026-08-26, after G5 RF-state freeze, Africa/Cairo
 
 ## Standing handover rule
 
@@ -8,27 +8,19 @@ No material project state may exist only in chat. Decisions, results, artifacts,
 
 ## Executive state
 
-Completed evidence/infrastructure:
-
-- FIT IoT-LAB embedded-hardware scientific evidence layer: **FINAL PASS**.
-- POWDER G0 account/project: **PASS**.
-- POWDER G1 compute provisioning: **PASS**.
-- POWDER G2 explicit-key SSH + teardown: **PASS**.
-- POWDER G3 file-based simulated LTE stack/data path: **PASS**.
-- POWDER G4 controlled physical-RF LTE lifecycle + attach + user-plane + teardown: **PASS**.
-
-Scientific weighted completion remains **20%**.
-
+- FIT IoT-LAB scientific evidence layer: **FINAL PASS**.
+- POWDER G0–G4: **PASS**.
+- POWDER **G5 RF impairment/control + numeric RF-state calibration: PASS**.
 - WP0 Novelty & Venue Lock: **8/8 complete**.
-- WP1 Confirmatory Protocol & Statistics Freeze: **12/12 design work complete**, but comparator sufficiency is **OPEN FOR PRE-SCORE REVIEW**.
-- WP2 RF Calibration & Measurement Validation: **0/15 — NEXT**.
-- WP3 Conducted-RF Confirmatory Campaign: **0/30 — blocked by WP2 + comparator freeze + explicit scored authorization**.
-- WP4 OTA External Replication: **0/15 — blocked by WP3**.
-- WP5 Analysis + Artifact + Paper Closure: **0/20 scientific closure**.
+- WP1 Confirmatory Protocol & Statistics Freeze: **12/12 design complete**, comparator sufficiency still open pre-score.
+- WP2 RF Calibration & Measurement Validation: **IN PROGRESS**. RF-state calibration sub-gate is closed; H/recovery-horizon and remaining measurement/evidence pre-score gates are still open.
+- WP3: **0/30 — BLOCKED** by WP2 + comparator freeze + explicit scored authorization.
+- WP4: **0/15 — BLOCKED** by WP3.
+- WP5: **0/20 scientific closure**.
+- Gate-based scientific weighted completion remains **20%** until WP2 closes.
+- `scored_runs_authorized = false`.
 
-`scored_runs_authorized = false`.
-
-No POWDER G4 observation belongs to the scored scientific corpus.
+No G5 calibration observation is a scored B1/W1 scientific result.
 
 ## Canonical repositories and workspaces
 
@@ -37,144 +29,116 @@ No POWDER G4 observation belongs to the scored scientific corpus.
 - Drive validation workspace `00_Validation_Workspace`: `1SydHCA2jlkatxdGgUtJ1P8atgyi8_ta3`.
 - Drive raw evidence `02_RAW_EVIDENCE`: `11xaitxG0vkV6fCzK_JgLAacrdhjz7GBf`.
 - Drive handover folder `WellPulse Handover`: `1Du4j_YkMLvQjWJCxV5zqxxK6OGG2Q0hA`.
-- Drive current handover index: `1Gd4FzyJ_dW6-AK6wQc4FW7LAWVb2GNzG0t-xHaSEwn4`.
+- Clean G5 snapshot: `docs/handovers/2026-08-26_G5_RF_CALIBRATION_HANDOVER.md`.
 
-## Scientific design — frozen working baseline
+## Frozen scientific design
 
-Canonical protocol: `experiments/WP-PWD01/protocol.md`, v0.4.
+Canonical protocol remains `experiments/WP-PWD01/protocol.md` v0.4. It intentionally left numeric Q0–Q3 values open pending WP2 calibration.
 
-Primary matched comparison:
+Primary comparison remains:
 
-- `B1_MQTT_QOS1`: Paho Python MQTT v3.1.1, QoS1, TLS scored path, automatic reconnect, `clean_session=False`, volatile client state, no application-level disk durability/reconciliation.
-- `W1_OFFLINE_FIRST`: same low-level Paho Python session plus SQLite durable application queue, stable record identity/checksum, replay, idempotent receiver and reconciliation.
+- `B1_MQTT_QOS1`: Paho Python MQTT v3.1.1, QoS1, TLS on scored path, automatic reconnect, `clean_session=False`, volatile client state, no application-level disk durability/reconciliation.
+- `W1_OFFLINE_FIRST`: same low-level Paho session plus SQLite durable application queue, stable record identity/checksum, replay, idempotent receiver and reconciliation.
 
-Frozen low-level parameters:
+Frozen low-level parameters: `paho-mqtt==2.1.0`, keepalive 60 s, reconnect 1–8 s, outgoing queue 4096, inflight 20.
 
-- `paho-mqtt==2.1.0`;
-- keepalive 60 s;
-- reconnect 1–8 s;
-- outgoing queue 4096;
-- inflight 20.
+Comparator caveat remains open: B1 is the clean matched same-implementation comparator but not the strongest durable MQTT client generally. Candidate `B2_MQTT_DURABLE_CLIENT` must be qualified/frozen before scoring if retained.
 
-Scenarios: S0 healthy, S1 intermittent, S2 hard outage, S3 hard outage + gateway-process restart. Run is the statistical unit. Working conducted campaign remains 24–36 scored B1/W1 runs under the precision rule; OTA remains a compact 12-run S1/S2 replication if the conducted gate passes.
+## G5 accepted experiment state
 
-## FIT IoT-LAB accepted scientific evidence
+Non-scored experiment:
 
-Canonical result: `experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md`.
-
-- Grenoble A8 hardware.
-- B0/W1 × C0/C1/C2 × 3 replicates = 18 final cells.
-- exactly 10,000 records per cell.
-- 18/18 final reconciliation PASS.
-- W1 achieved 100% final completeness, zero permanent missing records and zero final duplicates under controlled broker outage and broker-outage + gateway restart in 3/3 replicates.
-- B0 retained 80% under C1/C2.
-
-FIT is real embedded-hardware evidence under controlled connectivity impairment. It is not physical-RF causal evidence and B0 is a historical lower-bound comparator.
-
-## POWDER G3 accepted infrastructure evidence
-
-Canonical evidence: `evidence/powder/g3-simstack-2026-08-24.md`.
-
-Accepted run: `WP-G3-SIMSTACK`, UUID `3484b01d-7eca-48e7-9e34-866680057b0d`; file-based LTE simulation path PASS; cleanup/teardown PASS with `Current Usage: 0 Node Hours`. G3 has no SDR/physical-RF/scientific result.
-
-## POWDER G4 — FINAL PASS
-
-Canonical evidence: `evidence/powder/g4-ue-attach-2026-08-25.md`.
-
-Successful rerun:
-
-- experiment `WP-G4-CTRL-RF`;
-- UUID `0e4269fb-06dd-432b-abec-4bca685a05af`;
+- `WP-G5-RF-CAL`;
+- UUID `575d246e-8d01-4827-9a84-f4368d272cea`;
 - profile `srslte-controlled-rf`;
-- RefSpec `refs/heads/master (a6da9656)`;
-- live role binding: `enb1 -> nuc2`, `rue1 -> nuc1`;
-- explicit Golden-key SSH PASS on both nodes;
-- physical B210 EPC/eNodeB startup PASS;
-- physical B210 srsUE startup PASS;
-- LTE attach PASS;
-- UE IP `172.16.0.2`;
-- E-RAB/bearer establishment PASS;
-- UE interface `tun_srsue 172.16.0.2/24`;
-- EPC interface `srs_spgw_sgi 172.16.0.1/24`;
-- bounded LTE user-plane command `ping -I tun_srsue -c 5 172.16.0.1`;
-- result **5/5 replies, 0% packet loss**;
-- manual termination PASS;
-- final portal **no active experiments; Current Usage 0 Node Hours**.
+- profile revision `a6da96560b6526dc6816761282722c996418fd8c`;
+- live binding `enb1 -> nuc1` (EPC/eNB), `rue1 -> nuc2` (UE);
+- UE `172.16.0.2`, EPC SGi `172.16.0.1` after clean bearer restoration;
+- attenuation path IDs `1 33 2 34`, always changed together.
 
-Accepted G4 chain:
+At this handover the last commanded RF state was restored to **0 dB** after Q52, and the last explicit Q0 user-plane health test was **3/3 replies, 0% loss**.
 
-`READY -> actual live binding -> SSH -> physical B210 network startup -> physical B210 UE startup -> LTE attach -> bearer -> user-plane IP transfer -> terminate -> zero usage`
+A timestamped ping logger was running on `nuc2` as PID `20134`, file `/tmp/g5_q41_clean_ping.log`. Final clean stage logs include `/tmp/g5_q41_clean_stage.log`, `/tmp/g5_q42_clean_stage.log`, `/tmp/g5_q49_clean_stage.log`, `/tmp/g5_q52_clean_stage.log`. These files are ephemeral and may be sanitized/preserved before teardown if still available.
 
-G4 is **non-scored infrastructure qualification** and contributes 0% scientific completion.
+Fallback reservation remains available for `nuc1+nuc2` on **2026-08-26 19:00–22:00 Africa/Cairo**. Do not spend it on further RF hunting.
 
-Raw evidence in Drive includes final teardown screenshot `POWDER_G4_TEARDOWN_ZERO_USAGE_PASS_2026-08-25.png`, id `1lbgnFuesXbjd13WxJUPQY6zjvRCWQMLb`.
+## RF calibration — FROZEN
 
-## Comparator gate — still open
+Numeric authority: `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`.
+Calibration ledger: `evidence/powder/g5-rf-calibration-ledger-2026-08-26.md`.
 
-The serious related-work/comparator audit remains authoritative in `docs/WP0_COMPARATOR_AUDIT_2026-08-25.md`.
+| State | Programmed attenuation | Meaning | Accepted observation |
+|---|---:|---|---|
+| Q0 | **0 dB** | strong/stable | ~-60 dBm RSRP, SNR ~40–45 dB, BLER 0; clean user-plane PASS |
+| Q1 | **40 dB** | degraded but continuously connected | ~-100 dBm RSRP, SNR ~18–19 dB; continuous ping |
+| Q2 | **52 dB** | near-threshold/intermittent | clean isolated 20 s window: **6 replies / 12 misses**; clean Q0 recovery |
+| Q3 | **55 dB** | effective application-data outage | first isolated valid 20 s outage with immediate recovery after Q0 reset |
 
-Key finding: current Paho Python B1 is the clean matched same-implementation comparator but is not the strongest durable MQTT client generally. Other standard Paho implementations can provide durable persistence/offline buffering.
+Clean boundary checks after bearer restoration:
 
-Preferred route remains:
+- +41 dB: 20 replies / 0 misses;
+- +42 dB: 20 replies / 0 misses;
+- +49 dB: 21 replies / 0 misses;
+- +52 dB: 6 replies / 12 misses.
 
-- retain B1 for the matched B1/W1 primary campaign;
-- locally qualify candidate `B2_MQTT_DURABLE_CLIENT`;
-- if valid, freeze a compact S2/S3 B2 sensitivity comparison rather than inflate the full primary matrix;
-- keep B2 separate from primary paired inference.
+**No more attenuation sweep is authorized or scientifically useful.**
 
-No scored run may begin until the comparator review and exact amendment are explicitly frozen.
+## Critical invalidity and safeguard
 
-## Automation / security state
+Repeated severe RLF/re-attach testing eventually produced a stale user-plane bearer while the UE still appeared attached and had an IP. Q0 then failed in both directions. This is infrastructure/calibration invalidity, not an RF scientific result.
 
-Canonical manual key remains `WellPulse-POWDER-Golden`, fingerprint `SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs`. Never expose/commit/copy the private key or passphrase.
+The contaminated-period 48/50/52/54 sweep, 42/44/46/47 sweep, and first +41 attempt are retained for provenance but excluded from canonical RF classification.
 
-G4 manual qualification is now complete, so the **proven G4 lifecycle may be automated**. Do not rediscover the resource lifecycle by trial and error. Any new RF-control/impairment layer must receive one bounded manual qualification before repetitive automation.
+The bearer was restored by a bounded clean LTE reset: stop UE, restart EPC/eNB, restart UE, reattach, then verify Q0 user plane. Clean restoration passed 5/5.
 
-The GitHub `POWDER_SSH_PRIVATE_KEY` path remains known-bad and must be repaired before trusting automated SSH or scored execution.
+**Frozen safeguard:** every future scored run/block must begin with an explicit Q0 user-plane readiness gate. Attached state or assigned IP alone is insufficient. If Q0 user-plane health fails, the run is technically invalid and must not enter the scientific corpus.
 
-## Immediate next gate
+## Key G5 evidence
 
-**G5 / WP2 — RF impairment and measurement calibration.**
+- Q0 baseline `9e4e8b0ee14f9919a8ca8b5a5e5f615fdb33e62d`
+- +20/+30/+40 sweep `7a4dc3891977b0e643850bfa713e6a0ae9c0a16c`
+- isolated +55 / Q3 `cf57bf8646f39c1be9443c4e08160a69697c7ba1`
+- invalid first +41 / stale bearer `a67126b2fdbf30f69b1038e45d63e5d3547b8d67`
+- clean Q0 recovery `6f4cb5d01ceb2eb402f638534c24a7b04a3276da`
+- clean +41 `ae2baa30065c606f54d819ff2c6610b10fe30bdc`
+- clean +42 `41011cee93f5ab100061edfc2076d966e44824d9`
+- clean +52 / Q2 `3b9d1992cfeb18ceb5be468b1fe751b0d2a40a9e`
+- calibration ledger `ae27b01311d84491120001d7bc308683515a87ba`
+- RF freeze artifact `74e7eae3df8365693d01b627378dcd5a3f3f2860`
 
-Do not repeat G4. Reuse the proven lifecycle and add only the minimum RF-control/measurement layer needed to qualify controlled impairment.
+## Remaining pre-score work
 
-An approved fallback reservation still exists for `nuc1+nuc2` on **2026-08-26 19:00–22:00 Africa/Cairo**. Highest-ROI use is G5/WP2, provided its new RF-control procedure is prepared and manually bounded first.
+Do not authorize scored runs yet. Material open gates:
 
-## Scientific critical path
+1. calibrate/freeze common recovery horizon `H` from valid non-scored W1 backlog-drain observations;
+2. reproduce frozen Paho/runtime configuration on the remote path;
+3. verify B1/W1 implementation matching and end-to-end identity/checksum preservation;
+4. verify evidence capture and clock alignment for mandatory endpoints;
+5. run deterministic analysis on a non-scored pilot bundle without manual spreadsheet edits;
+6. close the B2 durable-client comparator decision/amendment;
+7. repair or bypass the known-bad automated `POWDER_SSH_PRIVATE_KEY` path before scored automation is trusted.
 
-```text
-G4 controlled physical-RF lifecycle PASS
-        ↓
-G5 / WP2 RF impairment + measurement calibration
-        ↓
-close B2 durable-client comparator gate before scoring
-        ↓
-freeze Q0-Q3 + H + exact protocol amendment if needed
-        ↓
-WP3 conducted scored campaign
-        ↓
-WP4 compact OTA replication
-        ↓
-WP5 deterministic analysis + artifact + manuscript closure
-```
+## Exact next action
 
-## Evidence boundary
+**Operationally:** if `WP-G5-RF-CAL` is still active, preserve any desired sanitized `/tmp` calibration logs, leave attenuation at 0, terminate the experiment cleanly, and verify zero active usage. Do not run more RF calibration.
 
-Current remote-testbed evidence supports communications/radio-link resilience, telemetry integrity/completeness, recovery, reconnect, gateway-process restart and controlled LTE connectivity. It does **not** validate pump mechanics, hydraulics, groundwater, crop/agronomic outcomes, Siwa field performance or generic rural-field generalization.
+**Scientifically after teardown:** stay in WP2. Run the smallest valid non-scored W1 recovery pilot needed to calibrate/freeze `H`, then close the remaining pre-score measurement/evidence gates. Do not start WP3 and do not execute B1/W1/B2 scored cells.
 
-## Reproducibility read order for a new agent
+## Reproducibility read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/MILESTONE_STATUS.md`
-3. `docs/STATUS.md`
-4. `docs/DECISIONS.md`
-5. `evidence/powder/g4-ue-attach-2026-08-25.md`
-6. `docs/WP0_COMPARATOR_AUDIT_2026-08-25.md`
-7. `experiments/WP-PWD01/protocol.md`
-8. `experiments/WP-PWD01/analysis-plan.md`
-9. `experiments/WP-PWD01/evidence-schema.md`
-10. `experiments/WP-PWD01/randomization-plan.csv`
-11. `experiments/WP-PWD01/run-matrix.yaml`
-12. `powder/MANUAL_GOLDEN_PATH.md`
+2. `docs/handovers/2026-08-26_G5_RF_CALIBRATION_HANDOVER.md`
+3. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`
+4. `evidence/powder/g5-rf-calibration-ledger-2026-08-26.md`
+5. `docs/MILESTONE_STATUS.md`
+6. `docs/STATUS.md`
+7. `docs/DECISIONS.md`
+8. `experiments/WP-PWD01/protocol.md`
+9. `docs/WP0_COMPARATOR_AUDIT_2026-08-25.md`
+10. `experiments/WP-PWD01/analysis-plan.md`
+11. `experiments/WP-PWD01/evidence-schema.md`
+12. `experiments/WP-PWD01/randomization-plan.csv`
+13. `experiments/WP-PWD01/run-matrix.yaml`
+14. `powder/MANUAL_GOLDEN_PATH.md`
 
-Do not infer current live bindings from past node numbers; roles can reverse between runs. Verify live bindings each time.
+Never infer node roles from prior runs. Never persist secrets, private keys, passphrases, RPC tokens, credential blocks, or raw credential-bearing manifests.
