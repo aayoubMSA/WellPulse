@@ -1,19 +1,17 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-25 01:42 Africa/Cairo
-
-This is the compact dashboard for scientific WP completion, POWDER infrastructure gates, comparator status, critical path, and planning time.
+Last updated: 2026-08-25 late session, Africa/Cairo
 
 ## Scientific work packages
 
-| WP | Scope | Weight | Progress | Status | Remaining active-work estimate |
-|---|---|---:|---:|---|---:|
-| WP0 | Novelty & Venue Lock | 8% | 100% | PASS — serious related-work benchmark added | 0 h core; manuscript check remains |
-| WP1 | Confirmatory Protocol & Statistics Freeze | 12% | 100% design work | PRE-SCORE COMPARATOR REVIEW OPEN | small B2 semantics/audit task |
-| WP2 | RF Calibration & Measurement Validation | 15% | 0% | NEXT after G4 | ~4–8 h |
-| WP3 | Conducted-RF Confirmatory Campaign | 30% | 0% | BLOCKED BY WP2 + comparator freeze | ~6–10 h plus any compact B2 sensitivity |
-| WP4 | OTA External Replication | 15% | 0% | BLOCKED BY WP3 | ~3–6 h |
-| WP5 | Analysis + Artifact + Paper Closure | 20% | 0% scientific closure | PREPARED, NOT EXECUTED | ~12–20 h |
+| WP | Scope | Weight | Progress | Status |
+|---|---|---:|---:|---|
+| WP0 | Novelty & Venue Lock | 8% | 100% | PASS — serious related-work/comparator benchmark attached |
+| WP1 | Confirmatory Protocol & Statistics Freeze | 12% | 100% design work | PRE-SCORE COMPARATOR REVIEW OPEN |
+| WP2 | RF Calibration & Measurement Validation | 15% | 0% | **NEXT / AUTHORIZED NON-SCORED STAGE** |
+| WP3 | Conducted-RF Confirmatory Campaign | 30% | 0% | BLOCKED BY WP2 + comparator freeze + explicit scored authorization |
+| WP4 | OTA External Replication | 15% | 0% | BLOCKED BY WP3 |
+| WP5 | Analysis + Artifact + Paper Closure | 20% | 0% scientific closure | PREPARED, NOT EXECUTED |
 
 Scientific weighted completion remains **20%**.
 
@@ -35,95 +33,65 @@ G0 Account + WellPulse project      ██████████████�
 G1 Manual compute provisioning      ████████████████████ PASS
 G2 Explicit-key SSH + teardown      ████████████████████ PASS
 G3 Simulated stack/data path        ████████████████████ PASS
-G4 Controlled physical-RF lifecycle ████████░░░░░░░░░░░░ SCHEDULED / LIFECYCLE PENDING
-G5 RF impairment plumbing           ░░░░░░░░░░░░░░░░░░░ PENDING
+G4 Controlled physical-RF lifecycle ████████████████████ PASS
+G5 RF impairment plumbing           ░░░░░░░░░░░░░░░░░░░ NEXT
 ```
 
 G0–G4 are enabling infrastructure qualification and add **0%** scientific completion.
 
-### G4 scheduled state
+## G4 final accepted state
 
-- profile `PowderProfiles/srslte-controlled-rf`;
-- repo hash `a6da9656`;
-- UE `srsLTE UE (B210)`;
-- approved WellPulse reservation: `nuc1` + `nuc2`, one each;
-- window: **2026-08-25 19:00–22:00 Africa/Cairo**;
-- scheduled experiment: `WP-G4-CTRL-RF`;
-- state after scheduling: `scheduled`;
-- current usage after scheduling: `0 Node Hours`.
+Canonical evidence: `evidence/powder/g4-ue-attach-2026-08-25.md`.
 
-G4 PASS still requires READY -> actual manifest/radio binding -> explicit-key SSH -> controlled physical-RF LTE sanity -> clean terminate -> zero active usage.
+Successful rerun:
 
-Canonical G4 evidence:
+- experiment `WP-G4-CTRL-RF`;
+- UUID `0e4269fb-06dd-432b-abec-4bca685a05af`;
+- profile `srslte-controlled-rf`, RefSpec `a6da9656`;
+- live binding: `enb1 -> nuc2`, `rue1 -> nuc1`;
+- physical B210 network/eNodeB path PASS;
+- physical B210 srsUE path PASS;
+- LTE attach PASS;
+- UE IP `172.16.0.2`, EPC SGi `172.16.0.1`;
+- E-RAB/bearer establishment PASS;
+- bounded user-plane test via `tun_srsue`: **5/5 replies, 0% loss**;
+- manual termination PASS;
+- final portal: no active experiments, `Current Usage: 0 Node Hours`.
 
-- `evidence/powder/g4-live-discovery-2026-08-25.md`
+**G4 = PASS.** No G4 result is scored science.
 
-## Serious related-work / comparator gate
+## Comparator gate
 
-Canonical artifacts:
-
-- `docs/WP0_RELATED_WORK_BENCHMARK_2026-08-25.md`
-- `docs/WP0_RELATED_WORK_MATRIX_2026-08-25.csv`
-- `docs/WP0_COMPARATOR_AUDIT_2026-08-25.md`
-- `docs/WP0_NOVELTY_VENUE_LOCK_2026-08-24.md`
-
-The serious pre-G4 survey confirmed that MQTT resilience, buffering/store-and-forward, durable local databases, offline-first operation, identifiers, reconciliation, agricultural/cellular MQTT and testbed validation are all prior art in isolation.
-
-The material new finding is that standard Eclipse Paho implementations outside Python can provide file-backed persistence and persistent disconnected buffering. Therefore current `B1_MQTT_QOS1` remains a useful same-Paho-Python matched comparator but is **not** claimed as the strongest durable MQTT-client configuration generally.
-
-Provisional preferred defense:
-
-1. retain B1 for the full matched B1/W1 primary campaign;
-2. locally qualify a candidate `B2_MQTT_DURABLE_CLIENT` using authoritative durable-client settings;
-3. if B2 semantics pass, freeze only a compact S2/S3 sensitivity comparison rather than inflate the full primary matrix;
-4. keep B2 secondary/sensitivity evidence separate from the B1/W1 primary paired inference.
-
-No scored execution is permitted until this comparator review is explicitly closed.
+The durable-client issue remains open. B1 remains the matched same-Paho-Python comparator but is not the strongest durable MQTT client generally. Candidate `B2_MQTT_DURABLE_CLIENT` semantics must be locally qualified and the exact sensitivity amendment explicitly frozen before scoring.
 
 `scored_runs_authorized = false`.
 
-G4 is not blocked because it is infrastructure-only.
+## Immediate next action
 
-## Time remaining
+**G5 / WP2 — RF impairment and measurement calibration.**
 
-Previous planning estimate remains approximately:
+Use the proven G4 lifecycle rather than rediscovering the platform. Automation may clone the proven G4 lifecycle. Any new RF-control/impairment layer must first receive one bounded manual qualification. Do not begin B1/W1/B2 scored runs.
 
-- active hands-on work: **~27–48 hours**;
-- best case: **~3–4 intensive working days** after infrastructure access is stable;
-- realistic elapsed: **~5–8 calendar days**;
-- resource constrained: **~1–2 weeks**.
-
-A validated compact B2 sensitivity experiment may add a small amount of active work. It is not yet included as a fixed scored matrix and must not be estimated as a full third arm.
+An approved `nuc1+nuc2` fallback reservation still exists for **2026-08-26 19:00–22:00 Africa/Cairo**. It may be reused for G5/WP2 if the required RF-control path is prepared and manually bounded first; do not waste it on repeating G4.
 
 ## Critical path
 
 ```text
-G4 scheduled manual controlled-RF lifecycle
+G4 controlled physical-RF lifecycle PASS
         ↓
-G5 / WP2 user-plane + RF calibration + freeze Q0-Q3 and H
+G5 / WP2 RF impairment + measurement calibration
         ↓
 close durable-client B2 comparator gate
         ↓
-freeze any protocol v0.5 amendment before scoring
+freeze Q0-Q3 + H + exact scored amendment if needed
         ↓
-WP3 24–36 primary B1/W1 conducted scored runs
-        + compact B2 sensitivity only if qualified/frozen
+WP3 conducted scored campaign
         ↓
-WP4 12-run compact OTA replication
+WP4 compact OTA replication
         ↓
 WP5 deterministic analysis + artifact + manuscript closure
 ```
 
-## Immediate action
-
-No POWDER action before the approved 19:00 Cairo window.
-
-At 19:00:
-
-`WP-G4-CTRL-RF -> READY -> manifest/radio binding -> SSH -> controlled LTE sanity -> terminate -> 0 Node Hours`
-
-In the scientific-preparation lane, continue citation snowballing and durable-client comparator qualification work, but do not mutate the scored protocol or authorize runs until that evidence is frozen.
-
 ## Evidence boundary
 
-Current accepted POWDER evidence through G3 proves infrastructure/plumbing and file-based LTE-stack feasibility only. A successful G4 will prove a controlled physical-RF lifecycle, not a WellPulse performance effect. No remote-testbed result validates pumps, hydraulics, groundwater, agronomy, Siwa field performance, or generic rural-field performance.
+G4 proves a controlled physical-RF LTE lifecycle and bounded user-plane connectivity on POWDER. It does not establish RF calibration, WellPulse/MQTT resilience effects, pump/hydraulic/agronomic performance, Siwa field performance, or generic rural generalization.
