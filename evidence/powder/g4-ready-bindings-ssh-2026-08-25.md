@@ -9,7 +9,7 @@
 
 ## Purpose
 
-Preserve the reproducible, credential-free checkpoint proving that the scheduled controlled-RF experiment reached READY, exposed the expected RF-controlled topology, and accepted the canonical explicit SSH identity on both endpoint hosts. This checkpoint does **not** prove LTE attach/user-plane operation and does not close G4.
+Preserve the reproducible, credential-free checkpoint proving that the scheduled controlled-RF experiment reached READY, exposed the expected RF-controlled topology, accepted the canonical explicit SSH identity on both endpoint hosts, and progressed into profile-authoritative LTE component startup. This checkpoint does **not** yet prove UE attach/user-plane operation and does not close G4.
 
 ## Live state observed
 
@@ -78,6 +78,61 @@ The PDF preserves the experiment header/status plus the portal-generated Load Av
 
 Evidence boundary: these portal graphs are preserved as **infrastructure/provenance evidence only**. They are not currently attributable to the experimental LTE user plane or controlled-RF impairment path. The underlying time-series samples are not present in the currently retained evidence, so an exact scientific reproduction of the portal graph is not claimed. Digitizing the image would only produce an approximation and must not replace the original PDF.
 
+## EPC / eNB startup checkpoint on `nuc1`
+
+The user manually executed the profile-authoritative components on `nuc1`.
+
+EPC command:
+
+```bash
+sudo srsepc /etc/srslte/epc.conf
+```
+
+Observed sanitized startup output included:
+
+```text
+Built in Release mode using commit c892ae56b on branch master.
+Reading configuration file /etc/srslte/epc.conf...
+HSS Initialized.
+MME S11 Initialized
+MME GTP-C Initialized
+MME Initialized. MCC: 0xf998, MNC: 0xff98
+SPGW GTP-U Initialized.
+SPGW S11 Initialized.
+SP-GW Initialized.
+```
+
+Interpretation: **EPC initialization reached the reported initialized state**. This does not by itself prove the EPC process remained alive after the captured output.
+
+The eNB command was then executed:
+
+```bash
+sudo srsenb /etc/srslte/enb.conf
+```
+
+Observed sanitized startup output included:
+
+```text
+Built in Release mode using commit c892ae56b on branch master.
+Reading configuration file /etc/srslte/enb.conf...
+Force DL EARFCN for cell PCI=1 to 2175
+Opening 1 channels in RF device=default with args=default
+[INFO] [UHD] ... UHD_3.15.0.0-2ubuntu1emulab1
+Opening USRP channels=1, args: type=b200,master_clock_rate=23.04e6
+[INFO] [B200] Detected Device: B210
+[INFO] [B200] Loading FPGA image: /usr/share/uhd/images/usrp_b210_fpga.bin...
+```
+
+Interpretation: **eNB startup reached the real UHD/B210 initialization path and detected a B210 device**. This is stronger than manifest-only binding evidence because it demonstrates software-level access to the physical SDR. However, the captured output does not yet prove the eNB process remained alive, completed RF bring-up, accepted a UE, or carried user-plane traffic.
+
+Current sub-gate verdict:
+
+- EPC reported initialization: **PASS as startup checkpoint**;
+- eNB B210 detection / FPGA-load path reached: **PASS as SDR-access checkpoint**;
+- sustained EPC/eNB process liveness: **NOT YET VERIFIED**;
+- UE attach: **NOT STARTED / NOT VERIFIED**;
+- LTE bearer/user-plane connectivity: **NOT VERIFIED**.
+
 ## Security sanitization
 
 The raw portal manifest/status dump supplied during the live session contained experiment RPC credential/certificate material. That material is intentionally **not retained** in this repository. Only non-secret experiment/profile/resource identifiers and reproducibility metadata are preserved here.
@@ -86,13 +141,13 @@ Do not commit private keys, passphrases, POWDER API tokens, experiment RPC token
 
 ## Evidence boundary
 
-This checkpoint proves only:
+This checkpoint currently proves:
 
-`scheduled experiment -> READY -> actual nuc1/nuc2 bindings -> rf-controlled P2PLTE link manifest -> explicit Golden-key SSH on both hosts`
+`scheduled experiment -> READY -> actual nuc1/nuc2 bindings -> rf-controlled P2PLTE link manifest -> explicit Golden-key SSH on both hosts -> EPC initialization output -> eNB reaches UHD/B210 detection and FPGA-load path`
 
-It does **not** prove:
+It does **not** yet prove:
 
-- `srsepc`/`srsenb` start success;
+- sustained `srsepc`/`srsenb` liveness;
 - `srsue` start or attach;
 - LTE bearer/user-plane connectivity;
 - RF impairment control;
@@ -101,10 +156,4 @@ It does **not** prove:
 
 ## Exact next action
 
-Continue the same manual G4 qualification. On `nuc1` start the profile-authoritative EPC/eNB path using:
-
-```bash
-/local/repository/bin/start.sh
-```
-
-Verify EPC/eNB startup before starting the srsLTE UE on `nuc2`. Preserve only sanitized output. Do not begin scored runs.
+Before starting the UE on `nuc2`, verify that the EPC and eNB processes are actually still alive on `nuc1` using a read-only process check. Do not begin scored runs.
