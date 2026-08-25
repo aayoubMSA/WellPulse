@@ -12,20 +12,40 @@ The 2026-08-25 `WP-G4-CTRL-RF` session successfully reached the profile-authorit
 
 This is **not a scientific FAIL**. It is an incomplete non-scored G4 lifecycle qualification caused by the reservation-window boundary.
 
-## Approved continuation reservation
+## Approved continuation reservations
 
-POWDER reservation request was submitted and immediately shown as approved on 2026-08-25 at 22:10 local portal time.
+### Immediate late window — primary next attempt
 
-Reserved resources:
+A second WellPulse reservation was approved on 2026-08-25 at approximately 22:22 Africa/Cairo for:
 
 - `Emulab / nuc1 / 1`
 - `Emulab / nuc2 / 1`
 - OTA Lab: none
 - frequency reservation: none
 - class reservation: No
+- **Start:** 2026-08-25 23:00 Africa/Cairo
+- **End:** 2026-08-26 00:00 Africa/Cairo
 
-Approved continuation window:
+A rerun of the same experiment was then scheduled successfully:
 
+- experiment name: `WP-G4-CTRL-RF`
+- profile: `srslte-controlled-rf`
+- profile repo/ref: `a6da9656`, `refs/heads/master`
+- state after scheduling: `scheduled`
+- scheduled start: **2026-08-25 23:00 Africa/Cairo**
+- expiry: **2026-08-26 00:00 Africa/Cairo**
+
+This one-hour window is the primary immediate attempt. Do not spend it repeating discovery or comparator work.
+
+### Fallback reservation — preserved
+
+The earlier approved fallback reservation remains available:
+
+- `Emulab / nuc1 / 1`
+- `Emulab / nuc2 / 1`
+- OTA Lab: none
+- frequency reservation: none
+- class reservation: No
 - **Start:** 2026-08-26 19:00 Africa/Cairo
 - **End:** 2026-08-26 22:00 Africa/Cairo
 
@@ -37,17 +57,18 @@ Reservation reason recorded in the portal:
 
 Do not repeat discovery, comparator science, or scored runs. The shortest valid continuation path is:
 
-1. use the approved `nuc1`/`nuc2` window;
-2. restore/instantiate the same `srslte-controlled-rf` G4 lifecycle without changing profile semantics;
-3. verify both actual live SSH endpoints with the canonical explicit Golden key;
-4. launch the profile-authoritative startup on `nuc1` and confirm EPC/eNB live state;
-5. launch the profile-authoritative `srsue` path on `nuc2`;
-6. verify UE attach/authentication/bearer establishment;
-7. verify LTE user-plane connectivity through the experimental path, not the POWDER control network;
-8. preserve credential-free raw evidence and concise provenance;
-9. teardown manually and verify zero active usage;
-10. only then classify G4 PASS/FAIL.
+1. wait for the scheduled experiment to reach `READY`;
+2. verify both actual live SSH endpoints with the canonical explicit Golden key;
+3. launch the profile-authoritative startup on `nuc1` and confirm EPC/eNB live state;
+4. launch the profile-authoritative `srsue` path on `nuc2`;
+5. verify UE attach/authentication/bearer establishment;
+6. verify LTE user-plane connectivity through the experimental path, not the POWDER control network;
+7. preserve credential-free raw evidence and concise provenance;
+8. teardown manually and verify zero active usage;
+9. only then classify G4 PASS/FAIL.
+
+If the 23:00–00:00 window is insufficient, stop cleanly and resume in the approved 19:00–22:00 fallback window. Do not convert time pressure into weaker evidence or scored execution.
 
 ## Evidence boundary
 
-This reservation changes **operational readiness only**. It adds no scientific percentage and authorizes no scored campaign. G4 remains **IN PROGRESS** until UE attach and user-plane qualification are evidenced.
+These reservations change **operational readiness only**. They add no scientific percentage and authorize no scored campaign. G4 remains **IN PROGRESS** until UE attach and user-plane qualification are evidenced.
