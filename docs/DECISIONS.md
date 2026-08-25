@@ -47,3 +47,24 @@ Failed or exploratory POWDER experiments remain visible in history and may be ci
 For the current G3 gate, manual resource creation remains mandatory. After a fresh `srsLTE-SIM:9` experiment is created manually and reaches READY, `.github/workflows/powder-g3-attach.yml` may attach to that exact experiment UUID and automate target validation, manifest/SSH discovery, the profile-authoritative file-based `pdsch_enodeb -> file -> pdsch_ue` check, sanitized evidence capture, and fail-safe termination.
 
 This does **not** unfreeze resource-creating automation. `.github/workflows/powder-g3-simstack.yml` remains unapproved for execution until the equivalent G3 manual gate has passed and the canonical handover explicitly changes that state. G3 remains non-scored/no-RF and adds no scientific percentage.
+
+## D-015 — POWDER G5 numeric RF-state freeze
+The accepted conducted-RF programmed attenuation states are frozen from WP2 non-scored calibration as:
+
+- `Q0 = 0 dB` — strong/stable reference;
+- `Q1 = 40 dB` — degraded but continuously connected;
+- `Q2 = 52 dB` — near-threshold/intermittent;
+- `Q3 = 55 dB` — effective application-data outage.
+
+Numeric authority is `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`; provenance and selection rationale are in `evidence/powder/g5-rf-calibration-ledger-2026-08-26.md`.
+
+The clean boundary evidence after bearer restoration was +41 dB 20/20 replies, +42 dB 20/20, +49 dB 21 replies/0 misses, and +52 dB 6 replies/12 misses in the isolated window. Q3 derives from the first isolated valid +55 dB outage/recovery test before the later stale-bearer contamination.
+
+Do not reopen the attenuation sweep merely to optimize the appearance of results. Any future change requires a material technical reason and an explicit pre-score protocol amendment.
+
+## D-016 — Q0 user-plane readiness is mandatory
+A POWDER UE may remain attached and retain an IP while the LTE user-plane bearer is stale after repeated severe RLF/re-attach cycles. Therefore attach state and UE IP are not sufficient readiness evidence.
+
+Before every future scored run/block, Q0 must pass an explicit end-to-end user-plane readiness check through the experimental radio path. If Q0 user-plane health fails, the run is technically invalid and must not enter the scientific corpus. The raw invalid run remains preserved/labeled; replacement is permitted for this technical invalidity only, never because of an unfavorable scientific result.
+
+The contaminated-period 48/50/52/54 sweep, 42/44/46/47 sweep and first +41 attempt are provenance/troubleshooting evidence only and are excluded from canonical RF-state classification.
