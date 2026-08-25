@@ -66,6 +66,18 @@ aayoub
 
 Verdict: **explicit-key SSH access PASS on both controlled-RF endpoint hosts**.
 
+## Portal graph evidence preservation
+
+The portal Graphs view was saved as the original PDF in the canonical Drive raw-evidence workspace:
+
+- Drive file: `POWDER_G4_CTRL_RF_Portal_Graphs_2026-08-25.pdf`
+- Drive file ID: `1iTygKh_RHV3JFlDty0UsZHtFIJGyPkGo`
+- parent: `02_RAW_EVIDENCE` (`11xaitxG0vkV6fCzK_JgLAacrdhjz7GBf`)
+
+The PDF preserves the experiment header/status plus the portal-generated Load Average and Control Traffic plots. The Control Traffic plot visually shows roughly 60-70 packets/s through much of the displayed interval before declining near the end.
+
+Evidence boundary: these portal graphs are preserved as **infrastructure/provenance evidence only**. They are not currently attributable to the experimental LTE user plane or controlled-RF impairment path. The underlying time-series samples are not present in the currently retained evidence, so an exact scientific reproduction of the portal graph is not claimed. Digitizing the image would only produce an approximation and must not replace the original PDF.
+
 ## Security sanitization
 
 The raw portal manifest/status dump supplied during the live session contained experiment RPC credential/certificate material. That material is intentionally **not retained** in this repository. Only non-secret experiment/profile/resource identifiers and reproducibility metadata are preserved here.
