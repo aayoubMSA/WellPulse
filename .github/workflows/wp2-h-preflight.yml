@@ -63,13 +63,14 @@ jobs:
           PY
           } > /tmp/wp2-h-preflight.log 2>&1
 
+          PAHO_VERSION="$(python -c 'import importlib.metadata as m; print(m.version("paho-mqtt"))')"
           {
             echo "# WP2 H Calibration Preflight — latest"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- Tested GitHub SHA: ${GITHUB_SHA}"
             echo "- Python: $(python --version 2>&1)"
-            echo "- Paho MQTT: $(python -c \"import importlib.metadata as m; print(m.version('paho-mqtt'))\")"
+            echo "- Paho MQTT: ${PAHO_VERSION}"
             echo "- Evidence class: **LOCAL PRE-SCORE IMPLEMENTATION QA ONLY**"
             echo "- POWDER resource interaction: **NONE**"
             echo "- Scored run interaction: **NONE**"
