@@ -1,7 +1,7 @@
-import json
 import sqlite3
 from pathlib import Path
 from .records import Record
+
 
 class DurableQueue:
     def __init__(self, path):
@@ -19,12 +19,33 @@ class DurableQueue:
         )
         self.conn.commit()
 
-    def enqueue(self, record: Record) -> None:
+    def enqueue(self, record: Record) -> bool:
+        """Durably enqueue one record without silently hiding identity conflicts.
+
+        Re-enqueueing the exact same canonical record is idempotent and returns
+        False. Reusing an existing record_id for different content is an
+        integrity failure and raises ValueError.
+        """
+        payload_json = record.canonical_payload()
+        checksum = record.checksum_sha256
+        existing = self.conn.execute(
+            "SELECT payload_json, checksum_sha256 FROM queue WHERE record_id=?",
+            (record.record_id,),
+        ).fetchone()
+        if existing is not None:
+            existing_payload, existing_checksum = existing
+            if existing_payload == payload_json and existing_checksum == checksum:
+                return False
+            raise ValueError(
+                f"record_id collision with conflicting payload/checksum: {record.record_id}"
+            )
+
         self.conn.execute(
-            "INSERT OR IGNORE INTO queue(record_id,payload_json,checksum_sha256,state) VALUES(?,?,?,'PENDING')",
-            (record.record_id, record.canonical_payload(), record.checksum_sha256),
+            "INSERT INTO queue(record_id,payload_json,checksum_sha256,state) VALUES(?,?,?,'PENDING')",
+            (record.record_id, payload_json, checksum),
         )
         self.conn.commit()
+        return True
 
     def rows(self):
         return list(self.conn.execute("SELECT record_id,payload_json,checksum_sha256,state FROM queue ORDER BY record_id"))
