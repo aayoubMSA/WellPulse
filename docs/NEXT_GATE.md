@@ -1,82 +1,53 @@
-# Next Gate — POWDER WP2 Physical H Calibration
+# Next Gate — WP2 Recovery-Semantics Amendment
 
-**Current frontier:** WP2 physical W1 H calibration  
+**Current frontier:** POST-H1 / PRE-AMENDMENT / PRE-SCORE  
 **Scientific completion:** 20%  
-**Scored authorization:** `false`
+**Scored authorization:** `false`  
+**H:** `UNFROZEN`
 
-## Mandatory pre-read
+## Governing consortium
 
-Before any POWDER action, read:
+Read first:
 
-1. `HANDOVER_CURRENT.md`
-2. `docs/AGENT_HANDOVER_POWDER_NEXT.md`
-3. `powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
-4. D-020 in `docs/DECISIONS.md`
+1. `docs/CONSORTIUM_WP2_RECOVERY_SEMANTICS_GATE_2026-08-26.md`
+2. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+3. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`
+4. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`
 
-## Current reservation
+## Frozen state
 
-**2026-08-26 19:00–22:00 Africa/Cairo — `nuc1+nuc2`**.
+- H1 Trial #1 remains `VALID_W1_RECOVERY_FAILURE`.
+- H is not frozen.
+- No replacement H trial is authorized under the current plan.
+- No scored B1/W1/B2 run is authorized.
+- Q0=0 dB, Q1=40 dB, Q2=52 dB, Q3=55 dB remain frozen.
+- Attenuator IDs `1 33 2 34` remain coupled.
+- The demonstrated clean-order recovery sequence `stop UE -> EPC -> eNB -> fresh UE` is a qualified testbed recovery primitive only; it is not yet an approved scientific treatment.
 
-## Entry gate
+## What the 2026-08-26 physical session proved
 
-For the current interactive/manual reservation, the access path is now:
+- correct physical Q0 readiness and `tun_srsue` route before H1;
+- exact Q3 55 dB hard-outage schedule with approximately 120.0001 s full-state duration;
+- technically valid failure to recover within the frozen post-Q0 bound;
+- LTE core/session-context pathology rather than an application/MQTT failure dominated the non-recovery;
+- UE-only recovery failed;
+- EPC/eNB reset with live UE failed;
+- coordinated clean-order LTE recovery passed;
+- exact post-recovery TLS/MQTT/QoS1/payload-integrity path passed in 3/3 independent fresh sessions;
+- raw artifacts, runtime fingerprints, and node-local chain-of-custody manifests are preserved.
 
-`single instantiate -> READY -> live manifest/bindings PASS -> POWDER browser shell on both nodes PASS -> Q0 LTE user-plane PASS -> tun_srsue route PASS -> runtime/session-isolation PASS`
+## Current execution rule
 
-Direct SSH from the Home PC or GitHub Actions is **not a blocking gate for this reservation**. POWDER's browser-based shell is the preferred access mechanism because it is portal-authenticated and does not depend on a local SSH keypair. The GitHub SSH ownership gate remains a future automation-qualification task only; do not spend reservation time repairing it unless remote automation becomes materially necessary.
+Do **not** run H again yet.
 
-Only after the access/path gates above may physical W1 H calibration begin.
+The only authorized scientific work is the Recovery-Semantics consortium gate:
 
-## Execution rule
+`RS-1 evidence reconstruction -> RS-2 LTE recovery review -> RS-3 estimand/H review -> RS-4 adversarial review -> RS-5 prospective amendment -> RS-6 Golden E2E rehearsal design -> RS-7 GO/KILL`
 
-- instantiate exactly one fresh `PowderProfiles/srslte-controlled-rf` experiment early in the reservation;
-- verify the reservation still owns the requested resources before binding `nuc1/nuc2`;
-- wait for READY;
-- do **not** use terminate/recreate churn if provisioning stalls;
-- verify fresh profile revision and physical mapping (`enb1 -> nuc1`, `rue1 -> nuc2`);
-- use the POWDER **Web-based Shell** from the node action menu as the default interactive access path;
-- prove browser-shell access on both `nuc1` and `nuc2` before LTE actions;
-- do not block current science on Home-PC/GitHub SSH-key troubleshooting;
-- establish EPC/eNB + UE;
-- require explicit Q0 end-to-end user-plane PASS;
-- require route to `172.16.0.1` via `tun_srsue`;
-- verify Paho 2.1.0/runtime and first fresh MQTT `session_present=false`;
-- then run only non-scored W1 H calibration.
+## Immediate action
 
-## H rule
+**RS-1 — Evidence Reconstruction.**
 
-`30 s readiness -> Q0 60 s -> Q3 120 s -> Q0 until backlog drain`
+Reconstruct the H1 timeline and recovery chain from the preserved sender/receiver CSV/JSON/SQLite artifacts and LTE logs. The purpose is to establish exact `t_rf_restore`, service-loss/recovery evidence, application queue state, and the causal boundary between LTE substrate failure and WellPulse behavior.
 
-Exactly three `VALID_W1_RECOVERY_SUCCESS` trials are required.
-
-`H = max(120 s, ceil_to_30s(2 × p95))`
-
-With n=3, p95 is the maximum successful drain time.
-
-Stop if:
-
-- a `VALID_W1_RECOVERY_FAILURE` occurs;
-- H would exceed 300 s;
-- Q0 user-plane fails;
-- MQTT bypasses `tun_srsue`;
-- runtime/session isolation differs from frozen design;
-- experiment does not reach READY;
-- browser-shell access to either allocated node fails.
-
-## Frozen boundaries
-
-- Q0 = 0 dB, Q1 = 40 dB, Q2 = 52 dB, Q3 = 55 dB.
-- no RF sweep reopening.
-- no scored B1/W1/B2 run.
-- no WP3.
-- no rerun because a scientific result is unfavorable.
-
-The 14:00–16:00 window is operational troubleshooting history only and produced no H/scored scientific data.
-
-## Operational simplification freeze — 2026-08-26
-
-For this reservation and future interactive POWDER recovery work, prefer the shortest portal-native path:
-
-`Portal READY -> List View/Actions -> Shell`
-
-Do not route ordinary interactive access through Home-PC SSH keys or GitHub Actions merely because those automation paths exist. Use GitHub SSH only when unattended remote automation itself is the object being qualified.
+No protocol amendment is frozen until RS-1 through RS-4 are complete.
