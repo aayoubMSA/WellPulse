@@ -58,6 +58,20 @@ The live raw evidence was copied from `/tmp` into the user's persistent POWDER h
 
 Each node directory also contains a per-file `SHA256SUMS.txt` manifest. No secrets or private keys are intentionally included by this evidence step; the persistent bundle should be reviewed before any later public release.
 
+## Operator-history snapshot during UE-only recovery characterization
+
+A live POWDER browser-shell screenshot was captured during the bounded UE-only recovery test on `nuc2` at approximately `2026-08-26T18:26:24Z`.
+
+The screenshot records the following operational sequence without interpreting the final recovery outcome:
+
+- pre-restart state showed `srsue` running and `tun_srsue` present at `172.16.0.2/24` with route to `172.16.0.1` through the tunnel;
+- the existing `srsue` instance was stopped cleanly;
+- `tun_srsue` was absent after the stop;
+- a fresh `srsue` instance started with PID `2341`;
+- the live shell progress bar showed `37%`, corresponding to `Waiting for Q0 user plane 19s/90s` at the moment of capture.
+
+This image is retained as operator-history evidence showing that the bounded recovery procedure was actually executing interactively on the reserved hardware. The screenshot alone does not establish PASS or FAIL of the UE-only recovery test; that classification must be taken from the terminal's final result and associated logs.
+
 ## Decision
 
 1. Preserve Trial #1; do not replace it.
