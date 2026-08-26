@@ -1,0 +1,53 @@
+name: POWDER H Calibration Final Status
+
+on:
+  push:
+    paths:
+      - ".powder-hcal-final-status-trigger"
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - name: Install Portal client
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+      - name: Read final H-cal state
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment list > /tmp/list.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/list.json'))
+          items=x if isinstance(x,list) else x.get('experiments') or x.get('items') or x.get('value') or []
+          names={'WP-HCAL-A','WP-HCAL-B','WP-HCAL-C'}
+          found=[]
+          for i in items:
+              if not isinstance(i,dict): continue
+              name=str(i.get('name') or i.get('experiment_name') or i.get('slug') or '')
+              if name in names:
+                  found.append({k:i.get(k) for k in ('id','name','status','project','profile_name','profile_project','bindings')})
+          print('HCAL_VISIBLE_COUNT='+str(len(found)))
+          print(json.dumps(found,indent=2,sort_keys=True))
+          active=[]
+          for i in found:
+              st=str(i.get('status') or '').lower()
+              if st not in {'terminated','failed','error'}:
+                  active.append((i.get('name'),st,i.get('id')))
+          print('HCAL_ACTIVE='+repr(active))
+          if active:
+              print('FINAL_RELEASE_GATE=NOT_CLEAN')
+          else:
+              print('FINAL_RELEASE_GATE=PASS')
+          PY
