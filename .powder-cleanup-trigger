@@ -1,2 +1,2 @@
-experiment_id=a0095527-4e6b-4da5-8b59-f50f1282da67
-reason=fail-safe verification after srsran-handover feasibility observer could no longer resolve experiment
+experiment_id=575d246e-8d01-4827-9a84-f4368d272cea
+reason=close G5 before WP2 H calibration; sanitized canonical G5 evidence already preserved
