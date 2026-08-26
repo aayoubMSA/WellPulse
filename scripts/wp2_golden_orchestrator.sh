@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run this controller on the UE/application node after the profile instance is ready.
-# It is deliberately fail-closed: any failed gate aborts the Golden rehearsal and does not authorize teardown.
+# Run on the UE/application node after the profile instance is ready.
+# Fail-closed: any failed gate aborts the Golden rehearsal and never authorizes teardown.
 
 RUN_ID="${WP_RUN_ID:?WP_RUN_ID is required}"
 EXPERIMENT_ID="${WP_EXPERIMENT_ID:?WP_EXPERIMENT_ID is required}"
@@ -31,11 +31,11 @@ PY
 }
 fail(){ echo; gate "$1" FAIL "$2"; echo "GOLDEN_E2E=FAIL_$1:$2"; exit 70; }
 ssh_core(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}" "$@"; }
+ssh_ue(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${UE_HOST}" "$@"; }
 scp_core(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$1" "$2"; }
+scp_ue(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@${UE_HOST}:$1" "$2"; }
 
-cleanup_rf(){
-  for id in 1 33 2 34; do /usr/local/etc/emulab/tmcc attenuator "$id" 0 >/dev/null 2>&1 || true; done
-}
+cleanup_rf(){ for id in 1 33 2 34; do /usr/local/etc/emulab/tmcc attenuator "$id" 0 >/dev/null 2>&1 || true; done; }
 trap cleanup_rf EXIT
 
 echo '=== WellPulse WP2 Golden E2E orchestration ==='
@@ -63,7 +63,7 @@ ssh_core "cd '$REPO' && bash powder/wp2_h_epc_broker.sh /tmp/wellpulse-wp2-golde
 scp_core "/tmp/wellpulse-wp2-golden-broker/ca.crt" "$EVDIR/substrate/ca.crt" || fail G2 CA_COPY
 [[ -s "$EVDIR/substrate/ca.crt" ]] || fail G2 CA_EMPTY
 ping -I tun_srsue -c 5 -W 2 172.16.0.1 | tee "$EVDIR/substrate/q0_pre_ping.txt" || fail G2 Q0_PING
-openssl s_client -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -verify_return_error </dev/null > "$EVDIR/substrate/q0_pre_tls.txt" 2>&1 || fail G2 Q0_TLS
+openssl s_client -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null > "$EVDIR/substrate/q0_pre_tls.txt" 2>&1 || fail G2 Q0_TLS
 gate G2 PASS READY
 
 bar 22 'G2 launching receiver on core node'; echo
@@ -87,12 +87,14 @@ gate G4 PASS "$T_RF_RESTORE"
 
 bar 48 'G5 deterministic clean-order LTE restoration'; echo
 WP_CORE_HOST="$CORE_HOST" WP_UE_HOST="$UE_HOST" WP_REMOTE_USER="$REMOTE_USER" WP_RESTORE_OUT="$EVDIR/substrate/service_restore.txt" bash scripts/wp2_golden_service_restore.sh || fail G5 RESTORE_SEQUENCE
+RESTORE_START_EPOCH=$(awk -F= '/^RESTORE_START_EPOCH=/{print $2}' "$EVDIR/substrate/service_restore.txt" | tail -1)
+[[ -n "$RESTORE_START_EPOCH" ]] || fail G5 RESTORE_START_MISSING
 scp_core "/tmp/wp2-golden-core-start.console" "$EVDIR/substrate/core_start.console" || fail G5 CORE_CONSOLE_COPY
-cp /tmp/wp2-golden-ue-start.console "$EVDIR/substrate/ue_start.console" 2>/dev/null || printf 'UE start console path unavailable at controller\n' > "$EVDIR/substrate/ue_start.console"
+scp_ue "/tmp/wp2-golden-ue-start.console" "$EVDIR/substrate/ue_start.console" || fail G5 UE_CONSOLE_COPY
 gate G5 PASS COMPLETE
 
 bar 58 'G6 architecture-blind 120 s service-ready gate'; echo
-WP_SERVICE_READY_OUT="$EVDIR/substrate/service_ready_probe.txt" bash scripts/wp2_golden_service_ready_probe.sh || fail G6 SERVICE_RESTORE
+WP_CA_FILE="$EVDIR/substrate/ca.crt" WP_RESTORE_START_EPOCH="$RESTORE_START_EPOCH" WP_SERVICE_PROBE_OUT="$EVDIR/substrate/service_ready_probe.txt" bash scripts/wp2_golden_service_ready_probe.sh || fail G6 SERVICE_RESTORE
 T_SERVICE_READY=$(awk -F= '/^T_SERVICE_READY=/{print $2}' "$EVDIR/substrate/service_ready_probe.txt" | tail -1)
 [[ -n "$T_SERVICE_READY" ]] || fail G6 READY_TIMESTAMP_MISSING
 printf '%s\n' "$T_SERVICE_READY" > "$SERVICE_MARKER"
@@ -106,14 +108,14 @@ gate G7 PASS 300S_COMPLETE
 bar 74 'Collecting receiver and substrate evidence'; echo
 ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
 scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
-# Best-effort raw LTE logs are promoted to mandatory local filenames; missing source is a hard failure.
-ssh_core "test -s /tmp/ue.log || test -s /tmp/wp2-srsue.log" || fail G8 UE_LOG_SOURCE_MISSING
-ssh_core "test -s /tmp/epc.log || test -s /tmp/srsepc.log || true"
-ssh_core "test -s /tmp/enb.log || test -s /tmp/srsenb.log || true"
-scp_core "/tmp/ue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || scp_core "/tmp/wp2-srsue.log" "$EVDIR/substrate/ue.log" || fail G8 UE_LOG_COPY
-# Core/eNB exact profile paths may vary; capture process-visible logs if canonical files exist, otherwise use startup console as explicit fallback evidence.
-scp_core "/tmp/epc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || cp "$EVDIR/substrate/core_start.console" "$EVDIR/substrate/epc.log"
-scp_core "/tmp/enb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || cp "$EVDIR/substrate/core_start.console" "$EVDIR/substrate/enb.log"
+# Capture all available tmux panes rather than inventing log paths.
+ssh_core "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/core_tmux_capture.txt" || fail G8 CORE_TMUX_CAPTURE
+ssh_ue "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/ue_tmux_capture.txt" || fail G8 UE_TMUX_CAPTURE
+[[ -s "$EVDIR/substrate/core_tmux_capture.txt" && -s "$EVDIR/substrate/ue_tmux_capture.txt" ]] || fail G8 EMPTY_TMUX_CAPTURE
+# Preserve native logs when the runtime exposes them; absence does not fabricate substitute data.
+scp_core "/tmp/epc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || scp_core "/tmp/srsepc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || true
+scp_core "/tmp/enb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || scp_core "/tmp/srsenb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || true
+scp_ue "/tmp/ue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || scp_ue "/tmp/wp2-srsue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || true
 
 bar 82 'G8 reconstructing endpoint from raw evidence'; echo
 python3 scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
