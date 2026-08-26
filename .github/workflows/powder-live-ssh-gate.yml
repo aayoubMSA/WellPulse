@@ -1,0 +1,80 @@
+name: POWDER Live SSH Gate
+
+on:
+  push:
+    paths:
+      - ".powder-live-ssh-gate-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Materialize and unlock key
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "PRIVATE_KEY_MISSING"; exit 2; }
+          [[ -n "$POWDER_SSH_KEY_PASSPHRASE" ]] || { echo "PASSPHRASE_MISSING"; exit 3; }
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY']
+          raw=raw.replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          p=Path.home()/'.ssh'/'id_ed25519_powder'
+          p.write_text(raw, encoding='utf-8', newline='\n')
+          lines=raw.splitlines()
+          assert lines and lines[0]=='-----BEGIN OPENSSH PRIVATE KEY-----'
+          assert lines[-1]=='-----END OPENSSH PRIVATE KEY-----'
+          print('KEY_STRUCTURE=PASS')
+          print('KEY_LINE_COUNT='+str(len(lines)))
+          PY
+          chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          cat > /tmp/wp-askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp-askpass
+          export SSH_ASKPASS=/tmp/wp-askpass
+          export SSH_ASKPASS_REQUIRE=force
+          export DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$HOME/.ssh/id_ed25519_powder" </dev/null
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/wp-public.key </dev/null
+          FP="$(ssh-keygen -lf /tmp/wp-public.key | awk '{print $2}')"
+          echo "ACTUAL_FINGERPRINT=$FP"
+          echo "PRIVATE_KEY_UNLOCK=PASS"
+          echo "SSH_AGENT_LOAD=PASS"
+
+      - name: SSH nuc1 read-only gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            aayoub@nuc1.emulab.net \
+            'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'
+          echo "SSH_NUC1=PASS"
+
+      - name: SSH nuc2 read-only gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            aayoub@nuc2.emulab.net \
+            'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'
+          echo "SSH_NUC2=PASS"
+
+      - name: Ownership SSH gate complete
+        shell: bash
+        run: |
+          echo "LIVE_SSH_OWNERSHIP_GATE=PASS"
