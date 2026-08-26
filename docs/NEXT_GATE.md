@@ -1,6 +1,6 @@
 # Next Gate — WP2 Golden E2E Rehearsal
 
-**Current frontier:** RS-7 COMPLETE / GOLDEN RESERVATION READY  
+**Current frontier:** GOLDEN RESERVATION APPROVED / PRE-INSTANTIATION  
 **Scientific completion:** 20%  
 **Scored authorization:** `false`
 
@@ -23,18 +23,40 @@
 - RS-6 Golden E2E design — PASS/frozen.
 - RS-7 implementation/reservation readiness — PASS, `RESERVE=true`.
 
+## Approved POWDER reservation — 2026-08-27
+
+POWDER UI evidence confirms the reservation request is **Approved**.
+
+Portal-displayed reservation window:
+
+- Start: **2026-08-27 02:00 AM**
+- End: **2026-08-27 04:00 AM**
+- Duration: **120 minutes**
+- Project: `WellPulse`
+- Cluster: `Emulab`
+- Hardware: `nuc1 × 1`, `nuc2 × 1`
+- Frequency range: none requested
+- Purpose: one non-scored WellPulse WP2 Golden E2E rehearsal using the existing controlled-RF srsLTE profile.
+
+The reservation was shown as created and approved at **2026-08-27 01:17 AM** in the POWDER UI. Times above are recorded exactly as displayed by the portal; no timezone reinterpretation is asserted here.
+
 ## Exact next action
 
-Reserve one POWDER slot:
+Instantiate the reserved experiment using profile family:
 
-- preferred duration: **120 minutes**;
-- minimum: **90 minutes**;
-- profile family: `PowderProfiles/srslte-controlled-rf`;
-- physical roles: `nuc1` core/eNB/broker/receiver and `nuc2` UE/sender/controller;
-- attenuator IDs: `1 33 2 34`;
-- purpose: exactly one **non-scored S2-style Golden E2E rehearsal**.
+`PowderProfiles/srslte-controlled-rf`
 
-No scored campaign is allowed in this slot.
+Required physical roles:
+
+- `nuc1` → core / eNB / TLS broker / receiver
+- `nuc2` → UE / Golden sender / controller
+- attenuator IDs → `1 33 2 34`
+
+Purpose: execute exactly one **non-scored S2-style Golden E2E rehearsal**.
+
+No scored campaign is allowed in this reservation.
+
+Before launching the Golden orchestrator, confirm the instantiated experiment binds the expected profile roles to the reserved NUC hardware and that the repository/runtime are available on both nodes.
 
 ## Golden execution authority
 
@@ -64,6 +86,10 @@ The Google Drive destination is already authenticated/listable from POWDER. Cred
 `RS7_CURRENT_VERDICT=RESERVE`
 
 `RESERVE=true`
+
+`RESERVATION_APPROVED=true`
+
+`GOLDEN_INSTANTIATED=false`
 
 `RS7_ACCEPTED_PROGRESS=100/100`
 
