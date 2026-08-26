@@ -1,7 +1,7 @@
 # Local unit-test gate — latest
 
-- Checked UTC: 2026-08-26T09:21:33Z
-- GitHub SHA: 1e4f366e751dc9009cc7f45b9b6172af719e094a
+- Checked UTC: 2026-08-26T09:23:24Z
+- GitHub SHA: 255b8906eaf3443356c9c49d3fc06c99b838e503
 - Python: Python 3.12.14
 - Paho MQTT: 2.1.0
 - Gate: **PASS**
@@ -30,7 +30,9 @@ test_reconciliation_detects_loss_and_duplicate (test_records.WellPulseKernelTest
 test_record_id_is_deterministic (test_records.WellPulseKernelTests.test_record_id_is_deterministic) ... ok
 test_conflicting_duplicate_record_id_fails_closed (test_store.DurableQueueIntegrityTests.test_conflicting_duplicate_record_id_fails_closed) ... ok
 test_exact_duplicate_is_idempotent (test_store.DurableQueueIntegrityTests.test_exact_duplicate_is_idempotent) ... ok
+test_disconnected_qos1_publish_is_counted_as_accepted_unacked (test_transport.PahoTransportTests.test_disconnected_qos1_publish_is_counted_as_accepted_unacked) ... ok
 test_frozen_public_config_is_reproducible_and_secret_safe (test_transport.PahoTransportTests.test_frozen_public_config_is_reproducible_and_secret_safe) ... ok
+test_run_isolation_identifiers_are_deterministic_and_distinct (test_transport.PahoTransportTests.test_run_isolation_identifiers_are_deterministic_and_distinct) ... ok
 test_session_constructs_with_explicit_volatile_queue (test_transport.PahoTransportTests.test_session_constructs_with_explicit_volatile_queue) ... ok
 test_unbounded_queue_is_rejected (test_transport.PahoTransportTests.test_unbounded_queue_is_rejected) ... ok
 test_broker_shell_script_passes_bash_syntax (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_broker_shell_script_passes_bash_syntax) ... ok
@@ -41,7 +43,7 @@ test_python_pilot_scripts_compile (test_wp2_h_pilot_scripts.WP2HPilotScriptTests
 test_q0_packet_loss_parser_rejects_100_percent_loss (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_q0_packet_loss_parser_rejects_100_percent_loss) ... ok
 
 ----------------------------------------------------------------------
-Ran 32 tests in 11.986s
+Ran 34 tests in 15.727s
 
 OK
 ```
