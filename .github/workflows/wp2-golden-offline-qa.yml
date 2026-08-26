@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install rsync
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync
+      - name: Install rsync and rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync rclone
       - name: Bash syntax QA
         run: |
           bash -n scripts/wp2_golden_orchestrator.sh
@@ -24,10 +24,13 @@ jobs:
           bash -n scripts/wp2_golden_service_ready_probe.sh
           bash -n scripts/wp2_golden_evidence_escrow.sh
           bash -n scripts/wp2_golden_teardown_guard.sh
+          bash -n scripts/wp2_golden_offpowder_rclone.sh
+          bash -n scripts/wp2_golden_teardown_guard_rclone.sh
           bash -n scripts/wp2_golden_offline_qa.sh
       - name: Python compile QA
         run: |
           python3 -m py_compile scripts/reconstruct_wp2_golden.py
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py
-      - name: Reconstruction, dual escrow, and fail-closed interlock QA
+          python3 -m py_compile scripts/wp2_golden_rclone_verify.py
+      - name: Reconstruction, filesystem/rclone escrow, and fail-closed interlock QA
         run: bash scripts/wp2_golden_offline_qa.sh
