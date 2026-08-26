@@ -1,7 +1,7 @@
 # WP2 H Calibration Preflight — latest
 
-- Checked UTC: 2026-08-26T09:29:58Z
-- Tested GitHub SHA: e20da2fb186eeab047080cbd851f46c3c96c81f0
+- Checked UTC: 2026-08-26T10:04:47Z
+- Tested GitHub SHA: 2fde85607eb37e14c5afe0554394e6966f0cae9e
 - Python: Python 3.12.14
 - Paho MQTT: 2.1.0
 - Evidence class: **LOCAL PRE-SCORE IMPLEMENTATION QA ONLY**
@@ -47,7 +47,7 @@ test_python_pilot_scripts_compile (test_wp2_h_pilot_scripts.WP2HPilotScriptTests
 test_q0_packet_loss_parser_rejects_100_percent_loss (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_q0_packet_loss_parser_rejects_100_percent_loss) ... ok
 
 ----------------------------------------------------------------------
-Ran 34 tests in 11.473s
+Ran 34 tests in 15.346s
 
 OK
 
@@ -55,6 +55,6 @@ OK
 
 ## Shell syntax
 
-## Frozen-state and P0 guards
-frozen-state and P0 guards: PASS
+## Frozen-state, P0, P1 and B2 guards
+frozen-state, P0, P1 and B2 guards: PASS
 ```
