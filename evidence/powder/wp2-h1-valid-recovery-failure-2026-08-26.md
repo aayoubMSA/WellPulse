@@ -103,6 +103,17 @@ Operational conclusion: in this srsLTE/POWDER setup, deterministic Q0 recovery a
 
 Scientific consequence: this is a recovery procedure for the testbed/runtime, not evidence that the original H1 trial recovered within the frozen scientific bound. Trial #1 remains a valid recovery failure, H remains unfrozen, and scored runs remain unauthorized. Any future H-calibration protocol that incorporates an explicit LTE-stack recovery primitive would constitute a protocol change and must be frozen before use.
 
+## Recovery-characterization evidence preservation
+
+The diagnostic/recovery characterization artifacts were also copied into persistent POWDER home storage and archived separately on both nodes.
+
+- nuc1 recovery-characterization archive: `nuc1-recovery-characterization.tar.gz`
+  - SHA-256: `71aaea25a50ad955fa797a358b14cce4efc0e76ec0861468b3b99dd224c7dd55`
+- nuc2 recovery-characterization archive: `nuc2-recovery-characterization.tar.gz`
+  - SHA-256: `431855c8662fa46a82f7baca60b5f3deeda4fd849cf4d90bfc4889800be3e71d`
+
+Both preservation scripts completed with `WP2_RECOVERY_EVIDENCE_PRESERVED=PASS`.
+
 ## Operator-history snapshot during UE-only recovery characterization
 
 A live POWDER browser-shell screenshot was captured during the bounded UE-only recovery test on `nuc2` at approximately `2026-08-26T18:26:24Z`.
