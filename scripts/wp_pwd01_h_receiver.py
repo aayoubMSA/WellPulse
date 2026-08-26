@@ -11,7 +11,8 @@ from pathlib import Path
 import signal
 import ssl
 import threading
-import time
+
+from wellpulse.transport import make_run_client_id, make_run_topic
 
 
 def utc_now() -> str:
@@ -23,7 +24,7 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--host", default="172.16.0.1")
     parser.add_argument("--port", type=int, default=8883)
-    parser.add_argument("--topic", default="wellpulse/records")
+    parser.add_argument("--topic", default=None, help="Optional override; default is deterministic run-isolated topic")
     parser.add_argument("--ca-file", required=True)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
@@ -33,12 +34,17 @@ def main() -> int:
 
     import paho.mqtt.client as mqtt
 
+    mqtt_topic = args.topic or make_run_topic(args.run_id, "HCAL")
+    client_id = make_run_client_id(args.run_id, "HCRX")
+
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     received_path = out / "telemetry_received.csv"
     events_path = out / "receiver_events.jsonl"
     stop = threading.Event()
     io_lock = threading.Lock()
+    isolation_failure: list[str] = []
+    connect_count = 0
 
     new_file = not received_path.exists() or received_path.stat().st_size == 0
     csv_fh = received_path.open("a", encoding="utf-8", newline="")
@@ -57,7 +63,6 @@ def main() -> int:
                 fh.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
                 fh.flush()
 
-    client_id = ("wp-h-rx-" + args.run_id)[-64:]
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         client_id=client_id,
@@ -68,11 +73,28 @@ def main() -> int:
     client.tls_set_context(ssl.create_default_context(cafile=args.ca_file))
 
     def on_connect(client, userdata, flags, reason_code, properties):
-        event("receiver_connect", reason_code=str(reason_code), session_present=bool(getattr(flags, "session_present", False)))
+        nonlocal connect_count
+        connect_count += 1
+        session_present = bool(getattr(flags, "session_present", False))
+        event(
+            "receiver_connect",
+            reason_code=str(reason_code),
+            session_present=session_present,
+            connection_count=connect_count,
+            client_id=client_id,
+            topic=mqtt_topic,
+        )
         if bool(getattr(reason_code, "is_failure", False)):
             return
-        result, mid = client.subscribe(args.topic, qos=1)
-        event("receiver_subscribe", rc=int(result), mid=int(mid), topic=args.topic, qos=1)
+        if connect_count == 1 and session_present:
+            isolation_failure.append(
+                "fresh H-calibration receiver unexpectedly resumed an existing MQTT session"
+            )
+            event("receiver_isolation_failure", reason=isolation_failure[-1])
+            stop.set()
+            return
+        result, mid = client.subscribe(mqtt_topic, qos=1)
+        event("receiver_subscribe", rc=int(result), mid=int(mid), topic=mqtt_topic, qos=1)
 
     def on_disconnect(client, userdata, disconnect_flags, reason_code, properties):
         event("receiver_disconnect", reason_code=str(reason_code))
@@ -118,7 +140,9 @@ def main() -> int:
         run_id=args.run_id,
         host=args.host,
         port=args.port,
-        topic=args.topic,
+        topic=mqtt_topic,
+        client_id=client_id,
+        initial_session_present_required=False,
         paho_mqtt_version=importlib.metadata.version("paho-mqtt"),
         tls=True,
     )
@@ -132,9 +156,9 @@ def main() -> int:
             client.disconnect()
         finally:
             client.loop_stop()
-            event("receiver_stop")
+            event("receiver_stop", isolation_failure=isolation_failure[-1] if isolation_failure else None)
             csv_fh.close()
-    return 0
+    return 20 if isolation_failure else 0
 
 
 if __name__ == "__main__":
