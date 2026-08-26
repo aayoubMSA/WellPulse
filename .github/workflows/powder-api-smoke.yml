@@ -40,7 +40,7 @@ jobs:
           rm -rf /tmp/portal-api
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-          portal-cli --help >/tmp/portal-root-help.txt
+          portal-cli --help >/tmp/portal-root-help.txt 2>&1
           portal-cli experiment create --help >/tmp/experiment-create-help.txt 2>&1 || true
 
       - name: Run authenticated read-only early-window capability checks
@@ -52,26 +52,6 @@ jobs:
           portal-cli profile list >/tmp/powder-profiles.json
 
           python - <<'PY'
-          import json
-          from pathlib import Path
-
-          raw = json.loads(Path('/tmp/powder-profiles.json').read_text())
-          profiles = raw if isinstance(raw, list) else raw.get('profiles', [])
-          matches = [p for p in profiles if isinstance(p, dict)
-                     and p.get('name') == 'srslte-controlled-rf'
-                     and p.get('project') == 'PowderProfiles']
-          Path('/tmp/controlled-profile-match.json').write_text(json.dumps(matches, indent=2, sort_keys=True))
-          if matches and matches[0].get('id'):
-              Path('/tmp/profile-id').write_text(str(matches[0]['id']))
-          PY
-
-          if [[ -s /tmp/profile-id ]]; then
-            portal-cli profile get --profile-id "$(cat /tmp/profile-id)" >/tmp/controlled-profile-full.json
-          else
-            printf '{}\n' >/tmp/controlled-profile-full.json
-          fi
-
-          python - <<'PY'
           import json, datetime, os, re
           from pathlib import Path
 
@@ -81,27 +61,61 @@ jobs:
               except Exception:
                   return default
 
+          def strip_ansi(text):
+              return re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', text)
+
           ex_raw = load('/tmp/powder-experiments.json', [])
           exps = ex_raw if isinstance(ex_raw, list) else ex_raw.get('experiments', [])
           wp = []
           for x in exps:
-              if not isinstance(x, dict) or x.get('project') != 'WellPulse':
-                  continue
-              wp.append({k:x.get(k) for k in ['id','name','status','profile_name','profile_project','started_at','expires_at']})
+              if isinstance(x, dict) and x.get('project') == 'WellPulse':
+                  wp.append({k:x.get(k) for k in ['id','name','status','profile_name','profile_project','started_at','expires_at']})
 
-          matches = load('/tmp/controlled-profile-match.json', [])
-          full = load('/tmp/controlled-profile-full.json', {})
-          create_help = Path('/tmp/experiment-create-help.txt').read_text(errors='replace')
+          pr_raw = load('/tmp/powder-profiles.json', [])
+          profs = pr_raw if isinstance(pr_raw, list) else pr_raw.get('profiles', [])
+          matches = [p for p in profs if isinstance(p, dict)
+                     and p.get('name') == 'srslte-controlled-rf'
+                     and p.get('project') == 'PowderProfiles']
+
+          create_help = strip_ansi(Path('/tmp/experiment-create-help.txt').read_text(errors='replace'))
+          relevant_help = [line.rstrip() for line in create_help.splitlines()
+                           if re.search(r'start|schedule|reserv|duration|profile|binding|project|name', line, re.I)]
+          root_help = strip_ansi(Path('/tmp/portal-root-help.txt').read_text(errors='replace'))
+          root_res_lines = [line.rstrip() for line in root_help.splitlines() if re.search(r'reserv|resgroup|schedule', line, re.I)]
+
           openapi = load('/tmp/portal-api/openapi.json', {})
-          paths = list((openapi.get('paths') or {}).keys())
-          reservation_paths = [p for p in paths if 'reserv' in p.lower()]
-          scheduling_paths = [p for p in paths if any(t in p.lower() for t in ['schedule','reservation','availability'])]
+          all_paths = openapi.get('paths') or {}
+          relevant_paths = {}
+          for path, spec in all_paths.items():
+              if 'reserv' not in path.lower() and 'resgroup' not in path.lower():
+                  continue
+              ops = {}
+              for method in ['get','post','put','patch','delete']:
+                  op = spec.get(method) if isinstance(spec, dict) else None
+                  if not isinstance(op, dict):
+                      continue
+                  params = []
+                  for p in op.get('parameters') or []:
+                      if isinstance(p, dict):
+                          params.append({'name':p.get('name'),'in':p.get('in'),'required':p.get('required',False)})
+                  body = op.get('requestBody') or {}
+                  schemas = []
+                  for media in (body.get('content') or {}).values():
+                      if isinstance(media, dict) and isinstance(media.get('schema'), dict):
+                          s = media['schema']
+                          schemas.append({'ref':s.get('$ref'),'required':s.get('required'), 'properties':sorted((s.get('properties') or {}).keys())})
+                  ops[method] = {'operationId':op.get('operationId'),'summary':op.get('summary'),'parameters':params,'body_schemas':schemas}
+              relevant_paths[path] = ops
 
-          safe_full = {}
-          if isinstance(full, dict):
-              for k in ['id','name','project','version','repo_hash','repo_refspec','created_at','updated_at','parameters','bindings']:
-                  if k in full:
-                      safe_full[k] = full.get(k)
+          schemas_out = {}
+          schemas = ((openapi.get('components') or {}).get('schemas') or {})
+          for name, s in schemas.items():
+              if 'reserv' in name.lower() or 'resgroup' in name.lower():
+                  props = {}
+                  for pn, pv in (s.get('properties') or {}).items():
+                      if isinstance(pv, dict):
+                          props[pn] = {'type':pv.get('type'),'ref':pv.get('$ref'),'format':pv.get('format')}
+                  schemas_out[name] = {'required':s.get('required') or [], 'properties':props}
 
           now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
           out = Path('evidence/powder/api-smoke.md')
@@ -111,22 +125,24 @@ jobs:
               f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA", "unknown")}\n')
               f.write('- Authentication gate: **PASS**\n')
               f.write('- Resource mutation attempted: **NONE**\n')
-              f.write(f'- Exact `PowderProfiles/srslte-controlled-rf` matches: **{len(matches)}**\n')
-              if matches:
-                  f.write(f'- Profile ID: `{matches[0].get("id", "not-exposed")}`\n')
+              f.write(f'- Exact `PowderProfiles/srslte-controlled-rf` matches in profile-list response: **{len(matches)}**\n')
               f.write(f'- Visible WellPulse experiments: **{len(wp)}**\n')
               for x in wp:
                   f.write(f'  - `{x.get("name")}` | `{x.get("status")}` | `{x.get("profile_project")}/{x.get("profile_name")}` | start `{x.get("started_at")}` | expires `{x.get("expires_at")}`\n')
-              f.write(f'- OpenAPI reservation-like paths: **{len(reservation_paths)}**\n')
-              for p in reservation_paths[:20]:
-                  f.write(f'  - `{p}`\n')
-              f.write(f'- OpenAPI scheduling/availability-like paths: **{len(scheduling_paths)}**\n')
-              for p in scheduling_paths[:20]:
-                  f.write(f'  - `{p}`\n')
-              f.write('- `experiment create` exposes explicit scheduling option: **' + ('YES' if re.search(r'start|schedule|reservation', create_help, re.I) else 'NO') + '**\n')
+              f.write(f'- Reservation/resgroup API paths discovered: **{len(relevant_paths)}**\n')
               f.write('- Token content recorded: **NO**\n')
-              f.write('\n## Sanitized controlled-profile metadata\n\n```json\n')
-              f.write(json.dumps(safe_full, indent=2, sort_keys=True))
+
+              f.write('\n## Experiment-create scheduling options\n\n```text\n')
+              f.write('\n'.join(relevant_help[:120]))
+              f.write('\n```\n')
+              f.write('\n## Root reservation-related CLI lines\n\n```text\n')
+              f.write('\n'.join(root_res_lines[:80]) or '(none exposed at root CLI)')
+              f.write('\n```\n')
+              f.write('\n## Reservation/resgroup OpenAPI operations\n\n```json\n')
+              f.write(json.dumps(relevant_paths, indent=2, sort_keys=True))
+              f.write('\n```\n')
+              f.write('\n## Reservation/resgroup schema fields\n\n```json\n')
+              f.write(json.dumps(schemas_out, indent=2, sort_keys=True))
               f.write('\n```\n')
           PY
 
@@ -139,6 +155,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$OUT"
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Record POWDER early-window API probe"
+          git commit -m "Record POWDER reservation API schema probe"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
