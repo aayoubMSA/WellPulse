@@ -1,0 +1,6 @@
+WP2-B one-shot create authorization checkpoint
+reservation: 2026-08-26 19:00-22:00 Africa/Cairo
+experiment: WP-HCAL-D
+profile: PowderProfiles/srslte-controlled-rf
+bindings: enb_node=nuc1, ue_node=nuc2, ue_type=srsue
+scope: create exactly one experiment; no READY wait; no SSH; no LTE/RF/MQTT; no retry/recreate
