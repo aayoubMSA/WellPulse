@@ -68,3 +68,12 @@ A POWDER UE may remain attached and retain an IP while the LTE user-plane bearer
 Before every future scored run/block, Q0 must pass an explicit end-to-end user-plane readiness check through the experimental radio path. If Q0 user-plane health fails, the run is technically invalid and must not enter the scientific corpus. The raw invalid run remains preserved/labeled; replacement is permitted for this technical invalidity only, never because of an unfavorable scientific result.
 
 The contaminated-period 48/50/52/54 sweep, 42/44/46/47 sweep and first +41 attempt are provenance/troubleshooting evidence only and are excluded from canonical RF-state classification.
+
+## D-017 — WP2 recovery-horizon calibration semantics
+Freeze the common recovery horizon from exactly **three valid non-scored W1 hard-outage calibration trials** under the already frozen S2-style schedule and Q0/Q3 states. Use the empirical nearest-rank p95 of the three observed W1 backlog-drain times, then apply protocol v0.4 exactly:
+
+`H = max(120 s, ceil_to_30s(2 × p95))`.
+
+For calibration, backlog drain completes only when both conditions are true for the pre-restoration cohort: every record has reached the sink with matching identity/checksum, and the W1 durable queue has no pending cohort record. If the resulting `H > 300 s`, stop and investigate; do not cap it.
+
+Authority: `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`. The calibration is W1-only and non-scored; it does not authorize B1/W1 scoring, reopen RF calibration, or alter the frozen randomization plan.
