@@ -1,0 +1,97 @@
+name: WP2 Golden Owner — Credential Preflight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "powder/wp2-golden-owner-preflight.trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp2-golden-owner-preflight
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      RCLONE_CONFIG_B64: ${{ secrets.WP_RCLONE_CONFIG_B64 }}
+      EXPECTED_KEY_FP: SHA256:jQGQvU86rtuEchT50N1HuB4Cmizpvbmp0zSBR4rowxY
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate secret presence without printing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo 'PREFLIGHT_FAIL=POWDER_API_TOKEN_MISSING'; exit 10; }
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo 'PREFLIGHT_FAIL=POWDER_SSH_PRIVATE_KEY_MISSING'; exit 11; }
+          [[ -n "$RCLONE_CONFIG_B64" ]] || { echo 'PREFLIGHT_FAIL=WP_RCLONE_CONFIG_B64_MISSING'; exit 12; }
+          echo 'SECRET_PRESENCE=PASS'
+
+      - name: Verify registered SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path('/tmp/powder-key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          cat >/tmp/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/askpass /tmp/powder-key
+          export SSH_ASKPASS=/tmp/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f /tmp/powder-key >/tmp/powder-key.pub </dev/null
+          FP="$(ssh-keygen -lf /tmp/powder-key.pub | awk '{print $2}')"
+          [[ "$FP" == "$EXPECTED_KEY_FP" ]] || { echo 'PREFLIGHT_FAIL=SSH_KEY_FINGERPRINT_MISMATCH'; exit 13; }
+          rm -f /tmp/powder-key /tmp/powder-key.pub /tmp/askpass
+          echo 'SSH_IDENTITY=PASS'
+
+      - name: Verify POWDER Portal API read access
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api >/dev/null 2>&1
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          portal-cli experiment list >/tmp/portal-list.json
+          python3 - <<'PY'
+          import json
+          json.load(open('/tmp/portal-list.json'))
+          print('POWDER_PORTAL_API=PASS')
+          PY
+
+      - name: Verify Drive OAuth config read access
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,os,pathlib
+          p=pathlib.Path('/tmp/rclone.conf')
+          p.write_bytes(base64.b64decode(os.environ['RCLONE_CONFIG_B64'],validate=True))
+          p.chmod(0o600)
+          PY
+          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null
+          rclone --config /tmp/rclone.conf lsf gdrive: >/dev/null
+          rm -f /tmp/rclone.conf
+          echo 'DRIVE_OAUTH_READ=PASS'
+
+      - name: Final preflight verdict
+        shell: bash
+        run: |
+          echo 'OWNER_CREDENTIAL_PREFLIGHT=PASS'
+          echo 'POWDER_MUTATION_EXECUTED=NO'
