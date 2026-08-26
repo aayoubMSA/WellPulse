@@ -1,324 +1,234 @@
 # AGENT HANDOVER — WellPulse POWDER Validation Owner
 
-**Handover timestamp:** 2026-08-26 16:25 Africa/Cairo  
+**Handover timestamp:** 2026-08-26 post-H1 physical session and evidence closeout  
 **Canonical repository:** `aayoubMSA/WellPulse`  
 **Canonical branch:** `main`  
-**Current scientific completion:** **20%**  
-**Current scientific frontier:** **WP2 — physical W1 H calibration**  
+**Repository visibility:** private  
+**Scientific completion:** **20%**  
+**Current frontier:** **WP2 Recovery-Semantics Amendment Consortium / RS-1 offline reconstruction**  
+**H:** `UNFROZEN`  
 **Scored authorization:** `scored_runs_authorized = false`
 
 ## 1. Mandate
 
-Own continuation of the WellPulse POWDER validation lane from the current verified G0–G5 / frozen-RF state through the smallest defensible publication-grade validation package.
+Own continuation of the WellPulse validation lane from the preserved H1 adverse result through the smallest defensible amendment, non-scored Golden E2E rehearsal, H requalification, and only then the scored campaign.
 
 Optimize for:
 
 `scientific value × reproducibility × reviewer defensibility ÷ execution risk × unnecessary scope × resource cost`
 
-Do not reopen frozen science, do not broaden scope because POWDER exposes more capabilities, and do not treat infrastructure activity as scientific percentage.
+Do not reopen frozen RF science, do not broaden scope because POWDER exposes more capabilities, do not erase adverse evidence, and do not treat infrastructure activity as scientific completion.
 
-## 2. Mandatory read order before any POWDER action
+## 2. Mandatory read order
 
-Do not reconstruct state from chat history. Read the repository in this order:
+Read before taking any action:
 
 1. `HANDOVER_CURRENT.md`
-2. `powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
-3. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`
-4. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
-5. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
-6. `docs/MILESTONE_STATUS.md`
-7. `docs/STATUS.md`
-8. `docs/DECISIONS.md` — especially D-016 through D-020
-9. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`
-10. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`
-11. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
-12. `evidence/local/wp2-b2-semantics-latest.md`
-13. `evidence/local/wp2-h-preflight-latest.md`
-14. `experiments/WP-PWD01/protocol.md`
-15. `experiments/WP-PWD01/analysis-plan.md`
-16. `experiments/WP-PWD01/evidence-schema.md`
-17. `experiments/WP-PWD01/randomization-plan.csv`
-18. `experiments/WP-PWD01/b2-sensitivity-plan.csv`
-19. `experiments/WP-PWD01/run-matrix.yaml`
-20. `powder/MANUAL_GOLDEN_PATH.md`
+2. `docs/NEXT_GATE.md`
+3. `docs/CONSORTIUM_WP2_RECOVERY_SEMANTICS_GATE_2026-08-26.md`
+4. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+5. `docs/RS1_OFFLINE_RECONSTRUCTION.md`
+6. `scripts/wp2_rs1a_sender_reconstruct.py`
+7. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`
+8. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`
+9. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
+10. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
+11. `experiments/WP-PWD01/run-matrix.yaml`
+12. `docs/MILESTONE_STATUS.md`
+13. `docs/STATUS.md`
+14. `docs/DECISIONS.md`
+15. `experiments/WP-PWD01/protocol.md`
+16. `experiments/WP-PWD01/analysis-plan.md`
+17. `experiments/WP-PWD01/evidence-schema.md`
 
-Treat GitHub plus the Drive `WellPulse — Current Handover Index` as systems of record. If they disagree, stop and reconcile before execution.
+Do not use the prior “19:00 reservation / run H” instructions as current state.
 
-## 3. Executive scientific state
+## 3. Frozen project state
 
 - FIT IoT-LAB scientific layer: **FINAL PASS**.
 - POWDER G0–G5: **PASS**.
 - RF calibration: **PASS / FROZEN**.
+- Q0/Q1/Q2/Q3: `0 / 40 / 52 / 55 dB`.
+- attenuation IDs `1 33 2 34`, always coupled.
 - WP0: **8/8 PASS**.
-- WP1: **12/12 design complete; P0/P1 frozen; B2 local semantics PASS**.
-- WP2: **ACTIVE — physical H calibration is the scientific frontier**.
-- WP3: **0/30 — BLOCKED**.
-- WP4: **0/15 — BLOCKED**.
-- WP5: **0/20 scientific closure**.
-- Weighted scientific completion remains **20%** until WP2 closes.
-- No scored B1/W1/B2 run is authorized.
+- WP1: **12/12 design complete**.
+- B2 durable-client local semantics: **PASS 3/3**, compact S2/S3 sensitivity only.
+- WP2: **ACTIVE / POST-H1**.
+- WP3/WP4: **BLOCKED**.
+- WP5: **not scientifically closed**.
+- weighted scientific completion: **20%**.
 
-Infrastructure success, booking activity, SSH qualification, H calibration attempts, and B2 local semantics do not independently increase scientific percentage.
+## 4. Scientific question and claim boundary
 
-## 4. POWDER infrastructure state
+The study asks when durable application-level record semantics add measurable value beyond correctly configured MQTT QoS1, rather than assuming WellPulse wins every outage.
 
-- G0 Account + `WellPulse` project — **PASS**.
-- G1 Manual provisioning — **PASS**.
-- G2 explicit-key SSH + teardown — **PASS**.
-- G3 simulated LTE stack/data path — **PASS**.
-- G4 controlled physical-RF lifecycle — **PASS**.
-- G5 controlled attenuation / numeric RF calibration — **PASS / FROZEN**.
+- S0: healthy integrity equivalence/overhead sanity.
+- S1: intermittent network-only integrity; recovery/overhead secondary.
+- S2: hard network outage while volatile client-process state survives.
+- S3: primary process-state durability/integrity stress.
 
-Historical G5 accepted profile:
+Primary endpoint remains unique primary-cohort completeness at one common prospectively frozen H. Do not claim a separately powered confirmatory recovery-time advantage. Use cross-testbed consistency/triangulation, not broad transportability. Claim is bounded to the frozen 1 Hz low-rate regime.
 
-- profile: `PowderProfiles/srslte-controlled-rf`
-- profile revision: `a6da96560b6526dc6816761282722c996418fd8c`
-- historical experiment UUID: `575d246e-8d01-4827-9a84-f4368d272cea`
-- historical binding: `enb1 -> nuc1`, `rue1 -> nuc2`
+## 5. Physical experiment of record
 
-These bindings are historical evidence only. Every future experiment must verify its own live manifest.
+Experiment: `WP-HCAL-E`  
+UUID: `9153e16a-1eb1-45f5-88bf-303636a9d1ec`  
+Profile: `PowderProfiles/srslte-controlled-rf`  
+Profile revision: `a6da96560b6526dc6816761282722c996418fd8c`  
+Binding: `enb1 -> nuc1`, `rue1 -> nuc2`.
 
-## 5. Frozen RF calibration — DO NOT REOPEN
+Exact deployed WellPulse H code commit:
 
-- `Q0 = 0 dB` — strong/stable.
-- `Q1 = 40 dB` — degraded but continuously connected.
-- `Q2 = 52 dB` — near-threshold/intermittent; clean 20 s evidence = 6 replies / 12 misses.
-- `Q3 = 55 dB` — effective application-data outage.
-- attenuation IDs: `1 33 2 34`, changed together.
+`95ba9a57bef159450b00b8a439d393d22e1c0519`
 
-No further attenuation hunting is authorized.
+Pre-H physical/runtime gates passed: Q0 user plane, `tun_srsue` route, Python 3.11.16, Paho 2.1.0, TLS MQTT endpoint 172.16.0.1:8883, MQTTv3.1.1/QoS1/clean_session=false, fresh `session_present=false` isolation.
 
-Every scientific/non-scored/scored run requires explicit **Q0 end-to-end LTE user-plane PASS**. Attach state and UE IP are insufficient because a stale bearer was previously observed.
+## 6. H1 Trial #1 — DO NOT RECLASSIFY
 
-## 6. H calibration — exact active frontier
+Run ID: `wp2h1-a1-20260826-001`  
+Classification: **`VALID_W1_RECOVERY_FAILURE`**  
+Scored: false.
 
-H is one common post-restoration observation horizon, frozen before scored work and used unchanged for all arms/scenarios.
+Key observed data:
 
-Successful non-scored W1 trial:
+- Q3 full-state duration: `120.000117905 s`.
+- RF restoration/cutoff: `2026-08-26T18:16:00.428045+00:00`.
+- generated records: `361`.
+- pre-restoration cohort: `211`.
+- final pending: `270`.
+- app inflight: `20`.
+- published calls: `111`.
+- PUBACK callbacks: `91`.
+- Q0 pre-readiness: `5/5` ping PASS.
+- post-restoration health: `0/3` ping.
+- queue pending zero: not reached.
+- status: `STOP_AND_INVESTIGATE_H_WOULD_EXCEED_300S`.
 
-`30 s readiness -> Q0 60 s -> Q3 120 s -> Q0 until backlog drain`
+Consequences:
 
-Frozen W1 configuration includes:
+- preserve Trial #1 permanently;
+- no replacement H2/H3 under the old plan;
+- H remains unfrozen;
+- scored work remains prohibited.
 
-- 1 record/s;
-- Paho MQTT `2.1.0`;
-- MQTT v3.1.1;
-- QoS1;
-- `clean_session=False`;
-- keepalive 60;
-- reconnect 1–8;
-- queue 4096;
-- inflight 20;
-- SQLite WAL + `synchronous=FULL`;
-- TLS required;
-- run-isolated client IDs/topic;
-- first fresh connection requires `session_present=false`.
+## 7. Failure diagnosis
 
-Outcome classes:
+The dominant failure was below the application layer:
 
-- `TECHNICALLY_INVALID` — preserve; replacement allowed only for predefined infrastructure/protocol invalidity.
-- `VALID_W1_RECOVERY_FAILURE` — preserve; not replaceable as invalid; blocks H freeze and requires investigation.
-- `VALID_W1_RECOVERY_SUCCESS` — exactly three successful trials required; no extra successful calibration trials.
+- UE/tunnel remained present but user-plane packets did not traverse;
+- eNB later showed recovered uplink CRC/SNR, so radio recovery occurred;
+- EPC/MME/SPGW showed stale/context/IP churn, repeated attach requests, existing UE/GTP-C conflicts, failed old-tunnel deletion, and successive IP allocations while UE retained its old tunnel address.
 
-Drain semantics:
+Do not interpret H1 as proof that WellPulse durable queueing failed.
 
-- cutoff = final Q3→Q0 transition;
-- all pre-restoration cohort records must arrive with valid identity/checksum;
-- pending durable cohort must reach zero;
-- drain completion = max(sink cohort complete, queue pending zero).
+## 8. Recovery characterization
 
-With exactly three successes, nearest-rank p95 is the maximum observed successful drain time.
+- UE-only restart: **FAIL** after 96 s.
+- EPC/eNB reset while UE remains running: reset **PASS**, user-plane recovery **FAIL** after 61 s.
+- coordinated clean-order `stop UE -> EPC -> eNB -> fresh UE`: **PASS**, returning `172.16.0.2`, `tun_srsue`, and 10/10 Q0 ping.
 
-`H = max(120 s, ceil_to_30s(2 × p95))`
+The clean-order sequence is a **qualified testbed recovery primitive only**. It is not yet a scientifically approved in-trial action.
 
-If `H > 300 s`, **STOP AND INVESTIGATE; never cap**. If backlog is not drained by 150 s after restoration, stop because later success would imply H > 300 s.
+After clean-order recovery, exact application transport qualification passed **3/3** independent fresh sessions:
 
-## 7. Comparator and claim freeze
+`LTE -> TLS -> MQTTv3.1.1 -> QoS1 -> SUBACK/PUBACK -> round-trip receive -> matching SHA-256`
 
-Primary matched comparator:
+All fresh sessions had `session_present=false`.
 
-`B1_MQTT_QOS1`
+## 9. Evidence preservation
 
-WellPulse arm:
+Original H1 raw archives:
 
-`W1_OFFLINE_FIRST`
+- nuc1 SHA-256 `3e3d4c44847bfb7e6304de89d8c1cc05ff9722b6a54d93dd08ce0acfa7418210`
+- nuc2 SHA-256 `c5d3b212af015061c092c79025258a7f3378e3351051eef48318f12964af2593`
 
-B2 sensitivity comparator:
+Recovery-characterization archives:
 
-`B2_MQTT_DURABLE_CLIENT`
+- nuc1 `71aaea25a50ad955fa797a358b14cce4efc0e76ec0861468b3b99dd224c7dd55`
+- nuc2 `431855c8662fa46a82f7baca60b5f3deeda4fd849cf4d90bfc4889800be3e71d`
 
-B2 is already locally qualified with Eclipse Paho Java 1.2.5 + file persistence + persistent disconnected buffer: three trials each recovered `5/5 unique, 0 missing, 0 duplicates` after broker outage and abrupt client-process destruction.
+Reproducibility archives:
 
-If later scored authorization is explicitly granted, B2 scope is fixed to exactly:
+- nuc1 `af601716237082be410be3680f1e33b36240beae77e7b644f0f5bef811c1b647`
+- nuc2 `ada35310a2dd46dba6c28a26604d41f28884799e0fc27c0846a7bf66421935bc`
 
-- 3 B2 S2 runs;
-- 3 B2 S3 runs;
-- no B2 S0/S1;
-- no adaptive B2 replication;
-- B2-vs-W1 remains non-primary sensitivity analysis.
+Node-local chain-of-custody manifests:
 
-The confirmatory story is failure-domain bounded. Primary inferential endpoint remains unique primary-cohort completeness at common H. Do not claim a separately powered recovery-time advantage. Use `cross-testbed consistency` / `triangulation`, not broad transportability. Claim remains bounded to 1 Hz low-rate telemetry.
+- nuc1: 22 files, SHA-256 `9596f23f4e9359d3395f29f6e0081d5acdec05dc6a986c0e0b0f19ac5fa35811`
+- nuc2: 34 files, SHA-256 `343a9deb1e432c0f5d30cbf55def3d133726a214a595d9f7f0723a5e87d8ec2e`
 
-## 8. Credential and automation readiness — CURRENT
+Canonical session closeout commit: `74722415dc6e6f0fff6af023d8e7efffd998be3b`.
 
-The next agent must **not** ask the user to paste or recreate secret values unless independent evidence shows a credential has actually failed.
+Core raw sender artifacts include `sender_summary.json`, `calibration_manifest.json`, `attenuation_timeline.csv`, `telemetry_generated.csv`, `queue_timeline.csv`, `mqtt_events.jsonl`, and `w1_queue.sqlite`. Receiver and LTE/EPC/eNB/UE logs are preserved in the node bundles.
 
-GitHub Actions currently has the required secure runtime material:
+Hashes are integrity anchors; the raw files contain the actual scientific tables/timestamps/record identities.
 
-- `POWDER_API_TOKEN` — official Portal API authentication proven;
-- `POWDER_SSH_PRIVATE_KEY` — valid private-key structure;
-- `POWDER_SSH_KEY_PASSPHRASE` — unlock proven;
-- SSH identity loads into `ssh-agent` successfully;
-- corresponding public key has been registered with POWDER for future experiment instantiations.
+## 10. Current Recovery-Semantics Consortium gate
 
-Current automation SSH identity fingerprint observed during validation:
+Authority: `docs/CONSORTIUM_WP2_RECOVERY_SEMANTICS_GATE_2026-08-26.md`.
 
-`SHA256:/oW1viOGqRKnPVgLPqE1qKDohVeQ0QALXQX/XNyGkDQ`
+Question: how should network-service recovery be represented so that srsLTE/testbed pathology does not contaminate B1-vs-W1 application-level inference?
 
-Historical manual Golden-key fingerprint remains:
+Candidate event clocks:
 
-`SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs`
+- `t_rf_restore`
+- `t_service_ready`
+- `t_app_complete`
 
-Do not confuse the two identities.
+Candidate strategies:
 
-Important boundary: the current automation key is **credential-ready but not yet accepted on both nodes of a fresh READY experiment**. The 14:00 experiment was instantiated before that public key was registered, so its SSH failure does not prove the newly registered path is invalid.
+- A: repair/qualify autonomous LTE recovery — preferred if bounded fix exists;
+- B: prospectively standardize service restoration and separate clocks — strong fallback;
+- C: reopen RF outage design — presumptive KILL;
+- D: ad-hoc restart when recovery stalls — KILL.
 
-Portal API capabilities already exercised successfully include list/get/manifests/create/terminate and parameter bindings. No secret value belongs in Git, chat, evidence, or logs.
+Work packages:
 
-## 9. 2026-08-26 14:00–16:00 operational window — CLOSED / SCIENTIFICALLY CLEAN
+`RS-1 -> RS-2 -> RS-3 -> RS-4 -> RS-5 -> RS-6 -> RS-7`
 
-Reservation resources: `nuc1+nuc2`.
+## 11. RS-1 offline evidence reconstruction
 
-Observed sequence:
+Canonical guide: `docs/RS1_OFFLINE_RECONSTRUCTION.md`.
 
-1. `WP-HCAL-A` reached READY.
-2. UUID: `cf31bf66-bebe-48f3-81e0-7812e9f0a6c9`.
-3. Live profile/bindings were correct: `enb_node=nuc1`, `ue_node=nuc2`, `ue_type=srsue`.
-4. Physical manifest verified `enb1 -> nuc1`, `rue1 -> nuc2`.
-5. SSH using the current work-PC/GitHub key failed because that key had not been injected into this already-instantiated experiment.
-6. The public key was registered in POWDER.
-7. `WP-HCAL-A` was terminated and `WP-HCAL-B` was created immediately on the same reservation. It did not recover to READY.
-8. `WP-HCAL-B` was terminated and a deliberate cooldown was allowed.
-9. A positive resource-release gate then passed.
-10. `WP-HCAL-C` was created successfully; UUID `8942bcec-bf88-42ed-b512-d466cb0f09cc`.
-11. `WP-HCAL-C` oscillated between `provisioning` and `pending` for about 23 minutes and never reached READY.
-12. After reservation expiry, final read-only API check found zero visible/active H-cal experiments: `FINAL_RELEASE_GATE=PASS`.
+Canonical sender tool: `scripts/wp2_rs1a_sender_reconstruct.py`.
 
-Scientific consequence: **zero H trials, zero scored runs, zero scientific RF actions in this window**. No evidence exclusion or statistical repair is required.
+RS-1 requires no live reservation. Work only from copied/extracted preserved evidence.
 
-Key workflow provenance:
+Sequence:
 
-- recreate attempt: GitHub Actions run `32963561374`;
-- guarded B release: `32964929263`;
-- cooldown retry / C creation: `32967831937`;
-- final read-only status: `32972461567`.
+- RS-1A sender/RF/queue timeline;
+- RS-1B receiver/identity/checksum timeline;
+- RS-1C LTE/EPC/RAN chronology;
+- RS-1D generated-received-durable reconciliation;
+- RS-1E paper-grade tables/figures.
 
-## 10. D-020 allocator rule — mandatory
+## 12. Exact next actions for the new agent
 
-The testbed teardown/allocation control plane is asynchronous.
+1. Do **not** instantiate POWDER or rerun H.
+2. Obtain/copy the preserved H1 node archives into a local offline analysis workspace.
+3. Verify their SHA-256 values against this handover.
+4. Execute RS-1A through RS-1E and preserve derived outputs/hashes.
+5. Run RS-2 bounded LTE recovery-mechanism review using H1 logs and current srsLTE configuration/runtime fingerprints.
+6. RS-3 chooses `t_rf_restore`/`t_service_ready`/`t_app_complete` estimands and H semantics.
+7. RS-4 adversarially attacks the proposal for bias/confounding/censoring.
+8. Only after RS-1..RS-4 PASS, draft a prospective amendment (RS-5).
+9. Freeze Golden E2E non-scored rehearsal specification (RS-6).
+10. `GO_REOPEN_H` only after RS-1..RS-6 PASS.
 
-Never use:
+No WP3, no scored B1/W1/B2, no RF recalibration before that.
 
-`terminate -> immediate recreate`
+## 13. Security boundary
 
-Use only:
+Never expose or commit private SSH keys, passphrases, POWDER API tokens, RPC credentials, certificate private keys, or raw credential-bearing portal manifests. Preserve only sanitized topology/runtime/evidence metadata and public integrity hashes.
 
-`terminate -> positively verify release -> allow convergence interval -> recreate only if still necessary`
+## 14. Handover acceptance test
 
-For a short reserved window, prefer **one early instantiation and patience** over allocator churn. A successful terminate request does not prove immediate node reuse.
+A replacement agent may take ownership only if it can correctly state:
 
-If provisioning stalls, preserve state and diagnose. Do not repeatedly terminate/recreate within the same reservation.
-
-## 11. Next clean reservation
-
-Existing reservation is intentionally preserved:
-
-**2026-08-26 19:00–22:00 Africa/Cairo — `nuc1+nuc2`**.
-
-Recommended fresh experiment name for traceability: `WP-HCAL-D`.
-
-At the reservation start:
-
-1. Re-read `powder/PRE_EXPERIMENT_GATE_2026-08-26.md` and D-020.
-2. Verify the reservation is still active and really owns `nuc1+nuc2`.
-3. Instantiate **once**, early, using `PowderProfiles/srslte-controlled-rf` and live-valid bindings only.
-4. Supply the registered current automation public key through the secure Portal/API path.
-5. Wait for `READY`; no teardown/recreate loop.
-6. Capture fresh experiment UUID, exact profile revision, manifest, node mapping and SSH endpoints.
-7. Prove SSH on **both** nodes with the current automation identity before LTE/RF action.
-8. Establish EPC/eNB + UE lifecycle.
-9. Pass explicit Q0 end-to-end LTE user-plane readiness.
-10. Prove route to `172.16.0.1` uses `tun_srsue`.
-11. Verify remote runtime/Paho version and fresh MQTT run/session isolation.
-12. Only then execute non-scored physical W1 H calibration.
-13. Stop immediately for a valid adverse W1 recovery failure or any H > 300 implication.
-14. Freeze H only after exactly three valid successful trials and deterministic finalization.
-15. Use the same evidence bundle to close runtime/path/identity/clock/analysis gates where justified.
-
-If meaningful time remains after H is scientifically closed, only non-scored S3/B2 implementation qualification may follow. **No WP3 scored run.**
-
-## 12. Automation workflow safety map
-
-Today's live troubleshooting created several one-off workflows. Do not assume every workflow under `.github/workflows/` is a reusable next-run owner.
-
-- `.github/workflows/powder-hcal-release.yml` — one-off release logic for `WP-HCAL-B`; **do not reuse as a generic runner**.
-- `.github/workflows/powder-hcal-cooldown-retry.yml` — one-off `WP-HCAL-C` cooldown retry with date/name assumptions; **do not rerun for the evening reservation**.
-- `.github/workflows/powder-hcal-final-status.yml` — read-only final status artifact; safe historically, not the next execution path.
-- `.github/workflows/powder-live-discovery.yml` was repurposed during the live recreate episode; **do not trigger it blindly despite the filename**.
-- key validation/secret-presence workflows are diagnostic only.
-
-Before the evening run, either construct a fresh reservation-specific owner workflow that obeys this handover, or use the verified Portal API + SSH gates explicitly. It must have **no automatic recreate loop**.
-
-## 13. Stop conditions
-
-Stop rather than improvise if:
-
-- reservation/resources differ from expectation;
-- profile revision/bindings differ materially;
-- experiment fails to reach READY;
-- SSH fails after a fresh experiment that definitely includes the current registered key;
-- Q0 user-plane fails;
-- MQTT route bypasses `tun_srsue`;
-- first fresh MQTT connection reports `session_present=true`;
-- runtime/Paho does not match the frozen design;
-- evidence identity/checksum cannot be reconstructed;
-- a `VALID_W1_RECOVERY_FAILURE` occurs;
-- H would exceed 300 s;
-- protocol amendment becomes necessary;
-- any temptation arises to rerun because a scientific result is unfavorable.
-
-## 14. Evidence and security boundary
-
-POWDER supports networking/radio/telemetry/recovery/process-restart claims only. It does not validate pump mechanics, hydraulics, groundwater, agronomy, Siwa field performance, or broad rural generalization.
-
-Never commit or expose:
-
-- private SSH keys;
-- key passphrases;
-- POWDER API tokens;
-- RPC tokens;
-- certificate private material;
-- raw credential-bearing portal exports.
-
-Preserve sanitized reproducibility metadata: experiment/profile IDs, revisions, bindings, endpoint/auth mode, software/image identity, state transitions, UTC timestamps, commands, exit codes, checksums, verdicts and teardown state.
-
-## 15. Required end-of-block discipline
-
-After every material POWDER work block:
-
-1. update `HANDOVER_CURRENT.md`;
-2. update this file if the execution frontier changes;
-3. update `docs/MILESTONE_STATUS.md`;
-4. update `docs/STATUS.md` and `docs/DECISIONS.md` if state/decisions changed;
-5. update `docs/NEXT_GATE.md`;
-6. save sanitized evidence under `evidence/powder/`;
-7. update Drive `WellPulse — Current Handover Index`, including `MILESTONES`;
-8. leave the exact next action recoverable without chat history.
-
-## Immediate acceptance target
-
-A fresh reservation must first prove:
-
-`single instantiate -> READY -> live manifest PASS -> SSH both nodes PASS -> Q0 user-plane PASS -> tun_srsue route PASS -> runtime/session isolation PASS`
-
-Only then may physical W1 H trials begin.
+1. H1 is valid adverse evidence, not technical invalidity.
+2. H is still unfrozen.
+3. Clean-order LTE recovery is not yet an approved scientific treatment.
+4. The raw evidence bundles, not their hashes alone, contain the data required for analysis.
+5. The immediate work is offline RS-1 reconstruction, not another reservation.
+6. RS-1..RS-7 govern the recovery amendment.
+7. `scored_runs_authorized=false` remains mandatory.
