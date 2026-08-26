@@ -114,6 +114,41 @@ The diagnostic/recovery characterization artifacts were also copied into persist
 
 Both preservation scripts completed with `WP2_RECOVERY_EVIDENCE_PRESERVED=PASS`.
 
+## Recovered application-path verification and repeatability
+
+After the coordinated clean-order LTE restart, the exact WellPulse application prerequisites were re-qualified over the restored UE path. A corrected Paho 2.1.0 probe established:
+
+- route through `tun_srsue`
+- Q0 user-plane reachability
+- TLS connection to `172.16.0.1:8883`
+- MQTT 3.1.1
+- QoS1 SUBACK and PUBACK
+- broker round-trip receive
+- payload SHA-256 equality
+- fresh session evidence (`SESSION_PRESENT=false`)
+
+The first corrected probe passed with payload SHA-256 `a8b348847f2dff2032155d33bee8799628b79b8699304c90d96b6011615dfb6a` and evidence-record SHA-256 `fa7e34b289b32f48fcc3805d28cdc6643d95503f976815179767d8c604371e3a`.
+
+Two additional independent fresh sessions also passed, giving `WP2_POST_RECOVERY_APP_REPEATABILITY=3_OF_3_PASS`:
+
+- run 2 payload SHA-256: `4874e3e5ac18c85cf3e3dc4fa47d9e322e1b1c9c7e456b0be0afbd770ab77a4d`
+- run 2 preserved record SHA-256: `4031016406085535b9582d2b19ffdb955b6eb5bcb7d6931c452c19a876391cc0`
+- run 3 payload SHA-256: `9645bf064a5e4d3a4935067d481dedc106f8c8cd2ca2bb2c82452f988fdfc023`
+- run 3 preserved record SHA-256: `4f1b25fb8f7ba62dc8ab02ae2429fcdc56f26b9580e0e5b76429aab4c6153e61`
+
+This repeatability result supports the operational recovery primitive. It does not change the H1 scientific classification or authorize scored runs.
+
+## Reproducibility fingerprints
+
+Exact runtime/configuration fingerprints were captured on both nodes after recovery characterization. The fingerprint records hash the relevant LTE executables, srsLTE configuration files, active commands, RF/testbed runtime where available, exact WellPulse source commit/files, Python/Paho runtime, Mosquitto runtime/config hash, session scripts, OS/kernel identity, and network state without intentionally exposing config contents.
+
+- nuc1 runtime-fingerprint record SHA-256: `1ef8b04a8d3a634c1cc3ded2b84c80a7140d877758a0d63010411971eab8607f`
+- nuc1 reproducibility archive SHA-256: `af601716237082be410be3680f1e33b36240beae77e7b644f0f5bef811c1b647`
+- nuc2 runtime-fingerprint record SHA-256: `fc1c131602c49b8376733ad8e190c4fc5d8d1976b62fe59c1e5becbe41cf8d5a`
+- nuc2 reproducibility archive SHA-256: `ada35310a2dd46dba6c28a26604d41f28884799e0fc27c0846a7bf66421935bc`
+
+The nuc2 fingerprint procedure was accidentally run twice with unchanged node state; both executions produced the same record and archive hashes. This is consistent with a stable fingerprint package for that unchanged state.
+
 ## Operator-history snapshot during UE-only recovery characterization
 
 A live POWDER browser-shell screenshot was captured during the bounded UE-only recovery test on `nuc2` at approximately `2026-08-26T18:26:24Z`.
