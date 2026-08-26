@@ -1,0 +1,4 @@
+purpose=read_only_reservation_gate
+requested_utc=2026-08-26T16:55:00Z
+scope=WP2_H_CAL_D
+resource_creation=false
