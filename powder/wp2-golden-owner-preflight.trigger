@@ -1,0 +1,2 @@
+triggered_utc=2026-08-27
+purpose=verify_existing_github_powder_and_drive_credentials_without_mutation
