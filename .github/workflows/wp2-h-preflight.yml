@@ -42,7 +42,7 @@ jobs:
             echo "## Shell syntax"
             bash -n powder/wp2_h_epc_broker.sh || RC=$?
             echo
-            echo "## Frozen-state guards"
+            echo "## Frozen-state and P0 guards"
             PYTHONPATH=src python - <<'PY' || RC=$?
           import yaml
           from pathlib import Path
@@ -58,8 +58,20 @@ jobs:
           assert m['rf_states']['further_attenuation_hunting_authorized'] is False
           assert str(m['workload']['recovery_horizon_s']).startswith('TBD_')
           assert m['pre_score_gate_status']['recovery_horizon_H'] == 'OPEN_ACTIVE_GATE'
+          assert m['pre_score_gate_status']['h_adverse_outcome_classification'] == 'PASS_LOCAL_IMPLEMENTED'
+          assert m['pre_score_gate_status']['mqtt_run_session_isolation_implementation'] == 'PASS_LOCAL_PHYSICAL_VERIFICATION_OPEN'
+          assert m['pre_score_gate_status']['record_identity_collision_fail_closed'] == 'PASS_LOCAL_IMPLEMENTED'
+          assert m['pre_score_gate_status']['b1_accepted_unacked_instrumentation'] == 'PASS_LOCAL_PHYSICAL_EVIDENCE_OPEN'
+          assert m['pre_score_gate_status']['s3_restart_domain_separation'] == 'OPEN_NON_SCORED_VERIFICATION_REQUIRED'
+          assert m['pre_score_gate_status']['consortium_p1_analysis_claim_amendments'] == 'OPEN'
           assert Path('experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md').is_file()
-          print('frozen-state guards: PASS')
+          assert Path('experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md').is_file()
+          assert Path('docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md').is_file()
+          h_plan = Path('experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md').read_text(encoding='utf-8')
+          assert 'TECHNICALLY_INVALID' in h_plan
+          assert 'VALID_W1_RECOVERY_FAILURE' in h_plan
+          assert 'VALID_W1_RECOVERY_SUCCESS' in h_plan
+          print('frozen-state and P0 guards: PASS')
           PY
           } > /tmp/wp2-h-preflight.log 2>&1
 
@@ -82,7 +94,7 @@ jobs:
             fi
             echo
             echo '```text'
-            tail -n 220 /tmp/wp2-h-preflight.log
+            tail -n 240 /tmp/wp2-h-preflight.log
             echo '```'
           } > evidence/local/wp2-h-preflight-latest.md
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
@@ -94,7 +106,7 @@ jobs:
           OUT=evidence/local/wp2-h-preflight-latest.md
           [[ -f "$OUT" ]] || exit 0
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41812866+github-actions[bot]@users.noreply.github.com"
           git add "$OUT"
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Record WP2 H calibration preflight evidence"
