@@ -1,0 +1,6 @@
+format=openssl-aes-256-cbc-pbkdf2
+plaintext_committed=false
+source_experiment=b546abe9-8eb1-4e61-a1f2-42222b9f439a
+source_node=node_0
+verified_gdrive_read=true
+captured_utc=2026-08-26T22:35:48Z
