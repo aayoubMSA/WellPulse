@@ -1,14 +1,22 @@
-# POWDER Portal API smoke — latest
+# POWDER Portal API smoke — early-window probe
 
-- Checked UTC: 2026-08-24T17:03:58Z
-- WellPulse SHA: edb10c740d3728e2458afebda8612ba276414156
-- API actions: `experiment list`, `profile list` — read-only
-- Resource action attempted: **NONE**
-- Authentication gate: **POWDER_API_AUTH_PASS**
-- Experiment JSON shape: `dict`
-- Visible experiment count: `0`
-- Visible WellPulse experiment count: `0`
-- Profile-list gate: **PASS**
-- Profile JSON shape: `dict`
-- Exact `PowderTeam/srs-rf-matrix` matches: `0`
+- Checked UTC: 2026-08-26T09:45:54Z
+- WellPulse SHA: 2a8771f849eaf3ee5d47ac87d6d6fba38e60a464
+- Authentication gate: **PASS**
+- Resource mutation attempted: **NONE**
+- Exact `PowderProfiles/srslte-controlled-rf` matches: **0**
+- Visible WellPulse experiments: **0**
+- OpenAPI reservation-like paths: **2**
+  - `/resgroups/{resgroup_id}/reservations`
+  - `/resgroups/{resgroup_id}/reservations/{reservation_id}`
+- OpenAPI scheduling/availability-like paths: **2**
+  - `/resgroups/{resgroup_id}/reservations`
+  - `/resgroups/{resgroup_id}/reservations/{reservation_id}`
+- `experiment create` exposes explicit scheduling option: **YES**
 - Token content recorded: **NO**
+
+## Sanitized controlled-profile metadata
+
+```json
+{}
+```
