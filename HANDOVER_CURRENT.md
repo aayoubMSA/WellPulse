@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-26 after independent pre-WP3 consortium review, P0/P1 freeze, B2 local qualification, early-window search, and guarded preflight, Africa/Cairo
+Last updated: 2026-08-26 after independent pre-WP3 consortium review, P0/P1 freeze, B2 local qualification, guarded preflight, 14:00–16:00 POWDER operational window, and automation credential-readiness verification, Africa/Cairo
 
 ## Executive state
 
@@ -164,25 +164,26 @@ Result:
 - POWDER interaction NONE;
 - scored interaction NONE.
 
-## Early-window investigation — CLOSED
+## 14:00–16:00 POWDER operational window — CLOSED / SCIENTIFICALLY CLEAN
 
-The existing fallback reservation remains untouched:
+Mandatory pre-read:
+
+`powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
+
+Observed operational outcome:
+
+- `WP-HCAL-A` reached READY with correct `nuc1+nuc2` physical bindings, but its originally injected SSH identity did not authorize the current automation key.
+- The current automation private key/passphrase path was then validated in GitHub Actions, and the corresponding public key was registered with POWDER.
+- Immediate same-reservation terminate/recreate (`WP-HCAL-A` -> `WP-HCAL-B`) did not recover to READY.
+- After deliberate cooldown, the resource-release gate passed and `WP-HCAL-C` creation succeeded, but it oscillated between `provisioning` and `pending` for about 23 minutes and never reached READY.
+- After reservation expiry, Portal API showed zero visible/active H-cal experiments and `FINAL_RELEASE_GATE=PASS`.
+- No LTE user-plane, MQTT H trial, RF scientific action, or scored run occurred. The window is operationally failed but scientifically clean.
+
+Operational rule D-020 is now mandatory: do not use `terminate -> immediate recreate` on the same reserved nodes. Use positive resource-release verification plus a convergence interval, and prefer a single early instantiation per clean reservation.
+
+The fallback reservation remains:
 
 **2026-08-26 19:00–22:00 Africa/Cairo — `nuc1+nuc2`**.
-
-Authenticated API investigation showed:
-
-- exact `nuc1+nuc2` has no earlier slot today; search returned next availability tomorrow evening;
-- generic `nuc5300 x2` searches for 1/2/3 hours could not fit;
-- guarded immediate `srslte-controlled-rf` experiment creation returned a Portal internal error and created **no experiment**;
-- no scientific workload or RF command was executed during booking probes.
-
-Evidence:
-
-- `evidence/powder/api-smoke.md`
-- `evidence/powder/wp2-h-early-window-latest.md`
-
-Do not spend more project time hunting an earlier slot today unless new availability evidence appears.
 
 ## Current open pre-score gates
 
@@ -197,15 +198,17 @@ Do not spend more project time hunting an earlier slot today unless new availabi
 9. non-scored S3 restart-domain verification;
 10. non-scored remote B2 runtime/path/restart verification;
 11. immutable pre-score reproducibility snapshot after H and implementation gates close;
-12. repair or explicitly bypass the known-bad GitHub Actions SSH private-key path before trusted scored automation.
+12. prove the newly registered current automation SSH identity on both nodes of a READY fresh experiment before relying on remote execution.
 
-The `POWDER_SSH_PRIVATE_KEY` Actions value remains known bad (public-key form). Never place private-key/passphrase material in Git, evidence, or chat. The proven manual acceptance key remains the safe fallback path.
+Credential readiness is now verified without exposing secret values: `POWDER_API_TOKEN`, `POWDER_SSH_PRIVATE_KEY`, and `POWDER_SSH_KEY_PASSPHRASE` are available through GitHub Actions Secrets; the private key structure/passphrase unlock and `ssh-agent` load have passed; and the corresponding public key has been registered with POWDER. This does **not** count as SSH acceptance until a fresh READY experiment proves login on both allocated nodes. Never place private-key/passphrase/token material in Git, evidence, or chat.
 
 ## Exact next action
 
 At the 2026-08-26 19:00–22:00 reservation, and **only within WP2**:
 
-1. create a fresh `PowderProfiles/srslte-controlled-rf` experiment;
+**Mandatory first step:** read `powder/PRE_EXPERIMENT_GATE_2026-08-26.md` and D-020 before touching POWDER. Instantiate once early; do not churn the allocator with terminate/recreate loops.
+
+1. create one fresh `PowderProfiles/srslte-controlled-rf` experiment;
 2. capture exact profile revision and fresh live bindings;
 3. establish EPC/eNB + UE lifecycle;
 4. pass Q0 end-to-end user-plane readiness;
@@ -222,23 +225,24 @@ If meaningful reservation time remains after H is scientifically closed, only no
 ## Canonical read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`
-3. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
-4. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
-5. `docs/MILESTONE_STATUS.md`
-6. `docs/STATUS.md`
-7. `docs/DECISIONS.md`
-8. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`
-9. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`
-10. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
-11. `evidence/local/wp2-b2-semantics-latest.md`
-12. `evidence/local/wp2-h-preflight-latest.md`
-13. `experiments/WP-PWD01/protocol.md`
-14. `experiments/WP-PWD01/analysis-plan.md`
-15. `experiments/WP-PWD01/evidence-schema.md`
-16. `experiments/WP-PWD01/randomization-plan.csv`
-17. `experiments/WP-PWD01/b2-sensitivity-plan.csv`
-18. `experiments/WP-PWD01/run-matrix.yaml`
-19. `powder/MANUAL_GOLDEN_PATH.md`
+2. `powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
+3. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`
+4. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
+5. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
+6. `docs/MILESTONE_STATUS.md`
+7. `docs/STATUS.md`
+8. `docs/DECISIONS.md`
+9. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`
+10. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`
+11. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
+12. `evidence/local/wp2-b2-semantics-latest.md`
+13. `evidence/local/wp2-h-preflight-latest.md`
+14. `experiments/WP-PWD01/protocol.md`
+15. `experiments/WP-PWD01/analysis-plan.md`
+16. `experiments/WP-PWD01/evidence-schema.md`
+17. `experiments/WP-PWD01/randomization-plan.csv`
+18. `experiments/WP-PWD01/b2-sensitivity-plan.csv`
+19. `experiments/WP-PWD01/run-matrix.yaml`
+20. `powder/MANUAL_GOLDEN_PATH.md`
 
 Never infer future node roles from prior runs. Never persist secrets, private keys, passphrases, RPC tokens, credential blocks, or raw credential-bearing manifests.
