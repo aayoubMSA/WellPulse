@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".wp2-b-create-trigger"
+  schedule:
+    - cron: '12 16 26 8 *'
 
 permissions:
   contents: write
@@ -25,6 +27,15 @@ jobs:
       EXP_NAME: WP-HCAL-D
       STOP_AT: '2026-08-26T19:00:00+0000'
     steps:
+      - name: One-time schedule date guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            [[ "$(date -u +%Y-%m-%d)" == "2026-08-26" ]] || { echo "Obsolete one-shot schedule; no action"; exit 78; }
+          fi
+          echo "WP2B_DATE_GUARD=PASS"
+
       - uses: actions/checkout@v4
 
       - name: Install Portal API and derive registered public identity
