@@ -1,0 +1,159 @@
+name: POWDER WP2 H-Cal D Reservation Gate
+
+on:
+  push:
+    paths:
+      - ".powder-hcal-d-reservation-gate-trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-hcal-d-reservation-gate
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install official Portal client
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          mkdir -p /tmp/hcal-d evidence/powder
+
+      - name: Read reservation and experiment state
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli resgroup list > /tmp/hcal-d/resgroups.json
+          portal-cli experiment list > /tmp/hcal-d/experiments.json
+
+      - name: Evaluate reservation gate and write sanitized evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          from pathlib import Path
+
+          now = dt.datetime.now(dt.timezone.utc)
+          res = json.loads(Path('/tmp/hcal-d/resgroups.json').read_text())
+          exp = json.loads(Path('/tmp/hcal-d/experiments.json').read_text())
+          raw = json.dumps(res, sort_keys=True).lower()
+
+          reservation_identity = all(x in raw for x in ('wellpulse', 'nuc1', 'nuc2'))
+          time_window = (
+              now.date() == dt.date(2026, 8, 26)
+              and dt.time(15, 55) <= now.time().replace(tzinfo=None) <= dt.time(18, 50)
+          )
+
+          items = exp if isinstance(exp, list) else exp.get('experiments') or exp.get('items') or exp.get('value') or []
+          active = []
+          for item in items:
+              if not isinstance(item, dict):
+                  continue
+              name = str(item.get('name') or item.get('experiment_name') or item.get('slug') or '')
+              project = str(item.get('project') or '')
+              state = str(item.get('status') or item.get('state') or 'unknown').lower()
+              if project == 'WellPulse' and name.startswith('WP-HCAL') and state not in {'terminated','failed','error'}:
+                  active.append({
+                      'id': item.get('id') or item.get('uuid') or item.get('experiment_id'),
+                      'name': name,
+                      'status': state,
+                      'profile_project': item.get('profile_project'),
+                      'profile_name': item.get('profile_name'),
+                      'bindings': item.get('bindings'),
+                  })
+
+          no_active_hcal = not active
+          gate = reservation_identity and time_window and no_active_hcal
+
+          def collect_matches(obj, path='root', out=None):
+              if out is None:
+                  out = []
+              if len(out) >= 12:
+                  return out
+              if isinstance(obj, dict):
+                  text = json.dumps(obj, sort_keys=True).lower()
+                  if 'wellpulse' in text and ('nuc1' in text or 'nuc2' in text):
+                      allowed = {}
+                      for k in ('id','uuid','name','project','status','state','start','start_at','start_time',
+                                'end','end_at','end_time','created_at','expires_at','clusters','reservations',
+                                'nodes','reservable_nodes','resources'):
+                          if k in obj:
+                              allowed[k] = obj[k]
+                      out.append({'path': path, 'fields': allowed})
+                  for k, v in obj.items():
+                      collect_matches(v, f'{path}.{k}', out)
+              elif isinstance(obj, list):
+                  for i, v in enumerate(obj):
+                      collect_matches(v, f'{path}[{i}]', out)
+              return out
+
+          matches = collect_matches(res)
+          evidence = [
+              '# WP2 H-Cal D Reservation Gate — latest',
+              '',
+              f'- Checked UTC: {now.strftime("%Y-%m-%dT%H:%M:%SZ")}',
+              f'- Git SHA: {os.environ.get("GITHUB_SHA","unknown")}',
+              '- Evidence class: **READ_ONLY INFRASTRUCTURE GATE**',
+              '- Resource creation: **NONE**',
+              '- RF action: **NONE**',
+              '- Scientific workload: **NONE**',
+              f'- Reservation identity contains WellPulse+nuc1+nuc2: **{"PASS" if reservation_identity else "FAIL"}**',
+              f'- Approved time window active: **{"PASS" if time_window else "FAIL"}**',
+              f'- No active prior WP-HCAL experiment: **{"PASS" if no_active_hcal else "FAIL"}**',
+              f'- Gate: **{"PASS" if gate else "FAIL"}**',
+              '',
+              '## Active H-cal experiments',
+              '',
+              '~~~json',
+              json.dumps(active, indent=2, sort_keys=True),
+              '~~~',
+              '',
+              '## Sanitized matching reservation fragments',
+              '',
+              '~~~json',
+              json.dumps(matches, indent=2, sort_keys=True),
+              '~~~',
+              '',
+              '- Credentials recorded: **NO**',
+          ]
+          Path('evidence/powder/wp2-hcal-d-reservation-gate-latest.md').write_text(
+              '\n'.join(evidence) + '\n', encoding='utf-8'
+          )
+          Path('/tmp/hcal-d/gate').write_text('PASS\n' if gate else 'FAIL\n')
+          print('WP2_HCAL_D_RESERVATION_GATE=' + ('PASS' if gate else 'FAIL'))
+          PY
+
+      - name: Commit sanitized gate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/wp2-hcal-d-reservation-gate-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          git commit -m "Record WP2 H-cal D reservation gate" || exit 0
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Enforce gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(cat /tmp/hcal-d/gate)" == "PASS" ]]
