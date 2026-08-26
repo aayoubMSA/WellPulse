@@ -8,7 +8,14 @@ OFF="$ROOT/offtestbed"
 RUN_ID="wp2-golden-offline-qa"
 EXP_ID="OFFLINE-QA"
 
-bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
+bar(){
+  local p="$1" m="$2" n
+  n=$((p/5))
+  printf '\r['
+  printf '%*s' "$n" ''|tr ' ' '#'
+  printf '%*s' "$((20-n))" ''|tr ' ' '-'
+  printf '] %3d%%  %-48s' "$p" "$m"
+}
 
 echo '=== WP2 Golden offline QA ==='
 bar 5 'Creating synthetic evidence tree'; echo
@@ -77,7 +84,6 @@ bash scripts/wp2_golden_teardown_guard.sh | tee "$ROOT/teardown.txt"
 grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/teardown.txt"
 
 bar 85 'Testing fail-closed corruption behavior'; echo
-cp "$ODIR/sender/telemetry_generated.csv" "$ROOT/original.csv"
 printf 'corruption\n' >> "$ODIR/sender/telemetry_generated.csv"
 set +e
 WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" \
