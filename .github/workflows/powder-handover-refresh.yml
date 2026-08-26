@@ -1,0 +1,63 @@
+name: Refresh POWDER Current Handover
+
+on:
+  push:
+    paths:
+      - ".powder-handover-refresh-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch canonical handover
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('HANDOVER_CURRENT.md')
+          s=p.read_text()
+
+          s=s.replace(
+            'Last updated: 2026-08-26 after independent pre-WP3 consortium review, P0/P1 freeze, B2 local qualification, early-window search, and guarded preflight, Africa/Cairo',
+            'Last updated: 2026-08-26 after independent pre-WP3 consortium review, P0/P1 freeze, B2 local qualification, guarded preflight, 14:00–16:00 POWDER operational window, and automation credential-readiness verification, Africa/Cairo'
+          )
+
+          start=s.index('## Early-window investigation — CLOSED')
+          end=s.index('## Current open pre-score gates')
+          replacement='''## 14:00–16:00 POWDER operational window — CLOSED / SCIENTIFICALLY CLEAN\n\nMandatory pre-read:\n\n`powder/PRE_EXPERIMENT_GATE_2026-08-26.md`\n\nObserved operational outcome:\n\n- `WP-HCAL-A` reached READY with correct `nuc1+nuc2` physical bindings, but its originally injected SSH identity did not authorize the current automation key.\n- The current automation private key/passphrase path was then validated in GitHub Actions, and the corresponding public key was registered with POWDER.\n- Immediate same-reservation terminate/recreate (`WP-HCAL-A` -> `WP-HCAL-B`) did not recover to READY.\n- After deliberate cooldown, the resource-release gate passed and `WP-HCAL-C` creation succeeded, but it oscillated between `provisioning` and `pending` for about 23 minutes and never reached READY.\n- After reservation expiry, Portal API showed zero visible/active H-cal experiments and `FINAL_RELEASE_GATE=PASS`.\n- No LTE user-plane, MQTT H trial, RF scientific action, or scored run occurred. The window is operationally failed but scientifically clean.\n\nOperational rule D-020 is now mandatory: do not use `terminate -> immediate recreate` on the same reserved nodes. Use positive resource-release verification plus a convergence interval, and prefer a single early instantiation per clean reservation.\n\nThe fallback reservation remains:\n\n**2026-08-26 19:00–22:00 Africa/Cairo — `nuc1+nuc2`**.\n\n'''
+          s=s[:start]+replacement+s[end:]
+
+          s=s.replace(
+            '12. repair or explicitly bypass the known-bad GitHub Actions SSH private-key path before trusted scored automation.\n\nThe `POWDER_SSH_PRIVATE_KEY` Actions value remains known bad (public-key form). Never place private-key/passphrase material in Git, evidence, or chat. The proven manual acceptance key remains the safe fallback path.',
+            '12. prove the newly registered current automation SSH identity on both nodes of a READY fresh experiment before relying on remote execution.\n\nCredential readiness is now verified without exposing secret values: `POWDER_API_TOKEN`, `POWDER_SSH_PRIVATE_KEY`, and `POWDER_SSH_KEY_PASSPHRASE` are available through GitHub Actions Secrets; the private key structure/passphrase unlock and `ssh-agent` load have passed; and the corresponding public key has been registered with POWDER. This does **not** count as SSH acceptance until a fresh READY experiment proves login on both allocated nodes. Never place private-key/passphrase/token material in Git, evidence, or chat.'
+          )
+
+          s=s.replace(
+            'At the 2026-08-26 19:00–22:00 reservation, and **only within WP2**:\n\n1. create a fresh `PowderProfiles/srslte-controlled-rf` experiment;',
+            'At the 2026-08-26 19:00–22:00 reservation, and **only within WP2**:\n\n**Mandatory first step:** read `powder/PRE_EXPERIMENT_GATE_2026-08-26.md` and D-020 before touching POWDER. Instantiate once early; do not churn the allocator with terminate/recreate loops.\n\n1. create one fresh `PowderProfiles/srslte-controlled-rf` experiment;'
+          )
+
+          old='''## Canonical read order\n\n1. `HANDOVER_CURRENT.md`\n2. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`\n3. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`\n4. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`\n5. `docs/MILESTONE_STATUS.md`\n6. `docs/STATUS.md`\n7. `docs/DECISIONS.md`\n8. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`\n9. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`\n10. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`\n11. `evidence/local/wp2-b2-semantics-latest.md`\n12. `evidence/local/wp2-h-preflight-latest.md`\n13. `experiments/WP-PWD01/protocol.md`\n14. `experiments/WP-PWD01/analysis-plan.md`\n15. `experiments/WP-PWD01/evidence-schema.md`\n16. `experiments/WP-PWD01/randomization-plan.csv`\n17. `experiments/WP-PWD01/b2-sensitivity-plan.csv`\n18. `experiments/WP-PWD01/run-matrix.yaml`\n19. `powder/MANUAL_GOLDEN_PATH.md`\n'''
+          new='''## Canonical read order\n\n1. `HANDOVER_CURRENT.md`\n2. `powder/PRE_EXPERIMENT_GATE_2026-08-26.md`\n3. `docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md`\n4. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`\n5. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`\n6. `docs/MILESTONE_STATUS.md`\n7. `docs/STATUS.md`\n8. `docs/DECISIONS.md`\n9. `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`\n10. `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`\n11. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`\n12. `evidence/local/wp2-b2-semantics-latest.md`\n13. `evidence/local/wp2-h-preflight-latest.md`\n14. `experiments/WP-PWD01/protocol.md`\n15. `experiments/WP-PWD01/analysis-plan.md`\n16. `experiments/WP-PWD01/evidence-schema.md`\n17. `experiments/WP-PWD01/randomization-plan.csv`\n18. `experiments/WP-PWD01/b2-sensitivity-plan.csv`\n19. `experiments/WP-PWD01/run-matrix.yaml`\n20. `powder/MANUAL_GOLDEN_PATH.md`\n'''
+          if old not in s:
+              raise SystemExit('Canonical read-order block not found; refusing silent patch')
+          s=s.replace(old,new)
+          p.write_text(s)
+          PY
+
+      - name: Commit handover refresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add HANDOVER_CURRENT.md
+          git diff --cached --check
+          git commit -m "Refresh POWDER handover after credential and allocator gates"
+          git pull --rebase origin main
+          git push origin HEAD:main
