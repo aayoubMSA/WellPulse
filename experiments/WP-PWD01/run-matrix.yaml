@@ -3,6 +3,12 @@ protocol_version: v0.4
 status: PRE_SCORE_VALIDATION_ACTIVE
 scored_runs_authorized: false
 
+pre_score_amendments:
+  consortium_review: docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md
+  p0_amendment: experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md
+  p0_status: IMPLEMENTED_LOCAL_PREFLIGHT_PASS_PHYSICAL_GATES_OPEN
+  p1_status: OPEN_NOT_YET_FULLY_FROZEN_INTO_SCORED_PROTOCOL
+
 controlled_rf_profile:
   selected_profile: srslte-controlled-rf
   selected_profile_revision: a6da96560b6526dc6816761282722c996418fd8c
@@ -39,14 +45,28 @@ matched_mqtt_transport:
   max_inflight_messages: 20
   application_level_persistence: false
   matching_rule: identical low-level session for B1 and W1; only W1 adds application-level disk durability/reconciliation
+  accepted_message_instrumentation:
+    total_publish_calls: recorded
+    accepted_publish_calls: recorded_including_disconnected_qos1_submissions
+    puback_callbacks: recorded
+    accepted_but_unacknowledged_ids: recorded
+    exact_internal_paho_queue_occupancy_claim: prohibited
+  run_isolation:
+    publisher_client_id: deterministic_run_unique
+    receiver_client_id: deterministic_run_unique
+    topic_namespace: deterministic_run_unique
+    fresh_run_initial_session_present: false_required
+    independent_run_client_identity_reuse: prohibited
+    s3_intra_run_gateway_client_identity_reuse: required
 
 modes:
   B1_MQTT_QOS1:
     role: PRIMARY_COMPARATOR
-    description: Frozen matched Paho MQTTv311 QoS1 session with automatic reconnect and bounded volatile queue; no application-level disk durability/reconciliation
+    description: Frozen matched Paho MQTTv311 QoS1 session with automatic reconnect and bounded volatile client state; no application-level disk durability/reconciliation and no process-durable client state
   W1_OFFLINE_FIRST:
     role: TREATMENT
     description: Same frozen Paho session plus WellPulse durable SQLite queue, record identity/checksum, replay and idempotent reconciliation
+    identity_collision_rule: exact duplicate is idempotent; same record_id with different payload/checksum is a hard integrity error
   B0_PUBLISH_ONLY:
     role: LEGACY_SANITY_ONLY
     description: Historical non-durable lower-bound baseline; excluded from primary POWDER scored matrix
@@ -86,6 +106,11 @@ workload:
   recovery_horizon_s: TBD_AFTER_NON_SCORED_H_CALIBRATION
   recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); stop_and_investigate_if_over_300s
   h_calibration_plan: experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md
+  h_calibration_outcome_rule:
+    technically_invalid: preserve_and_replace_only_for_predefined_technical_invalidity
+    valid_w1_recovery_failure: preserve_block_h_freeze_do_not_replace_as_invalid
+    valid_w1_recovery_success: exactly_three_required_for_h
+    extra_successful_trials: prohibited
 
 primary_cohort:
   cutoff: final_Q0_restoration_after_impairment
@@ -111,13 +136,22 @@ scenarios:
     scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
     paired_blocks_min: 3
     paired_blocks_max: 5
-    purpose: deterministic RF-induced outage and recovery
+    purpose: deterministic RF-induced outage and recovery while volatile gateway process state survives
   S3_OUTAGE_RESTART:
     scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
     restart_event: "gateway process restart 60s into Q3; not node reboot"
     paired_blocks_min: 3
     paired_blocks_max: 5
     purpose: volatile MQTT state versus durable application state under compound failure
+    restart_domain:
+      telemetry_generator_outside_restart_domain: required
+      generation_continues_at_1_hz: required
+      gateway_client_process_only: required
+      w1_durable_state_survives_restart: required
+      b1_same_run_client_identity_reused_after_restart: required
+      source_sequence_continuity: required
+      restart_timestamps_and_downtime: required
+      node_reboot_or_power_cycle: prohibited
 
 precision_stopping_rule:
   applies_to: [S1_INTERMITTENT, S2_HARD_OUTAGE, S3_OUTAGE_RESTART]
@@ -128,6 +162,7 @@ precision_stopping_rule:
   additional_pairs_if_not_precise: 2
   maximum_pairs: 5
   forbidden_basis_for_stopping: [effect_direction, p_value, favorable_result]
+  consortium_p1_review_status: OPEN_REVIEW_ALIGNMENT_WITH_RECOVERY_QUESTION_BEFORE_SCORING
 
 planned_conducted_scored_runs:
   minimum: 24
@@ -167,25 +202,37 @@ ota_replication:
 pre_score_gate_status:
   controlled_physical_rf_profile_and_numeric_states: PASS
   q0_user_plane_readiness_rule: PASS_FROZEN
+  h_adverse_outcome_classification: PASS_LOCAL_IMPLEMENTED
   recovery_horizon_H: OPEN_ACTIVE_GATE
+  mqtt_run_session_isolation_implementation: PASS_LOCAL_PHYSICAL_VERIFICATION_OPEN
   remote_paho_runtime_reproduction: OPEN
   experimental_radio_path_verification_for_mqtt: OPEN
-  record_identity_checksum_preservation: OPEN
+  record_identity_collision_fail_closed: PASS_LOCAL_IMPLEMENTED
+  record_identity_checksum_preservation: OPEN_PHYSICAL
+  b1_accepted_unacked_instrumentation: PASS_LOCAL_PHYSICAL_EVIDENCE_OPEN
   b1_w1_implementation_matching: OPEN
+  s3_restart_domain_separation: OPEN_NON_SCORED_VERIFICATION_REQUIRED
   evidence_capture_clock_alignment: OPEN
   deterministic_non_scored_analysis_reconstruction: OPEN
   b2_comparator_decision: OPEN
+  consortium_p1_analysis_claim_amendments: OPEN
   automated_powder_ssh_private_key_path: KNOWN_BAD_REPAIR_OR_BYPASS_REQUIRED
 
 freeze_requirements:
   - Use frozen srslte-controlled-rf profile revision and verify live bindings every experiment
+  - Preserve frozen Q0-Q3 values and mandatory Q0 user-plane readiness gate
+  - Apply P0 H outcome classification; never replace a valid adverse W1 result as technical invalidity
+  - Use deterministic run-unique MQTT publisher/receiver client identities and topic namespaces
+  - Require fresh-run initial session_present=false and preserve session evidence
   - Reproduce pinned Paho 2.1.0 transport settings in remote runtime manifest
   - Verify payload traverses experimental cellular data path rather than POWDER control network
-  - Preserve frozen Q0-Q3 values and mandatory Q0 user-plane readiness gate
   - Freeze recovery horizon H and verify cohort_cutoff_utc/horizon_end_utc timing
-  - Audit B1/W1 matching
+  - Verify record identity/checksum preservation and fail-closed collision semantics
+  - Audit B1/W1 matching with corrected B1 accepted/unacknowledged instrumentation semantics
+  - Verify S3 restart-domain separation non-scored before scored authorization
   - Verify evidence capture and clock alignment
   - Verify analysis reconstructs primary endpoint from a non-scored pilot bundle
   - Close B2 durable-client decision/amendment
+  - Resolve consortium P1 analysis/claim amendments before scored authorization
   - Repair or bypass known-bad automated POWDER SSH private-key path before scored automation is trusted
   - Set scored_runs_authorized true only after all gates close
