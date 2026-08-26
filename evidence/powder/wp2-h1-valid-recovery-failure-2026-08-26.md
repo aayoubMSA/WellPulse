@@ -58,6 +58,30 @@ The live raw evidence was copied from `/tmp` into the user's persistent POWDER h
 
 Each node directory also contains a per-file `SHA256SUMS.txt` manifest. No secrets or private keys are intentionally included by this evidence step; the persistent bundle should be reviewed before any later public release.
 
+## Recovery characterization
+
+### UE-only restart
+
+A bounded UE-only recovery test was run after the valid H1 failure. The existing `srsue` process was stopped, `tun_srsue` disappeared, and a fresh `srsue` was launched while EPC/eNB remained untouched. The fresh UE rediscovered the LTE cell and reached `RRC Connected`, but attach repeatedly failed. Final result after 96 s:
+
+- `WP2_UE_ONLY_RECOVERY=FAIL`
+- repeated `Attach failed`
+- cell discovery and Random Access succeeded
+- UE could not complete a usable user-plane attach
+
+Conclusion: restarting only the UE is not sufficient to recover the post-outage state.
+
+### EPC/eNB reset while UE remains running
+
+EPC/eNB were then reset on `nuc1` while the fresh UE remained active on `nuc2`; the MQTT broker was intentionally left untouched. The core/RAN reset itself completed successfully (`WP2_CORE_RAN_RESET=PASS`). A bounded 60 s automatic-reacquisition check then failed:
+
+- `WP2_POST_CORE_Q0_RECOVERY=FAIL`
+- recovery check elapsed: 61 s
+- UE again reported radio-link failure / RRC idle
+- no working Q0 user-plane path returned
+
+Conclusion: resetting EPC/eNB while the UE is already running is also insufficient. The next diagnostic candidate is a coordinated clean-order LTE restart with the UE stopped first, then EPC/eNB reset, then a fresh UE start after the core/RAN are stable.
+
 ## Operator-history snapshot during UE-only recovery characterization
 
 A live POWDER browser-shell screenshot was captured during the bounded UE-only recovery test on `nuc2` at approximately `2026-08-26T18:26:24Z`.
@@ -70,7 +94,7 @@ The screenshot records the following operational sequence without interpreting t
 - a fresh `srsue` instance started with PID `2341`;
 - the live shell progress bar showed `37%`, corresponding to `Waiting for Q0 user plane 19s/90s` at the moment of capture.
 
-This image is retained as operator-history evidence showing that the bounded recovery procedure was actually executing interactively on the reserved hardware. The screenshot alone does not establish PASS or FAIL of the UE-only recovery test; that classification must be taken from the terminal's final result and associated logs.
+This image is retained as operator-history evidence showing that the bounded recovery procedure was actually executing interactively on the reserved hardware. The screenshot alone does not establish PASS or FAIL of the UE-only recovery test; that classification is taken from the terminal's final result and associated logs.
 
 ## Decision
 
