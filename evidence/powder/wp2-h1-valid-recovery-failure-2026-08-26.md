@@ -47,6 +47,17 @@ The EPC/MME/SPGW logs instead showed repeated attach/session-context churn after
 
 Interpretation: the observed non-recovery is dominated by post-outage LTE core/session-context/IP continuity failure in this srsLTE stack, not by MQTT or WellPulse durable-queue logic. The trial nevertheless remains a technically valid W1 recovery failure under the frozen protocol because the required user-plane recovery did not occur within the bound.
 
+## Raw evidence preservation
+
+The live raw evidence was copied from `/tmp` into the user's persistent POWDER home storage on both nodes and archived separately.
+
+- nuc1 archive: `/users/aayoub/wellpulse-powder-evidence/wp2-h1-valid-failure-20260826/nuc1-wp2-h1-evidence.tar.gz`
+  - SHA-256: `3e3d4c44847bfb7e6304de89d8c1cc05ff9722b6a54d93dd08ce0acfa7418210`
+- nuc2 archive: `/users/aayoub/wellpulse-powder-evidence/wp2-h1-valid-failure-20260826/nuc2-wp2-h1-evidence.tar.gz`
+  - SHA-256: `c5d3b212af015061c092c79025258a7f3378e3351051eef48318f12964af2593`
+
+Each node directory also contains a per-file `SHA256SUMS.txt` manifest. No secrets or private keys are intentionally included by this evidence step; the persistent bundle should be reviewed before any later public release.
+
 ## Decision
 
 1. Preserve Trial #1; do not replace it.
