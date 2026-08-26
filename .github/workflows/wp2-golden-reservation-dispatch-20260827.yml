@@ -1,0 +1,58 @@
+name: WP2 Golden Reservation Dispatch — 2026-08-27
+
+on:
+  schedule:
+    # Approved reservation is 2026-08-27 02:00-04:00 Africa/Cairo (UTC+03).
+    # Dispatch two minutes after reservation start: 2026-08-26 23:02 UTC.
+    - cron: '2 23 26 8 *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: wp2-golden-reservation-dispatch-20260827
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OWNER_WORKFLOW: wp2-golden-owner.yml
+      EXPERIMENT_NAME: WP-GOLDEN-20260827-A1
+      STOP_AT_UTC: '2026-08-27T01:00:00+0000'
+
+    steps:
+      - name: One-time date guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            [[ "$(date -u +%Y-%m-%d)" == "2026-08-26" ]] || {
+              echo 'DISPATCH_SKIPPED=OUTSIDE_APPROVED_2026_RESERVATION_DATE'
+              exit 0
+            }
+          fi
+          echo 'RESERVATION_DATE_GATE=PASS'
+
+      - name: Dispatch Golden owner workflow
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '2 23 26 8 *'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Re-check the year/date here so future annual cron matches cannot dispatch.
+          if [[ "${{ github.event_name }}" == "schedule" && "$(date -u +%Y-%m-%d)" != "2026-08-26" ]]; then
+            echo 'OWNER_DISPATCH=SKIPPED_FUTURE_CRON'
+            exit 0
+          fi
+          gh workflow run "$OWNER_WORKFLOW" \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f experiment_name="$EXPERIMENT_NAME" \
+            -f stop_at="$STOP_AT_UTC"
+          echo 'OWNER_DISPATCH=PASS'
+          echo "EXPERIMENT_NAME=$EXPERIMENT_NAME"
+          echo "SCORING_AUTHORIZED=false"
