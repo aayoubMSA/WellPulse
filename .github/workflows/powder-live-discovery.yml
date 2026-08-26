@@ -1,101 +1,161 @@
-name: POWDER Live Experiment Discovery
+name: POWDER H Calibration Recreate Owner
 
 on:
   push:
     paths:
       - ".powder-live-discovery-trigger"
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  discover:
+  recreate:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 35
     env:
       PORTAL_HTTP: https://boss.emulab.net:43794
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      OLD_ID: cf31bf66-bebe-48f3-81e0-7812e9f0a6c9
+      NEW_NAME: WP-HCAL-B
     steps:
-      - name: Install official Portal API client
+      - name: Install Portal client and unlock automation key
         shell: bash
         run: |
           set -euo pipefail
-          [[ -n "$PORTAL_TOKEN" ]] || { echo "PORTAL_TOKEN_MISSING"; exit 2; }
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-          echo "PORTAL_CLIENT=PASS"
-      - name: Inspect create syntax
-        shell: bash
-        run: |
-          set -euo pipefail
-          portal-cli experiment create --help
-          echo "CREATE_HELP=PASS"
-      - name: Discover WP-HCAL-A experiment identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          portal-cli experiment list > /tmp/experiments.json
+          mkdir -p "$HOME/.ssh" /tmp/hcal
+          chmod 700 "$HOME/.ssh"
+          umask 077
           python - <<'PY'
-          import json
+          import os
           from pathlib import Path
-          obj=json.loads(Path('/tmp/experiments.json').read_text())
-          items=obj if isinstance(obj,list) else obj.get('experiments') or obj.get('items') or obj.get('value') or []
-          hits=[]
-          for x in items:
-              if not isinstance(x,dict): continue
-              name=str(x.get('name') or x.get('experiment_name') or x.get('slug') or '')
-              if name=='WP-HCAL-A': hits.append(x)
-          print('MATCH_COUNT='+str(len(hits)))
-          if len(hits)!=1: raise SystemExit(3)
-          x=hits[0]
-          expid=x.get('id') or x.get('uuid') or x.get('experiment_id')
-          print('EXPERIMENT_ID='+str(expid))
-          Path('/tmp/experiment_id').write_text(str(expid))
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          p=Path.home()/'.ssh'/'id_ed25519_powder'
+          p.write_text(raw,encoding='utf-8',newline='\n')
           PY
-          ID="$(cat /tmp/experiment_id)"
-          portal-cli experiment get --experiment-id "$ID" > /tmp/status.json
-          jq '{id,name,status,project,profile_id,profile_name,profile_project,bindings}' /tmp/status.json
-          [[ "$(jq -r .status /tmp/status.json)" == "ready" ]] || { echo "NOT_READY"; exit 4; }
-          echo "EXPERIMENT_DISCOVERY=PASS"
-      - name: Retrieve and parse live manifest
+          chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          cat > /tmp/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/askpass
+          export SSH_ASKPASS=/tmp/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$HOME/.ssh/id_ed25519_powder" </dev/null
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/hcal/public.key </dev/null
+          echo "OWNER_KEY_UNLOCK=PASS"
+
+      - name: Verify and terminate old WP-HCAL-A
         shell: bash
         run: |
           set -euo pipefail
-          ID="$(cat /tmp/experiment_id)"
-          portal-cli experiment manifests get --experiment-id "$ID" > /tmp/manifests.json
+          portal-cli experiment get --experiment-id "$OLD_ID" > /tmp/hcal/old.json
+          [[ "$(jq -r .name /tmp/hcal/old.json)" == "WP-HCAL-A" ]]
+          [[ "$(jq -r .project /tmp/hcal/old.json)" == "WellPulse" ]]
+          [[ "$(jq -r .profile_name /tmp/hcal/old.json)" == "srslte-controlled-rf" ]]
+          [[ "$(jq -r '.bindings.enb_node' /tmp/hcal/old.json)" == "nuc1" ]]
+          [[ "$(jq -r '.bindings.ue_node' /tmp/hcal/old.json)" == "nuc2" ]]
+          echo "OLD_EXPERIMENT_IDENTITY=PASS"
+          portal-cli experiment terminate --experiment-id "$OLD_ID" >/tmp/hcal/terminate.out
+          echo "OLD_TERMINATION_REQUEST=PASS"
+          for i in $(seq 1 30); do
+            set +e
+            portal-cli experiment get --experiment-id "$OLD_ID" >/tmp/hcal/post.json 2>/dev/null
+            rc=$?
+            set -e
+            if [[ $rc -ne 0 ]]; then echo "OLD_EXPERIMENT_RELEASED=PASS"; exit 0; fi
+            st="$(jq -r '.status // "unknown"' /tmp/hcal/post.json)"
+            if [[ "$st" =~ ^(terminated|failed|error)$ ]]; then echo "OLD_EXPERIMENT_RELEASED=PASS"; exit 0; fi
+            sleep 5
+          done
+          echo "Old experiment did not release in time" >&2
+          exit 10
+
+      - name: Create fresh WP-HCAL-B with exact bindings and owner key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUB="$(cat /tmp/hcal/public.key)"
+          BINDINGS='{"enb_node":"nuc1","ue_node":"nuc2","ue_type":"srsue"}'
+          portal-cli experiment create \
+            --name "$NEW_NAME" \
+            --project WellPulse \
+            --profile-name srslte-controlled-rf \
+            --profile-project PowderProfiles \
+            --stop-at '2026-08-26T13:00:00+0000' \
+            --bindings "$BINDINGS" \
+            --sshpubkey "$PUB" \
+            > /tmp/hcal/create.json
+          NEW_ID="$(jq -r '.id // empty' /tmp/hcal/create.json)"
+          [[ -n "$NEW_ID" ]]
+          echo "$NEW_ID" > /tmp/hcal/new_id
+          echo "NEW_EXPERIMENT_CREATE=PASS"
+          echo "NEW_ID=$NEW_ID"
+
+      - name: Wait for new experiment READY
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/hcal/new_id)"
+          for i in $(seq 1 90); do
+            portal-cli experiment get --experiment-id "$ID" > /tmp/hcal/new.json || { sleep 10; continue; }
+            st="$(jq -r '.status // "unknown"' /tmp/hcal/new.json)"
+            echo "state=$st"
+            if [[ "$st" == "ready" ]]; then echo "NEW_EXPERIMENT_READY=PASS"; exit 0; fi
+            if [[ "$st" =~ ^(failed|error|terminated)$ ]]; then cat /tmp/hcal/new.json; exit 12; fi
+            sleep 10
+          done
+          exit 13
+
+      - name: Verify new profile bindings and physical manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/hcal/new_id)"
+          portal-cli experiment get --experiment-id "$ID" > /tmp/hcal/new.json
+          [[ "$(jq -r .name /tmp/hcal/new.json)" == "$NEW_NAME" ]]
+          [[ "$(jq -r .profile_name /tmp/hcal/new.json)" == "srslte-controlled-rf" ]]
+          [[ "$(jq -r '.bindings.enb_node' /tmp/hcal/new.json)" == "nuc1" ]]
+          [[ "$(jq -r '.bindings.ue_node' /tmp/hcal/new.json)" == "nuc2" ]]
+          echo "NEW_BINDINGS=PASS"
+          portal-cli experiment manifests get --experiment-id "$ID" > /tmp/hcal/manifests.json
           python - <<'PY'
-          import json, xml.etree.ElementTree as ET
+          import json,xml.etree.ElementTree as ET
           from pathlib import Path
-          obj=json.loads(Path('/tmp/manifests.json').read_text())
-          xmls=[]
+          obj=json.loads(Path('/tmp/hcal/manifests.json').read_text()); xs=[]
           def walk(x):
               if isinstance(x,dict):
                   for v in x.values(): walk(v)
               elif isinstance(x,list):
                   for v in x: walk(v)
-              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()):
-                  xmls.append(x)
-          walk(obj)
-          nodes=[]; logins=[]
-          for text in xmls:
-              try: root=ET.fromstring(text)
-              except Exception: continue
-              for el in root.iter():
-                  tag=el.tag.rsplit('}',1)[-1]
-                  if tag=='node':
-                      cid=el.attrib.get('client_id')
-                      comp=el.attrib.get('component_id')
-                      if cid: nodes.append((cid,comp or ''))
-                  if tag=='login' and el.attrib.get('hostname'):
-                      logins.append((el.attrib.get('username',''),el.attrib['hostname'],el.attrib.get('port','22')))
-          nodes=list(dict.fromkeys(nodes)); logins=list(dict.fromkeys(logins))
-          print('NODE_COUNT='+str(len(nodes)))
-          for cid,comp in nodes: print(f'NODE_MAP={cid}|{comp}')
-          print('SSH_ENDPOINT_COUNT='+str(len(logins)))
-          for u,h,p in logins: print(f'SSH_ENDPOINT={u}|{h}|{p}')
-          cids={c for c,_ in nodes}
-          if not {'enb1','rue1'}.issubset(cids): raise SystemExit(5)
-          if len(logins)<2: raise SystemExit(6)
-          print('MANIFEST_GATE=PASS')
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xs.append(x)
+          walk(obj); maps={}; logins=[]
+          for text in xs:
+              try:r=ET.fromstring(text)
+              except:continue
+              for e in r.iter():
+                  t=e.tag.rsplit('}',1)[-1]
+                  if t=='node' and e.attrib.get('client_id'): maps[e.attrib['client_id']]=e.attrib.get('component_id','')
+                  if t=='login' and e.attrib.get('hostname'): logins.append((e.attrib.get('username','aayoub'),e.attrib['hostname'],e.attrib.get('port','22')))
+          assert maps.get('enb1','').endswith('+nuc1'),maps
+          assert maps.get('rue1','').endswith('+nuc2'),maps
+          Path('/tmp/hcal/logins.tsv').write_text(''.join(f'{u}\t{h}\t{p}\n' for u,h,p in dict.fromkeys(logins)))
+          print('PHYSICAL_BINDINGS=PASS')
+          print('SSH_ENDPOINTS='+str(len(set(logins))))
           PY
+
+      - name: Prove SSH ownership on both nodes
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SSH_AUTH_SOCK="${SSH_AUTH_SOCK}"
+          PASS=0
+          for host in nuc1.emulab.net nuc2.emulab.net; do
+            ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@"$host" \
+              'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; uname -srmo'
+            echo "SSH_${host%%.*}=PASS"
+          done
+          echo "AUTONOMOUS_SSH_OWNERSHIP=PASS"
