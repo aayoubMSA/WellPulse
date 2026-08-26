@@ -80,7 +80,28 @@ EPC/eNB were then reset on `nuc1` while the fresh UE remained active on `nuc2`; 
 - UE again reported radio-link failure / RRC idle
 - no working Q0 user-plane path returned
 
-Conclusion: resetting EPC/eNB while the UE is already running is also insufficient. The next diagnostic candidate is a coordinated clean-order LTE restart with the UE stopped first, then EPC/eNB reset, then a fresh UE start after the core/RAN are stable.
+Conclusion: resetting EPC/eNB while the UE is already running is also insufficient.
+
+### Coordinated clean-order LTE restart
+
+A final bounded recovery characterization was then executed with strict ordering:
+
+1. stop the UE completely on `nuc2`;
+2. reset and stabilize EPC on `nuc1`;
+3. start and stabilize eNB on `nuc1`;
+4. start a fresh UE on `nuc2` only after core/RAN were stable.
+
+This recovery path succeeded:
+
+- `WP2_CLEAN_ORDER_RECOVERY=PASS`
+- `tun_srsue` returned with source IP `172.16.0.2`
+- route to `172.16.0.1` traversed `tun_srsue`
+- final confirmation: 10/10 packets received, 0% loss
+- RTT min/avg/max/mdev: `12.947/19.176/25.593/3.953 ms`
+
+Operational conclusion: in this srsLTE/POWDER setup, deterministic Q0 recovery after the observed long-outage failure requires a coordinated clean-order LTE stack restart (`EPC -> eNB -> UE`) with the UE stopped before the core/RAN reset. UE-only restart and EPC/eNB reset with a live UE were both insufficient.
+
+Scientific consequence: this is a recovery procedure for the testbed/runtime, not evidence that the original H1 trial recovered within the frozen scientific bound. Trial #1 remains a valid recovery failure, H remains unfrozen, and scored runs remain unauthorized. Any future H-calibration protocol that incorporates an explicit LTE-stack recovery primitive would constitute a protocol change and must be frozen before use.
 
 ## Operator-history snapshot during UE-only recovery characterization
 
@@ -101,7 +122,7 @@ This image is retained as operator-history evidence showing that the bounded rec
 1. Preserve Trial #1; do not replace it.
 2. Stop H calibration; H remains unfrozen.
 3. Do not authorize scored B1/W1/B2 runs.
-4. Use remaining live reservation time only for bounded diagnosis/recovery characterization and evidence preservation, not another H trial.
-5. Before any future H-calibration attempt, define and validate a deterministic LTE recovery/re-attachment procedure that restores the intended UE user-plane identity/path without contaminating the scientific outage semantics.
+4. Treat `EPC -> eNB -> UE` as the currently demonstrated deterministic LTE recovery primitive for this environment, not as a retroactive repair of Trial #1.
+5. Before any future H-calibration attempt, explicitly decide whether recovery by LTE-stack restart is scientifically admissible; if admitted, freeze that procedure prospectively before any new calibration trial.
 
 No credentials or private keys are recorded in this evidence file.
