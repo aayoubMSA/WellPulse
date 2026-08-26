@@ -1,0 +1,152 @@
+name: POWDER H Calibration Cooldown Retry
+
+on:
+  push:
+    paths:
+      - ".powder-hcal-cooldown-retry-trigger"
+
+permissions:
+  contents: read
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      NEW_NAME: WP-HCAL-C
+    steps:
+      - name: Install Portal client and load SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          mkdir -p "$HOME/.ssh" /tmp/hcal
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          p=Path.home()/'.ssh'/'id_ed25519_powder'
+          p.write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          cat > /tmp/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/askpass
+          export SSH_ASKPASS=/tmp/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$HOME/.ssh/id_ed25519_powder" </dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          ssh-add -L > /tmp/hcal/public.key
+          echo "OWNER_KEY_READY=PASS"
+
+      - name: Verify allocator release before recreate
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment list > /tmp/hcal/list.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/hcal/list.json'))
+          items=x if isinstance(x,list) else x.get('experiments') or x.get('items') or x.get('value') or []
+          active=[]
+          for i in items:
+              if not isinstance(i,dict): continue
+              name=str(i.get('name') or i.get('experiment_name') or i.get('slug') or '')
+              if name not in {'WP-HCAL-A','WP-HCAL-B','WP-HCAL-C'}: continue
+              st=str(i.get('status') or i.get('state') or 'unknown').lower()
+              if st not in {'terminated','failed','error'}:
+                  active.append((name,st,i.get('id') or i.get('uuid') or i.get('experiment_id')))
+          print('ACTIVE_HCAL='+repr(active))
+          if active:
+              raise SystemExit(20)
+          print('RESOURCE_RELEASE_GATE=PASS')
+          PY
+
+      - name: Create fresh WP-HCAL-C
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUB="$(head -n1 /tmp/hcal/public.key)"
+          BINDINGS='{"enb_node":"nuc1","ue_node":"nuc2","ue_type":"srsue"}'
+          portal-cli experiment create \
+            --name "$NEW_NAME" \
+            --project WellPulse \
+            --profile-name srslte-controlled-rf \
+            --profile-project PowderProfiles \
+            --stop-at '2026-08-26T13:00:00+0000' \
+            --bindings "$BINDINGS" \
+            --sshpubkey "$PUB" \
+            > /tmp/hcal/create.json
+          ID="$(jq -r '.id // empty' /tmp/hcal/create.json)"
+          [[ -n "$ID" ]]
+          echo "$ID" > /tmp/hcal/id
+          echo "NEW_EXPERIMENT_CREATE=PASS"
+          echo "NEW_ID=$ID"
+
+      - name: Wait for READY
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/hcal/id)"
+          for i in $(seq 1 100); do
+            set +e
+            portal-cli experiment get --experiment-id "$ID" > /tmp/hcal/status.json 2>/tmp/hcal/status.err
+            RC=$?
+            set -e
+            if [[ $RC -ne 0 ]]; then sleep 10; continue; fi
+            ST="$(jq -r '.status // "unknown"' /tmp/hcal/status.json)"
+            echo "state=$ST"
+            if [[ "$ST" == "ready" ]]; then echo "NEW_EXPERIMENT_READY=PASS"; exit 0; fi
+            if [[ "$ST" =~ ^(failed|error|terminated)$ ]]; then exit 21; fi
+            sleep 10
+          done
+          exit 22
+
+      - name: Verify bindings manifest and SSH both nodes
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/hcal/id)"
+          portal-cli experiment get --experiment-id "$ID" > /tmp/hcal/status.json
+          [[ "$(jq -r '.bindings.enb_node' /tmp/hcal/status.json)" == "nuc1" ]]
+          [[ "$(jq -r '.bindings.ue_node' /tmp/hcal/status.json)" == "nuc2" ]]
+          [[ "$(jq -r '.bindings.ue_type' /tmp/hcal/status.json)" == "srsue" ]]
+          echo "PARAMETER_BINDINGS=PASS"
+          portal-cli experiment manifests get --experiment-id "$ID" > /tmp/hcal/manifests.json
+          python - <<'PY'
+          import json,xml.etree.ElementTree as ET
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/hcal/manifests.json').read_text()); xs=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xs.append(x)
+          walk(obj); maps={}
+          for text in xs:
+              try:r=ET.fromstring(text)
+              except:continue
+              for e in r.iter():
+                  if e.tag.rsplit('}',1)[-1]=='node' and e.attrib.get('client_id'):
+                      maps[e.attrib['client_id']]=e.attrib.get('component_id','')
+          assert maps.get('enb1','').endswith('+nuc1'),maps
+          assert maps.get('rue1','').endswith('+nuc2'),maps
+          print('PHYSICAL_BINDINGS=PASS')
+          PY
+          for host in nuc1.emulab.net nuc2.emulab.net; do
+            ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@"$host" \
+              'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ'
+            echo "SSH_${host%%.*}=PASS"
+          done
+          echo "AUTONOMOUS_SSH_OWNERSHIP=PASS"
