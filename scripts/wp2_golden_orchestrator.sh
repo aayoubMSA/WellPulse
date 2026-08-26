@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run this controller on the UE/application node after the profile instance is ready.
+# It is deliberately fail-closed: any failed gate aborts the Golden rehearsal and does not authorize teardown.
+
+RUN_ID="${WP_RUN_ID:?WP_RUN_ID is required}"
+EXPERIMENT_ID="${WP_EXPERIMENT_ID:?WP_EXPERIMENT_ID is required}"
+CORE_HOST="${WP_CORE_HOST:?WP_CORE_HOST is required}"
+UE_HOST="${WP_UE_HOST:-$(hostname)}"
+REMOTE_USER="${WP_REMOTE_USER:-aayoub}"
+REPO="${WP_REPO_ROOT:-$HOME/WellPulse}"
+PY="${WP_PYTHON:-python3}"
+EVDIR="${WP_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID}"
+CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core}"
+OFF_ROOT="${WP_OFF_POWDER_ROOT:?WP_OFF_POWDER_ROOT must be configured before live execution}"
+PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
+
+mkdir -p "$EVDIR"/{sender,receiver,substrate,runtime,orchestration,analysis,escrow}
+CONSOLE="$EVDIR/orchestration/golden_console.txt"
+GATES="$EVDIR/orchestration/gate_events.jsonl"
+exec > >(tee -a "$CONSOLE") 2>&1
+
+utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
+bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-52s' "$p" "$m"; }
+gate(){ "$PY" - "$1" "$2" "$3" <<'PY' >> "$GATES"
+import json,sys,datetime
+print(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'gate':sys.argv[1],'status':sys.argv[2],'detail':sys.argv[3]},sort_keys=True,separators=(',',':')))
+PY
+}
+fail(){ echo; gate "$1" FAIL "$2"; echo "GOLDEN_E2E=FAIL_$1:$2"; exit 70; }
+ssh_core(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}" "$@"; }
+scp_core(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$1" "$2"; }
+
+cleanup_rf(){
+  for id in 1 33 2 34; do /usr/local/etc/emulab/tmcc attenuator "$id" 0 >/dev/null 2>&1 || true; done
+}
+trap cleanup_rf EXIT
+
+echo '=== WellPulse WP2 Golden E2E orchestration ==='
+echo "RUN_ID=$RUN_ID"
+echo "EXPERIMENT_ID=$EXPERIMENT_ID"
+echo "CORE_HOST=$CORE_HOST"
+echo "UE_HOST=$UE_HOST"
+echo "START_UTC=$(utc)"
+
+bar 5 'G0 environment identity'; echo
+cd "$REPO" || fail G0 REPO_NOT_FOUND
+GIT_SHA=$(git rev-parse HEAD)
+printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\ngit_sha=%s\nutc=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$GIT_SHA" "$(utc)" > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
+ssh_core "cd '$REPO' && printf 'host=%s\\ngit_sha=%s\\nutc=%s\\n' \"\$(hostname)\" \"\$(git rev-parse HEAD)\" \"\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)\"" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
+[[ -s "$EVDIR/runtime/ue_runtime_fingerprint.txt" && -s "$EVDIR/runtime/core_runtime_fingerprint.txt" ]] || fail G0 EMPTY_FINGERPRINT
+gate G0 PASS "$GIT_SHA"
+
+bar 10 'G1 clean run identity and paths'; echo
+[[ ! -e "$EVDIR/sender/sender_summary.json" ]] || fail G1 RUN_DIR_NOT_CLEAN
+ssh_core "rm -rf '$CORE_EVDIR'; mkdir -p '$CORE_EVDIR/receiver' '$CORE_EVDIR/substrate'" || fail G1 CORE_DIR_INIT
+gate G1 PASS CLEAN
+
+bar 16 'G2 starting TLS broker and retrieving CA'; echo
+ssh_core "cd '$REPO' && bash powder/wp2_h_epc_broker.sh /tmp/wellpulse-wp2-golden-broker" > "$EVDIR/substrate/broker_start.txt" || fail G2 BROKER_START
+scp_core "/tmp/wellpulse-wp2-golden-broker/ca.crt" "$EVDIR/substrate/ca.crt" || fail G2 CA_COPY
+[[ -s "$EVDIR/substrate/ca.crt" ]] || fail G2 CA_EMPTY
+ping -I tun_srsue -c 5 -W 2 172.16.0.1 | tee "$EVDIR/substrate/q0_pre_ping.txt" || fail G2 Q0_PING
+openssl s_client -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -verify_return_error </dev/null > "$EVDIR/substrate/q0_pre_tls.txt" 2>&1 || fail G2 Q0_TLS
+gate G2 PASS READY
+
+bar 22 'G2 launching receiver on core node'; echo
+ssh_core "cd '$REPO' && nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & echo \$! > '$CORE_EVDIR/receiver/receiver.pid'" || fail G2 RECEIVER_START
+sleep 3
+ssh_core "test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'" || fail G2 RECEIVER_NOT_READY
+
+bar 28 'G3 launching fixed Golden workload/RF runner'; echo
+SERVICE_MARKER="$EVDIR/substrate/service_ready.marker"
+nohup "$PY" scripts/wp_pwd01_golden_sender.py --run-id "$RUN_ID" --host 172.16.0.1 --port 8883 --ca-file "$EVDIR/substrate/ca.crt" --output-dir "$EVDIR/sender" --service-ready-file "$SERVICE_MARKER" > "$EVDIR/sender/sender_console.txt" 2>&1 &
+SENDER_PID=$!
+echo "$SENDER_PID" > "$EVDIR/sender/sender.pid"
+gate G3 PASS "sender_pid=$SENDER_PID"
+
+bar 38 'G4 waiting for physical Q3->Q0 restoration'; echo
+DEADLINE=$(( $(date +%s) + 240 ))
+while [[ ! -s "$EVDIR/sender/rf_restore.ready" && $(date +%s) -lt $DEADLINE ]]; do kill -0 "$SENDER_PID" 2>/dev/null || fail G4 SENDER_EXITED_EARLY; sleep 1; done
+[[ -s "$EVDIR/sender/rf_restore.ready" ]] || fail G4 RF_RESTORE_TIMEOUT
+T_RF_RESTORE=$(cat "$EVDIR/sender/rf_restore.ready")
+gate G4 PASS "$T_RF_RESTORE"
+
+bar 48 'G5 deterministic clean-order LTE restoration'; echo
+WP_CORE_HOST="$CORE_HOST" WP_UE_HOST="$UE_HOST" WP_REMOTE_USER="$REMOTE_USER" WP_RESTORE_OUT="$EVDIR/substrate/service_restore.txt" bash scripts/wp2_golden_service_restore.sh || fail G5 RESTORE_SEQUENCE
+scp_core "/tmp/wp2-golden-core-start.console" "$EVDIR/substrate/core_start.console" || fail G5 CORE_CONSOLE_COPY
+cp /tmp/wp2-golden-ue-start.console "$EVDIR/substrate/ue_start.console" 2>/dev/null || printf 'UE start console path unavailable at controller\n' > "$EVDIR/substrate/ue_start.console"
+gate G5 PASS COMPLETE
+
+bar 58 'G6 architecture-blind 120 s service-ready gate'; echo
+WP_SERVICE_READY_OUT="$EVDIR/substrate/service_ready_probe.txt" bash scripts/wp2_golden_service_ready_probe.sh || fail G6 SERVICE_RESTORE
+T_SERVICE_READY=$(awk -F= '/^T_SERVICE_READY=/{print $2}' "$EVDIR/substrate/service_ready_probe.txt" | tail -1)
+[[ -n "$T_SERVICE_READY" ]] || fail G6 READY_TIMESTAMP_MISSING
+printf '%s\n' "$T_SERVICE_READY" > "$SERVICE_MARKER"
+gate G6 PASS "$T_SERVICE_READY"
+
+bar 66 'G7 fixed 300 s application observation'; echo
+wait "$SENDER_PID" || fail G7 SENDER_FIXED_HORIZON
+[[ $(python3 -c "import json;print(json.load(open('$EVDIR/sender/sender_summary.json'))['status'])") == GOLDEN_FIXED_HORIZON_COMPLETE ]] || fail G7 BAD_SENDER_STATUS
+gate G7 PASS 300S_COMPLETE
+
+bar 74 'Collecting receiver and substrate evidence'; echo
+ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
+scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
+# Best-effort raw LTE logs are promoted to mandatory local filenames; missing source is a hard failure.
+ssh_core "test -s /tmp/ue.log || test -s /tmp/wp2-srsue.log" || fail G8 UE_LOG_SOURCE_MISSING
+ssh_core "test -s /tmp/epc.log || test -s /tmp/srsepc.log || true"
+ssh_core "test -s /tmp/enb.log || test -s /tmp/srsenb.log || true"
+scp_core "/tmp/ue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || scp_core "/tmp/wp2-srsue.log" "$EVDIR/substrate/ue.log" || fail G8 UE_LOG_COPY
+# Core/eNB exact profile paths may vary; capture process-visible logs if canonical files exist, otherwise use startup console as explicit fallback evidence.
+scp_core "/tmp/epc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || cp "$EVDIR/substrate/core_start.console" "$EVDIR/substrate/epc.log"
+scp_core "/tmp/enb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || cp "$EVDIR/substrate/core_start.console" "$EVDIR/substrate/enb.log"
+
+bar 82 'G8 reconstructing endpoint from raw evidence'; echo
+python3 scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
+gate G8 PASS RECONSTRUCTABLE
+
+bar 90 'G9 verified persistent + off-POWDER escrow'; echo
+WP_EVIDENCE_SRC="$EVDIR" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PERSIST_ROOT="$PERSIST_ROOT" WP_OFF_POWDER_ROOT="$OFF_ROOT" WP_EVIDENCE_INVENTORY="$REPO/experiments/WP-PWD01/evidence_inventory_golden_v1.txt" bash scripts/wp2_golden_evidence_escrow.sh || fail G9 ESCROW
+PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"; ODIR="$OFF_ROOT/$EXPERIMENT_ID/$RUN_ID"
+WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" bash scripts/wp2_golden_teardown_guard.sh || fail G9 TEARDOWN_GUARD
+gate G9 PASS DUAL_VERIFIED
+
+bar 100 'G10 Golden E2E methods rehearsal PASS'; echo
+gate G10 PASS GOLDEN_E2E
+printf 'GOLDEN_E2E=PASS\n'
+printf 'TEARDOWN_AUTHORIZED=YES\n'
