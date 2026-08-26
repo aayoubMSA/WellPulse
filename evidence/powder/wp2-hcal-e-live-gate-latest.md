@@ -1,12 +1,12 @@
 # WP2 H-Cal E Live Manifest + SSH Gate — latest
 
-- Checked UTC: 2026-08-26T17:19:18Z
-- Git SHA: 0b59c0b6d34c14b3701e836a005c14e7c2774e02
+- Checked UTC: 2026-08-26T17:21:09Z
+- Git SHA: aef0d2b3a8cdaeeca390bd64216721083617b09b
 - Evidence class: **READ_ONLY INFRASTRUCTURE PRE-SCIENCE GATE**
 - Resource mutation: **NONE**
 - RF/LTE/MQTT/scientific workload: **NONE**
 - Experiment state: **ready**
-- SSH both live nodes gate: **FAIL**
+- SSH both live nodes gate: **PASS**
 
 ## Sanitized experiment state
 ~~~json
@@ -58,7 +58,15 @@
     "logical_node": "enb1",
     "port": "22",
     "ssh_rc": 0,
-    "stderr_tail": "debug2: channel 0: rcvd eow\ndebug2: channel 0: rcvd close\ndebug2: channel 0: almost dead\ndebug2: channel 0: gc: notify user\ndebug2: channel 0: gc: user detached\ndebug2: channel 0: send close\ndebug2: channel 0: is dead\ndebug2: channel 0: garbage collecting\ndebug1: channel 0: free: client-session, nchannels 1\nTransferred: sent 2432, received 2412 bytes, in 0.4 seconds\nBytes per second: sent 6049.3, received 5999.5\ndebug1: Exit status 0",
+    "stderr_tail": "debug2: channel 0: rcvd eow\ndebug2: channel 0: rcvd close\ndebug2: channel 0: almost dead\ndebug2: channel 0: gc: notify user\ndebug2: channel 0: gc: user detached\ndebug2: channel 0: send close\ndebug2: channel 0: is dead\ndebug2: channel 0: garbage collecting\ndebug1: channel 0: free: client-session, nchannels 1\nTransferred: sent 2380, received 2412 bytes, in 0.4 seconds\nBytes per second: sent 6058.9, received 6140.4\ndebug1: Exit status 0",
+    "user": "aayoub"
+  },
+  {
+    "host": "nuc2.emulab.net",
+    "logical_node": "rue1",
+    "port": "22",
+    "ssh_rc": 0,
+    "stderr_tail": "debug2: channel 0: rcvd eow\ndebug2: channel 0: rcvd close\ndebug2: channel 0: almost dead\ndebug2: channel 0: gc: notify user\ndebug2: channel 0: gc: user detached\ndebug2: channel 0: send close\ndebug2: channel 0: is dead\ndebug2: channel 0: garbage collecting\ndebug1: channel 0: free: client-session, nchannels 1\nTransferred: sent 2380, received 2412 bytes, in 0.4 seconds\nBytes per second: sent 5906.5, received 5985.9\ndebug1: Exit status 0",
     "user": "aayoub"
   }
 ]
