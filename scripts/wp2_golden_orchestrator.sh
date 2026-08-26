@@ -13,8 +13,8 @@ REPO="${WP_REPO_ROOT:-$HOME/WellPulse}"
 PY="${WP_PYTHON:-python3}"
 EVDIR="${WP_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID}"
 CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core}"
-OFF_ROOT="${WP_OFF_POWDER_ROOT:?WP_OFF_POWDER_ROOT must be configured before live execution}"
 PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
+RCLONE_ROOT="${WP_RCLONE_REMOTE_ROOT:-gdrive:}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 
 mkdir -p "$EVDIR"/{sender,receiver,substrate,runtime,orchestration,analysis,escrow}
@@ -23,25 +23,17 @@ GATES="$EVDIR/orchestration/gate_events.jsonl"
 exec > >(tee -a "$CONSOLE") 2>&1
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
-bar(){
-  local p="$1" m="$2" n
-  n=$((p/5))
-  printf '\r['
-  printf '%*s' "$n" ''|tr ' ' '#'
-  printf '%*s' "$((20-n))" ''|tr ' ' '-'
-  printf '] %3d%%  %-52s' "$p" "$m"
-}
+bar(){ local p="$1" m="$2" n; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-52s' "$p" "$m"; }
 gate(){ "$PY" - "$1" "$2" "$3" <<'PY' >> "$GATES"
 import json,sys,datetime
 print(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'gate':sys.argv[1],'status':sys.argv[2],'detail':sys.argv[3]},sort_keys=True,separators=(',',':')))
 PY
 }
-fail(){ echo; gate "$1" FAIL "$2"; echo "GOLDEN_E2E=FAIL_$1:$2"; exit 70; }
-ssh_core(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}" "$@"; }
-ssh_ue(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${UE_HOST}" "$@"; }
-scp_core(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$1" "$2"; }
-scp_ue(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@${UE_HOST}:$1" "$2"; }
-
+fail(){ echo; gate "$1" FAIL "$2"; echo "GOLDEN_E2E=FAIL_$1:$2"; [[ "$1" == G9 ]] && echo 'STOP_DO_NOT_TERMINATE=1'; exit 70; }
+ssh_core(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST" "$@"; }
+ssh_ue(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@$UE_HOST" "$@"; }
+scp_core(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST:$1" "$2"; }
+scp_ue(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@$UE_HOST:$1" "$2"; }
 cleanup_rf(){ for id in 1 33 2 34; do /usr/local/etc/emulab/tmcc attenuator "$id" 0 >/dev/null 2>&1 || true; done; }
 trap cleanup_rf EXIT
 
@@ -50,6 +42,7 @@ echo "RUN_ID=$RUN_ID"
 echo "EXPERIMENT_ID=$EXPERIMENT_ID"
 echo "CORE_HOST=$CORE_HOST"
 echo "UE_HOST=$UE_HOST"
+echo "RCLONE_ROOT=$RCLONE_ROOT"
 echo "START_UTC=$(utc)"
 
 bar 5 'G0 environment identity'; echo
@@ -114,7 +107,7 @@ gate G7 PASS 300S_COMPLETE
 
 bar 74 'Collecting receiver and substrate evidence'; echo
 ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
-scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
+scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
 ssh_core "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/core_tmux_capture.txt" || fail G8 CORE_TMUX_CAPTURE
 ssh_ue "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/ue_tmux_capture.txt" || fail G8 UE_TMUX_CAPTURE
 [[ -s "$EVDIR/substrate/core_tmux_capture.txt" && -s "$EVDIR/substrate/ue_tmux_capture.txt" ]] || fail G8 EMPTY_TMUX_CAPTURE
@@ -126,13 +119,20 @@ bar 82 'G8 reconstructing endpoint from raw evidence'; echo
 python3 scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
 gate G8 PASS RECONSTRUCTABLE
 
-bar 90 'G9 verified persistent + off-POWDER escrow'; echo
-WP_EVIDENCE_SRC="$EVDIR" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PERSIST_ROOT="$PERSIST_ROOT" WP_OFF_POWDER_ROOT="$OFF_ROOT" WP_EVIDENCE_INVENTORY="$REPO/experiments/WP-PWD01/evidence_inventory_golden_v1.txt" bash scripts/wp2_golden_evidence_escrow.sh || fail G9 ESCROW
-PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"; ODIR="$OFF_ROOT/$EXPERIMENT_ID/$RUN_ID"
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" bash scripts/wp2_golden_teardown_guard.sh || fail G9 TEARDOWN_GUARD
+bar 88 'G9 copying and verifying persistent /proj escrow'; echo
+WP_EVIDENCE_SRC="$EVDIR" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PERSIST_ROOT="$PERSIST_ROOT" WP_EVIDENCE_INVENTORY="$REPO/experiments/WP-PWD01/evidence_inventory_golden_v1.txt" bash scripts/wp2_golden_evidence_escrow.sh || fail G9 PERSISTENT_ESCROW
+PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
+
+bar 93 'G9 saving verified evidence to Google Drive'; echo
+WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RCLONE_ROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" bash scripts/wp2_golden_offpowder_rclone.sh || fail G9 DRIVE_ESCROW
+RDIR="${RCLONE_ROOT%/}/$EXPERIMENT_ID/$RUN_ID"
+
+bar 97 'G9 enforcing dual-copy teardown guard'; echo
+WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$RDIR" WP_RUN_ID="$RUN_ID" bash scripts/wp2_golden_teardown_guard_rclone.sh || fail G9 TEARDOWN_GUARD
 gate G9 PASS DUAL_VERIFIED
 
 bar 100 'G10 Golden E2E methods rehearsal PASS'; echo
 gate G10 PASS GOLDEN_E2E
 printf 'GOLDEN_E2E=PASS\n'
+printf 'EVIDENCE_ESCROW_GATE=PASS\n'
 printf 'TEARDOWN_AUTHORIZED=YES\n'
