@@ -26,6 +26,7 @@ jobs:
           bash -n scripts/wp2_golden_teardown_guard.sh
           bash -n scripts/wp2_golden_offpowder_rclone.sh
           bash -n scripts/wp2_golden_teardown_guard_rclone.sh
+          bash -n scripts/wp2_golden_rclone_preflight.sh
           bash -n scripts/wp2_golden_offline_qa.sh
       - name: Python compile QA
         run: |
