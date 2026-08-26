@@ -1,7 +1,7 @@
 # WP-PWD01 — POWDER Real-RF Resilience Validation
 
-**Protocol version:** v0.5  
-**Status:** PRE-SCORE / H UNFROZEN / `scored_runs_authorized=false`
+**Protocol version:** v0.6  
+**Status:** PRE-SCORE / RECOVERY SEMANTICS AMENDED / `scored_runs_authorized=false`
 
 ## Scientific purpose
 
@@ -19,70 +19,92 @@ Both B1 and W1 use `PahoQoS1Session` with `paho-mqtt==2.1.0`, MQTT v3.1.1, QoS1,
 
 Q0/Q1/Q2/Q3 = `0/40/52/55 dB`; attenuation IDs `1 33 2 34`, always coupled. Every physical run requires explicit Q0 end-to-end LTE user-plane PASS; attach/IP alone is insufficient.
 
-## Scientific scenarios and endpoint
+## Recovery-semantics amendment — governing
 
-S0 healthy, S1 intermittent, S2 hard outage, S3 outage + gateway-process restart. Primary endpoint remains unique valid primary-cohort completeness at the prospectively frozen common H. Run is the statistical unit; paired architecture order and replication rules remain governed by the frozen run matrix/randomization plan. Claim remains bounded to the 1 Hz low-rate telemetry regime.
+The prospective amendment frozen after RS-2/RS-3/RS-4 is:
+
+`experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
+
+It governs all future rehearsal/calibration/scored execution and supersedes the old arm-informed H-calibration logic.
+
+Frozen consequences:
+
+- `t_rf_restore`, `t_service_ready`, `t_app_complete` are distinct clocks;
+- primary cohort cutoff remains `t_rf_restore`;
+- `T_service`, `T_app`, `T_total` are mandatory;
+- common architecture-independent application horizon is **300 s from `t_service_ready`**;
+- primary completeness endpoint is observed at `t_service_ready + 300 s` for every architecture;
+- no W1-only or outcome-driven horizon calibration is permitted;
+- S2/S3 use the same scripted clean-order LTE service-restoration boundary across architectures;
+- S0/S1 do not receive a forced LTE reset and use the same architecture-blind service-ready probe;
+- service restoration and evidence escrow must be deterministic, scripted, timestamped, and architecture-blind.
+
+## Scientific scenarios
+
+S0 healthy, S1 intermittent, S2 hard outage, S3 outage + gateway-process restart. Scenario definitions, Q0–Q3 states, the S3 gateway-process restart treatment, workload, pairing/randomization and architecture comparators remain unchanged by the recovery-semantics amendment.
+
+## Primary endpoint
+
+For each valid run:
+
+`completeness_300 = unique valid primary-cohort records received no later than (t_service_ready + 300 s) / primary-cohort generated records`
+
+with:
+
+`primary cohort = all valid records generated at or before t_rf_restore`.
+
+Run remains the statistical unit. Paired B1/W1 comparisons and precision-based replication remain governed by the frozen analysis/randomization plan, subject to the endpoint clock amendment above.
 
 ## Technical invalidity
 
-Technical invalidity may be declared only for prospectively defined infrastructure/protocol failures, including wrong RF schedule, bypass of the experimental path, wrong architecture/configuration, severe clock/log failure, or missing/corrupt mandatory evidence preventing endpoint reconstruction. Raw invalid runs remain preserved. Unfavorable scientific outcomes are never grounds for replacement.
+Technical invalidity may be declared only for prospectively defined infrastructure/protocol failures, including wrong RF schedule, bypass of the experimental path, wrong architecture/configuration, severe clock/log failure, missing/corrupt mandatory evidence preventing endpoint reconstruction, or failure of the standardized architecture-blind service-restoration boundary under the exact RS-6 rule before application outcomes are inspected.
+
+Raw invalid attempts remain preserved and counted. Replacement is permitted only under the predeclared rule with a new run ID. Unfavorable application outcomes are never grounds for replacement.
 
 ## Mandatory Evidence Escrow Gate — FAIL CLOSED
 
-**Added 2026-08-26 after the WP-HCAL-E H1 evidence incident. This control is mandatory and cannot be waived by time pressure or reservation expiry.**
+Every future POWDER experiment/rehearsal/calibration/scored run/recovery test must, before teardown:
 
-The H1 experiment produced valid raw archives and SHA-256 manifests, but they were left under node-local `/users/aayoub/wellpulse-powder-evidence/` and were not copied to persistent `/proj/WellPulse` or off POWDER before experiment destruction. A subsequent RS-0 probe found no raw H1 bundle in user-accessible persistent storage. Backend recovery is pending with POWDER support.
+1. freeze raw sender, receiver, RF, LTE/EPC/eNB/UE, queue/database, runtime/configuration and analysis-input artifacts;
+2. compute source SHA-256 manifest;
+3. copy complete bundle to `/proj/WellPulse/evidence-escrow/<experiment>/<run-id>/`;
+4. verify persistent copy against source manifest;
+5. copy a second complete bundle off POWDER;
+6. verify the off-testbed copy against the same manifest;
+7. confirm mandatory endpoint-reconstruction inputs are present and non-empty;
+8. record experiment UUID/profile revision/node bindings/code commit/runtime versions/evidence locations/hashes in the canonical repository;
+9. emit `EVIDENCE_ESCROW_GATE=PASS`.
 
-Therefore, for every future POWDER experiment/rehearsal/calibration/scored run/recovery test:
+Anything else is `STOP / DO_NOT_TERMINATE`. Hashes, console summaries, screenshots, successful checks, or reservation expiry do not waive this gate.
 
-### Pre-termination requirements
+## Negative/null-result interpretation — frozen
 
-1. Freeze raw sender, receiver, RF, LTE/EPC/eNB/UE, queue/database, runtime/configuration and analysis-input artifacts.
-2. Compute a source-node SHA-256 manifest.
-3. Copy the complete bundle to:
-
-   `/proj/WellPulse/evidence-escrow/<experiment>/<run-id>/`
-
-4. Verify every persistent copy against the source SHA-256 manifest.
-5. Copy a second complete bundle off POWDER to the approved external evidence repository/workspace.
-6. Verify the off-testbed copy against the same SHA-256 manifest.
-7. Assert mandatory endpoint-reconstruction inputs exist and are non-empty, including generated ledger, received ledger/events, RF timeline, queue/durable-state evidence, runtime/configuration manifest and required diagnostic logs.
-8. Record experiment UUID, profile revision, node bindings, code commit, runtime/package versions, evidence locations and integrity hashes in the canonical repository/handover.
-9. Emit exactly:
-
-   `EVIDENCE_ESCROW_GATE=PASS`
-
-Only then may teardown be authorized.
-
-### Hard prohibition
-
-If the gate does not emit PASS, the required action is:
-
-`STOP / DO_NOT_TERMINATE`
-
-The following are **not** substitutes for escrow: hashes without files, console summaries, derived tables, screenshots, successful application checks, or an expiring reservation.
-
-Any automated teardown must fail closed: it must refuse experiment destruction unless both persistent-storage verification and off-testbed verification are positively recorded. Shell automation should show a visible progress bar and identify the failing escrow sub-gate.
+- B1 approximately W1 in S1/S2: standard QoS1 is sufficient while volatile process state survives; informative boundary result.
+- W1 > B1 in S3: evidence for application-level durability across volatile-state destruction.
+- B2 approximately W1 in S3: standard durable MQTT can close much of the gap; narrow WellPulse contribution accordingly.
+- B2 > W1 or W1 shows no material advantage: valid negative result; do not alter RF states, scenarios, horizon, exclusions or replication to recover a preferred story.
 
 ## Pre-score gates
 
 Before `scored_runs_authorized` can become true:
 
-1. Controlled physical-RF profile and exact identity frozen.
-2. Matched Paho configuration reproduced in remote runtime.
-3. Experimental path verified end-to-end.
-4. Record identity/checksum preserved end-to-end.
-5. Q0–Q3 frozen with radio context.
-6. H/recovery semantics prospectively frozen after the Recovery-Semantics Consortium gate.
-7. B1/W1 matching audited.
-8. Evidence capture and clock alignment sufficient for mandatory endpoints.
-9. Analysis code reconstructs the primary endpoint from a non-scored pilot without manual spreadsheet edits.
-10. **Evidence Escrow Gate implementation is rehearsed end-to-end and demonstrated fail-closed before any scored run.**
+1. controlled physical-RF profile and exact identity frozen;
+2. matched Paho configuration reproduced remotely;
+3. experimental path verified end-to-end;
+4. record identity/checksum preserved end-to-end;
+5. Q0–Q3 frozen with radio context;
+6. recovery clocks and fixed 300 s service-ready horizon frozen;
+7. B1/W1 matching audited;
+8. evidence capture and clock alignment sufficient for mandatory endpoints;
+9. analysis code reconstructs the amended primary endpoint from a non-scored pilot without manual spreadsheet edits;
+10. Golden E2E rehearsal passes the exact RS-6 service restoration and readiness procedure;
+11. Evidence Escrow Gate is demonstrated end-to-end and fail-closed;
+12. RS-7 issues explicit GO.
 
-## Current H1 provenance
+## H1 provenance
 
-`WP-HCAL-E`, UUID `9153e16a-1eb1-45f5-88bf-303636a9d1ec`, H1 run `wp2h1-a1-20260826-001`, remains `VALID_W1_RECOVERY_FAILURE`, non-scored. Do not reclassify or erase it. Raw record-level bundles are presently unavailable from user-accessible persistent storage; integrity hashes and derived observations remain provenance anchors, not substitutes for the missing raw files.
+`WP-HCAL-E`, UUID `9153e16a-1eb1-45f5-88bf-303636a9d1ec`, H1 run `wp2h1-a1-20260826-001`, remains `VALID_W1_RECOVERY_FAILURE`, non-scored. It is not retroactively reclassified and is not used to choose the new fixed horizon. Raw record-level bundles are presently unavailable from user-accessible persistent storage; backend recovery remains pending.
 
 ## Prohibited drift
 
-Do not add GPU, massive-MIMO, O-RAN/RIC, mobility, traffic-rate sweeps, QoS sweeps, multi-site operation, outdoor/rural claims, or AI components unless the frozen scientific questions cannot otherwise be answered and a pre-score amendment is approved.
+Do not add GPU, massive-MIMO, O-RAN/RIC, mobility, traffic-rate sweeps, QoS sweeps, multi-site operation, outdoor/rural claims, or AI components unless the frozen scientific questions cannot otherwise be answered and a new pre-score amendment is approved.
