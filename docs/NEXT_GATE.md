@@ -1,6 +1,6 @@
 # Next Gate — WP2 Recovery-Semantics Amendment
 
-**Current frontier:** RS-3 CAUSAL ESTIMAND / H / FAIRNESS REVIEW  
+**Current frontier:** RS-5 PROSPECTIVE PROTOCOL AMENDMENT  
 **Scientific completion:** 20%  
 **Scored authorization:** `false`  
 **H:** `UNFROZEN`
@@ -11,9 +11,11 @@
 2. `docs/AGENT_HANDOVER_POWDER_NEXT.md`
 3. `docs/CONSORTIUM_WP2_RECOVERY_SEMANTICS_GATE_2026-08-26.md`
 4. `docs/RS2_LTE_RECOVERY_MECHANISM_REVIEW_2026-08-26.md`
-5. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
-6. `experiments/WP-PWD01/protocol.md`
-7. `experiments/WP-PWD01/analysis-plan.md`
+5. `docs/RS3_ESTIMAND_H_FAIRNESS_REVIEW_2026-08-26.md`
+6. `docs/RS4_ADVERSARIAL_REVIEW_2026-08-26.md`
+7. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+8. `experiments/WP-PWD01/protocol.md`
+9. `experiments/WP-PWD01/analysis-plan.md`
 
 ## Frozen state
 
@@ -22,45 +24,47 @@
 - No replacement H trial is authorized under the old plan.
 - No scored B1/W1/B2 run is authorized.
 - Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; attenuator IDs `1 33 2 34` remain coupled.
-- Clean-order `stop UE -> EPC -> eNB -> fresh UE` is a demonstrated testbed restoration primitive, not yet an approved scientific treatment.
-- Raw H1 record-level bundles are unavailable from user-accessible persistent storage; backend recovery is pending with POWDER support.
-- Mandatory future Evidence Escrow Gate is fail-closed before every teardown.
+- Raw H1 record-level bundles remain unavailable from user-accessible persistent storage; POWDER backend recovery is pending.
+- Mandatory Evidence Escrow Gate remains fail-closed before teardown.
 
 ## RS-2 — PASS
 
-Canonical verdict: `docs/RS2_LTE_RECOVERY_MECHANISM_REVIEW_2026-08-26.md`.
+Mechanism characterized as cross-node LTE/NAS/MME/GTP-C/session-context inconsistency after the long outage. No proven bounded autonomous repair was identified. Broad engineering of old srsLTE is not authorized.
 
-RS-2 established:
+## RS-3 — PASS
 
-- persistent RF/eNB failure is not supported as the dominant blocker;
-- MQTT/WellPulse is not supported as the cause of service non-recovery;
-- UE-only restart is insufficient;
-- EPC/eNB-only reset with a live UE is insufficient;
-- the dominant diagnosis is cross-node LTE/NAS/MME/GTP-C/session-context inconsistency after the long outage;
-- clean-order reinitialization of both sides is the only demonstrated deterministic recovery primitive;
-- no specific bounded configuration-only/autonomous repair has been demonstrated.
+Accepted conceptual decomposition:
 
-RS-2 verdict:
+- `t_rf_restore` = physical Q3->Q0 treatment endpoint;
+- `t_service_ready` = first architecture-blind proof of usable experimental service;
+- `t_app_complete` = application-cohort completion;
+- `T_service = t_service_ready - t_rf_restore`;
+- `T_app = t_app_complete - t_service_ready`;
+- `T_total = t_app_complete - t_rf_restore`;
+- `cohort_cutoff_utc = t_rf_restore` remains fixed.
 
-`PASS — MECHANISM CHARACTERIZED; NO PROVEN BOUNDED AUTONOMOUS REPAIR`
+## RS-4 — PASS WITH ONE MANDATORY MODIFICATION
 
-Do not spend a new reservation broadly engineering old srsLTE recovery. One bounded offline source/config check remains permissible; absent a specific defect + deterministic fix + falsifiable micro-test, Strategy A closes for this paper.
+Canonical verdict: `docs/RS4_ADVERSARIAL_REVIEW_2026-08-26.md`.
 
-## Immediate action — RS-3
+The two-clock recovery decomposition and fairness framework survived adversarial review. The proposed W1-only `H_app` calibration did not.
 
-RS-3 must prospectively determine the causal estimands and fairness semantics for:
+RS-4 KILLED any observation-horizon rule chosen from W1 performance because the primary endpoint window would then be structurally informed by one architecture under comparison.
 
-- `t_rf_restore`
-- `t_service_ready`
-- `t_app_complete`
-- H / observation horizon
-- substrate-recovery reporting vs application-recovery reporting
-- identical architecture-neutral service-restoration treatment across B1/W1/B2
+RS-5 must therefore:
 
-Mandatory fairness invariant:
+1. adopt one architecture-independent fixed/common application observation horizon or architecture-independent calibration source;
+2. freeze a deterministic architecture-blind service-restoration rule;
+3. preserve/report `T_service`, `T_app`, and `T_total`;
+4. retain `cohort_cutoff_utc = t_rf_restore`;
+5. define symmetric service-restoration failure/technical-invalidity rules;
+6. embed the fail-closed Evidence Escrow Gate into the executable protocol;
+7. freeze the null/negative-result interpretation tree before scoring.
 
-> A restoration action may not inspect architecture identity, queue depth, delivery success, or emerging B1/W1/B2 outcomes. It must be triggered solely by prospectively frozen substrate/testbed state and applied identically where applicable.
+## Immediate action — RS-5
 
-RS-3 must also freeze the interpretation of null/negative outcomes before scored execution.
+Draft the prospective protocol amendment only. No live POWDER execution yet.
 
-No protocol amendment is frozen until RS-3 and the subsequent adversarial review pass.
+RS-5 must choose and justify the exact architecture-independent application observation horizon and the exact deterministic service-restoration trigger/procedure. It must then amend the protocol/analysis semantics without changing Q0–Q3, scenario definitions, architecture comparators, or H1 classification.
+
+After RS-5 passes, proceed to RS-6 Golden E2E rehearsal design. Only RS-7 may issue `GO_REOPEN_H`.
