@@ -25,6 +25,12 @@ jobs:
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
           echo "PORTAL_CLIENT=PASS"
+      - name: Inspect create syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment create --help
+          echo "CREATE_HELP=PASS"
       - name: Discover WP-HCAL-A experiment identity
         shell: bash
         run: |
