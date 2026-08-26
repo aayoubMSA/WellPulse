@@ -1,0 +1,117 @@
+name: WP2 Golden Owner — POWDER API to Verified Escrow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "powder/wp2-golden-owner-request.json"
+  workflow_dispatch:
+    inputs:
+      experiment_name:
+        description: "Unique non-scored experiment name (WP-GOLDEN-...)"
+        required: true
+        type: string
+      stop_at:
+        description: "Portal stop-at timestamp with timezone"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp2-golden-owner
+  cancel-in-progress: false
+
+jobs:
+  golden-owner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: aayoub
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      RCLONE_CONFIG_B64: ${{ secrets.WP_RCLONE_CONFIG_B64 }}
+
+    steps:
+      - name: Checkout canonical WellPulse state
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Prepare bounded execution request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            cat > /tmp/wp2-golden-owner-request.json <<EOF
+          {
+            "execute": "GOLDEN_E2E_NON_SCORED",
+            "experiment_name": "${{ inputs.experiment_name }}",
+            "stop_at": "${{ inputs.stop_at }}"
+          }
+          EOF
+            echo "path=/tmp/wp2-golden-owner-request.json" >> "$GITHUB_OUTPUT"
+          else
+            test -f powder/wp2-golden-owner-request.json
+            echo "path=powder/wp2-golden-owner-request.json" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Static controller gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n powder/wp2_golden_owner.sh
+          python3 -m py_compile \
+            scripts/wp_pwd01_golden_sender.py \
+            scripts/wp_pwd01_h_receiver.py \
+            scripts/reconstruct_wp2_golden.py \
+            scripts/wp2_golden_rclone_verify.py
+          echo "OWNER_STATIC_GATE=PASS"
+
+      - name: Execute GitHub-owned Golden lifecycle
+        id: owner
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x powder/wp2_golden_owner.sh
+          bash powder/wp2_golden_owner.sh "${{ steps.request.outputs.path }}"
+
+      - name: Commit sanitized lifecycle checkpoint
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(evidence/powder/wp2-golden-owner-*.md)
+          if (( ${#files[@]} == 0 )); then
+            echo "NO_SANITIZED_OWNER_CHECKPOINT_TO_COMMIT=1"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${files[@]}"
+          if git diff --cached --quiet; then
+            echo "OWNER_CHECKPOINT_ALREADY_RECORDED=1"
+            exit 0
+          fi
+          git commit -m "Record GitHub-owned WP2 Golden lifecycle checkpoint"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Final fail-closed workflow verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.owner.outcome }}" != "success" ]]; then
+            echo "WP2_GOLDEN_OWNER_WORKFLOW=FAIL_CLOSED"
+            echo "No teardown is authorized by this workflow unless the controller emitted verified G9/G10 PASS."
+            exit 1
+          fi
+          echo "WP2_GOLDEN_OWNER_WORKFLOW=PASS"
