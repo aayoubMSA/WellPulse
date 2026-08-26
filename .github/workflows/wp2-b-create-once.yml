@@ -1,0 +1,164 @@
+name: WP2-B Create One Fresh POWDER Experiment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".wp2-b-create-trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp2-b-create-once
+  cancel-in-progress: false
+
+jobs:
+  create-once:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXP_NAME: WP-HCAL-D
+      STOP_AT: '2026-08-26T19:00:00+0000'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Portal API and derive registered public identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "POWDER_API_TOKEN missing"; exit 2; }
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "POWDER SSH private key missing"; exit 2; }
+          [[ -n "$POWDER_SSH_KEY_PASSPHRASE" ]] || { echo "POWDER SSH passphrase missing"; exit 2; }
+          rm -rf /tmp/portal-api /tmp/wp2b
+          mkdir -p /tmp/wp2b "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          umask 077
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          p=Path.home()/'.ssh'/'id_ed25519_powder'
+          p.write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          cat > /tmp/wp2b/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp2b/askpass
+          export SSH_ASKPASS=/tmp/wp2b/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/wp2b/public.key </dev/null
+          echo "WP2B_KEY_DERIVATION=PASS"
+
+      - name: Fail closed if an H-cal experiment is already active
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment list > /tmp/wp2b/list-before.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          raw=json.loads(Path('/tmp/wp2b/list-before.json').read_text())
+          exps=raw if isinstance(raw,list) else raw.get('experiments',[])
+          terminal={'terminated','failed','error'}
+          active=[]
+          for x in exps:
+              if not isinstance(x,dict):
+                  continue
+              if x.get('project')!='WellPulse':
+                  continue
+              name=str(x.get('name',''))
+              status=str(x.get('status','')).lower()
+              if name.startswith('WP-HCAL-') and status not in terminal:
+                  active.append({'id':x.get('id'),'name':name,'status':status})
+          if active:
+              print('ACTIVE_HCAL_ALREADY_EXISTS', active)
+              raise SystemExit(20)
+          print('PRECREATE_ACTIVE_HCAL=NONE')
+          PY
+
+      - name: Create exactly one fresh experiment with frozen bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUB="$(cat /tmp/wp2b/public.key)"
+          BINDINGS='{"enb_node":"nuc1","ue_node":"nuc2","ue_type":"srsue"}'
+          portal-cli experiment create \
+            --name "$EXP_NAME" \
+            --project WellPulse \
+            --profile-name srslte-controlled-rf \
+            --profile-project PowderProfiles \
+            --stop-at "$STOP_AT" \
+            --bindings "$BINDINGS" \
+            --sshpubkey "$PUB" \
+            > /tmp/wp2b/create.json
+          ID="$(jq -r '.id // empty' /tmp/wp2b/create.json)"
+          [[ -n "$ID" ]] || { echo "Create returned no experiment ID"; exit 21; }
+          printf '%s\n' "$ID" > /tmp/wp2b/id
+          echo "WP2B_CREATE=PASS"
+          echo "EXPERIMENT_ID=$ID"
+
+      - name: Verify identity and frozen bindings only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/wp2b/id)"
+          portal-cli experiment get --experiment-id "$ID" > /tmp/wp2b/status.json
+          [[ "$(jq -r '.name' /tmp/wp2b/status.json)" == "$EXP_NAME" ]]
+          [[ "$(jq -r '.project' /tmp/wp2b/status.json)" == "WellPulse" ]]
+          [[ "$(jq -r '.profile_name' /tmp/wp2b/status.json)" == "srslte-controlled-rf" ]]
+          [[ "$(jq -r '.profile_project' /tmp/wp2b/status.json)" == "PowderProfiles" ]]
+          [[ "$(jq -r '.bindings.enb_node' /tmp/wp2b/status.json)" == "nuc1" ]]
+          [[ "$(jq -r '.bindings.ue_node' /tmp/wp2b/status.json)" == "nuc2" ]]
+          [[ "$(jq -r '.bindings.ue_type' /tmp/wp2b/status.json)" == "srsue" ]]
+          echo "WP2B_IDENTITY_BINDINGS=PASS"
+
+      - name: Write sanitized WP2-B checkpoint evidence
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/powder
+          python - <<'PY'
+          import json,datetime,os
+          from pathlib import Path
+          s=json.loads(Path('/tmp/wp2b/status.json').read_text())
+          keys=['id','name','project','status','profile_name','profile_project','profile_uuid','profile_version','profile_revision','created_at','started_at','expires_at','bindings']
+          safe={k:s.get(k) for k in keys if k in s}
+          now=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          out=Path('evidence/powder/wp2-b-create-once-2026-08-26.md')
+          out.write_text(
+              '# WP2-B — One Fresh POWDER Experiment\n\n'
+              f'- Checked UTC: {now}\n'
+              f'- Trigger SHA: `{os.environ.get("GITHUB_SHA","unknown")}`\n'
+              '- Classification: **NON-SCORED INFRASTRUCTURE ONLY**\n'
+              '- Experiment creation count in this workflow: **1**\n'
+              '- READY wait executed: **NO**\n'
+              '- SSH to nodes executed: **NO**\n'
+              '- LTE/RF/MQTT/scientific workload executed: **NO**\n'
+              '- Retry/recreate executed: **NO**\n'
+              '- Credential values recorded: **NO**\n'
+              '- Frozen bindings verification: **PASS**\n\n'
+              '## Sanitized experiment state immediately after creation\n\n```json\n'
+              +json.dumps(safe,indent=2,sort_keys=True)+'\n```\n',
+              encoding='utf-8')
+          PY
+
+      - name: Commit sanitized checkpoint evidence
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/powder/wp2-b-create-once-2026-08-26.md
+          git commit -m "Record WP2-B one-shot POWDER instantiation" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
