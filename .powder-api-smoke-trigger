@@ -1,1 +1,3 @@
-smoke=2026-08-24T20:02+03:00
+smoke=2026-08-26T12:45+03:00
+purpose=early-window-controlled-rf-capability-probe
+resource_mutation=false
