@@ -1,7 +1,7 @@
 # WP2 H Calibration Preflight — latest
 
-- Checked UTC: 2026-08-26T00:30:25Z
-- Tested GitHub SHA: d8ab08df5f4cac7394e16c78097b8dc2ca192649
+- Checked UTC: 2026-08-26T09:26:03Z
+- Tested GitHub SHA: e34d16fc813f0c0f6fc5824286df0b33bbc4f007
 - Python: Python 3.12.14
 - Paho MQTT: 2.1.0
 - Evidence class: **LOCAL PRE-SCORE IMPLEMENTATION QA ONLY**
@@ -32,16 +32,22 @@ test_inflight_is_bounded_and_sent_only_after_ack (test_powder_w1.DurablePahoRepl
 test_queue_is_idempotent (test_records.WellPulseKernelTests.test_queue_is_idempotent) ... ok
 test_reconciliation_detects_loss_and_duplicate (test_records.WellPulseKernelTests.test_reconciliation_detects_loss_and_duplicate) ... ok
 test_record_id_is_deterministic (test_records.WellPulseKernelTests.test_record_id_is_deterministic) ... ok
+test_conflicting_duplicate_record_id_fails_closed (test_store.DurableQueueIntegrityTests.test_conflicting_duplicate_record_id_fails_closed) ... ok
+test_exact_duplicate_is_idempotent (test_store.DurableQueueIntegrityTests.test_exact_duplicate_is_idempotent) ... ok
+test_disconnected_qos1_publish_is_counted_as_accepted_unacked (test_transport.PahoTransportTests.test_disconnected_qos1_publish_is_counted_as_accepted_unacked) ... ok
 test_frozen_public_config_is_reproducible_and_secret_safe (test_transport.PahoTransportTests.test_frozen_public_config_is_reproducible_and_secret_safe) ... ok
+test_run_isolation_identifiers_are_deterministic_and_distinct (test_transport.PahoTransportTests.test_run_isolation_identifiers_are_deterministic_and_distinct) ... ok
 test_session_constructs_with_explicit_volatile_queue (test_transport.PahoTransportTests.test_session_constructs_with_explicit_volatile_queue) ... ok
 test_unbounded_queue_is_rejected (test_transport.PahoTransportTests.test_unbounded_queue_is_rejected) ... ok
 test_broker_shell_script_passes_bash_syntax (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_broker_shell_script_passes_bash_syntax) ... ok
 test_finalizer_reconstructs_conservative_drain_time (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_finalizer_reconstructs_conservative_drain_time) ... ok
+test_missing_cohort_record_is_valid_adverse_outcome_not_invalidity (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_missing_cohort_record_is_valid_adverse_outcome_not_invalidity) ... ok
+test_predefined_sender_technical_failure_remains_replaceable (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_predefined_sender_technical_failure_remains_replaceable) ... ok
 test_python_pilot_scripts_compile (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_python_pilot_scripts_compile) ... ok
 test_q0_packet_loss_parser_rejects_100_percent_loss (test_wp2_h_pilot_scripts.WP2HPilotScriptTests.test_q0_packet_loss_parser_rejects_100_percent_loss) ... ok
 
 ----------------------------------------------------------------------
-Ran 28 tests in 14.083s
+Ran 34 tests in 14.522s
 
 OK
 
