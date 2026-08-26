@@ -43,13 +43,14 @@ jobs:
           python -m unittest discover -s tests -v > /tmp/unit-tests.log 2>&1
           RC=$?
           set -e
+          PAHO_VERSION="$(python -c 'import importlib.metadata as m; print(m.version("paho-mqtt"))')"
           {
             echo "# Local unit-test gate — latest"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
             echo "- Python: $(python --version 2>&1)"
-            echo "- Paho MQTT: $(python -c \"import importlib.metadata as m; print(m.version('paho-mqtt'))\")"
+            echo "- Paho MQTT: ${PAHO_VERSION}"
             if [[ "$RC" -eq 0 ]]; then
               echo "- Gate: **PASS**"
             else
