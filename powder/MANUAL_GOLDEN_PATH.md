@@ -162,6 +162,22 @@ remote hostname: node.wp-g1-sim.wellpulse.emulab.net
 
 These node identifiers are historical evidence only. Future reproductions must use the endpoint assigned by their own List View.
 
+## Same-resource terminate/recreate guard
+
+Do **not** assume that a successful terminate request means the just-released node can be immediately reused by a replacement experiment in the same reservation.
+
+Observed on 2026-08-26: `WP-HCAL-A` was terminated and `WP-HCAL-B` was created immediately with the same reserved `nuc1+nuc2` bindings. The replacement entered a transient `pending/booting` state with a reservation-allocation warning while the project still held the reservation.
+
+Operational rule:
+
+1. terminate the old experiment;
+2. verify the old experiment no longer resolves/owns the resources;
+3. wait for allocator/resource state to converge;
+4. only then instantiate the replacement;
+5. if the new experiment enters `pending` with a reservation conflict, preserve the state and allow the allocator to recover rather than repeatedly terminating/recreating.
+
+This is a defensive scheduling rule based on an observed allocator/release lag. It is not a claim that every immediate recreate will fail.
+
 ## Failure rule
 
 If any step fails:
