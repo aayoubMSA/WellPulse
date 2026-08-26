@@ -17,7 +17,12 @@ import time
 from wellpulse.powder_w1 import DurablePahoReplay
 from wellpulse.records import make_record
 from wellpulse.store import DurableQueue
-from wellpulse.transport import PahoQoS1Config, PahoQoS1Session
+from wellpulse.transport import (
+    PahoQoS1Config,
+    PahoQoS1Session,
+    make_run_client_id,
+    make_run_topic,
+)
 
 
 ATTENUATOR_IDS = (1, 33, 2, 34)
@@ -61,13 +66,16 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--host", default="172.16.0.1")
     parser.add_argument("--port", type=int, default=8883)
-    parser.add_argument("--topic", default="wellpulse/records")
+    parser.add_argument("--topic", default=None, help="Optional override; default is deterministic run-isolated topic")
     parser.add_argument("--ca-file", required=True)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
 
     if importlib.metadata.version("paho-mqtt") != "2.1.0":
         raise RuntimeError("WP-PWD01 requires paho-mqtt==2.1.0")
+
+    mqtt_topic = args.topic or make_run_topic(args.run_id, "HCAL")
+    mqtt_client_id = make_run_client_id(args.run_id, "HCTX")
 
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -112,7 +120,7 @@ def main() -> int:
     config = PahoQoS1Config(
         host=args.host,
         port=args.port,
-        topic=args.topic,
+        topic=mqtt_topic,
         ca_file=args.ca_file,
         tls=True,
         qos=1,
@@ -135,6 +143,11 @@ def main() -> int:
         "paho_mqtt_version": importlib.metadata.version("paho-mqtt"),
         "sqlite_version": sqlite3.sqlite_version,
         "mqtt": config.public_dict(),
+        "mqtt_isolation": {
+            "publisher_client_id": mqtt_client_id,
+            "topic": mqtt_topic,
+            "initial_session_present_required": False,
+        },
         "rf": {"Q0_db": Q0_DB, "Q3_db": Q3_DB, "attenuator_ids": list(ATTENUATOR_IDS)},
         "schedule_s": {
             "readiness_warmup": WARMUP_S,
@@ -152,7 +165,7 @@ def main() -> int:
         raise RuntimeError(f"experimental LTE route gate failed for {args.host}: {route_output}")
 
     generator_queue = DurableQueue(queue_path)
-    session = PahoQoS1Session(config, client_id=("wp-h-tx-" + args.run_id)[-64:], event_log=events_path)
+    session = PahoQoS1Session(config, client_id=mqtt_client_id, event_log=events_path)
     worker_stop = threading.Event()
     trial_abort = threading.Event()
     q0_restored_event = threading.Event()
@@ -232,6 +245,9 @@ def main() -> int:
         "run_id": args.run_id,
         "status": "STARTING",
         "scored": False,
+        "mqtt_client_id": mqtt_client_id,
+        "mqtt_topic": mqtt_topic,
+        "initial_session_present": None,
         "route_output": route_output,
         "q0_readiness_pre": None,
         "q0_health_post": None,
@@ -261,8 +277,14 @@ def main() -> int:
         connected_deadline = time.monotonic() + 20.0
         while time.monotonic() < connected_deadline and not session.snapshot()["connected"]:
             time.sleep(0.1)
-        if not session.snapshot()["connected"]:
+        initial_snapshot = session.snapshot()
+        if not initial_snapshot["connected"]:
             raise RuntimeError("MQTT session did not connect at healthy Q0")
+        summary["initial_session_present"] = initial_snapshot["session_present"]
+        if initial_snapshot["session_present"] is not False:
+            raise RuntimeError(
+                "run-isolation gate failed: fresh H-calibration publisher unexpectedly resumed an existing MQTT session"
+            )
 
         worker = threading.Thread(target=replay_worker, name="w1-replay", daemon=True)
         worker.start()
