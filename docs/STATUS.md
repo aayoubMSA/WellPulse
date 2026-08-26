@@ -1,84 +1,119 @@
 # Project Validation Status
 
-## Current state — 2026-08-26 after WP2-H implementation preflight, Africa/Cairo
+## Current state — 2026-08-26 after independent pre-WP3 consortium review and approved P0 amendments, Africa/Cairo
 
 - Canonical GitHub repository and Drive validation workspace: established.
 - FIT IoT-LAB WP-RT01: **COMPLETE / FINAL EVIDENCE PASS**; Grenoble A8; 18/18 final cells reconciled.
 - POWDER G0–G4: **PASS**.
-- POWDER G5 RF control + numeric calibration: **PASS**.
-- Old G5 experiment UUID `575d246e-8d01-4827-9a84-f4368d272cea`: **ABSENT / CLEANUP GATE PASS** as of 2026-08-26T00:14:52Z; no scientific action occurred during cleanup.
+- POWDER G5 RF control + numeric calibration: **PASS / FROZEN**.
+- Old G5 experiment UUID `575d246e-8d01-4827-9a84-f4368d272cea`: **ABSENT / CLEANUP PASS**.
+- Independent consortium review: **PROCEED WITH MATERIAL PRE-SCORE AMENDMENTS**.
+- Approved P0 amendment: `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`.
 - WP2 RF Calibration & Measurement Validation: **IN PROGRESS**.
-- WP2-H recovery-horizon calibration design: **FROZEN** in `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md` and Decision D-017.
-- WP2-H pilot implementation: **IMPLEMENTED + LOCALLY VERIFIED**, but **not yet physically executed on POWDER**.
-- Dedicated preflight evidence: `evidence/local/wp2-h-preflight-latest.md` — **28/28 tests PASS**, Python compile PASS, broker shell syntax PASS, frozen-state guards PASS on tested SHA `d8ab08df5f4cac7394e16c78097b8dc2ca192649`.
-- Scientific weighted completion remains **20%** under gate-based credit until WP2 closes.
+- WP2-H recovery-horizon design: **FROZEN AS P0-AMENDED**.
+- WP2-H implementation + P0 code amendments: **IMPLEMENTED + LOCALLY VERIFIED**.
+- Latest completed local preflight evidence: `evidence/local/wp2-h-preflight-latest.md` — **34/34 tests PASS**, Python compile PASS, broker shell syntax PASS, frozen-state guards PASS; POWDER interaction NONE; scored-run interaction NONE.
+- Physical W1 H calibration: **NOT YET EXECUTED**.
+- Scientific weighted completion remains **20%** until WP2 closes.
 - `scored_runs_authorized = false`.
 
 ## Frozen RF calibration
 
-Canonical freeze: `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`.  
-Canonical ledger: `evidence/powder/g5-rf-calibration-ledger-2026-08-26.md`.  
-Clean G5 handover: `docs/handovers/2026-08-26_G5_RF_CALIBRATION_HANDOVER.md`.
-
-Frozen programmed attenuation values:
+Canonical freeze: `experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md`.
 
 - Q0 = **0 dB** — strong/stable reference.
 - Q1 = **40 dB** — degraded but continuously connected.
-- Q2 = **52 dB** — near-threshold/intermittent; clean 20 s window = **6 replies / 12 misses**.
-- Q3 = **55 dB** — effective application-data outage from the first isolated valid outage test.
-
-All attenuation IDs `1 33 2 34` must change together. Clean post-reset boundary checks show +41, +42 and +49 remain continuously connected, while +52 is intermittent. **No additional RF sweep is authorized.**
+- Q2 = **52 dB** — near-threshold/intermittent; clean isolated 20 s window = **6 replies / 12 misses**.
+- Q3 = **55 dB** — effective application-data outage.
+- Attenuation IDs: `1 33 2 34`, always changed together.
+- **No further attenuation sweep is authorized.**
 
 ## Mandatory Q0 readiness rule
 
-Repeated severe RLF/re-attach testing can leave the LTE user-plane bearer stale even while the UE appears attached and retains an IP. The contaminated 48/50/52/54, 42/44/46/47 and first +41 observations remain preserved as invalid troubleshooting evidence and are excluded from canonical RF-state classification.
-
 Before every future scientific/non-scored calibration or scored run, Q0 must pass explicit end-to-end LTE user-plane readiness through the experimental path. Attach/IP alone is insufficient.
+
+## Approved P0 controls
+
+### H outcome classification
+
+A calibration attempt is now classified as one of:
+
+- `TECHNICALLY_INVALID` — predefined infrastructure/protocol failure; preserved and replaceable;
+- `VALID_W1_RECOVERY_FAILURE` — technically valid adverse W1 outcome; preserved, not replaceable as invalid, blocks H freeze;
+- `VALID_W1_RECOVERY_SUCCESS` — successful technically valid outcome.
+
+H requires exactly three successful outcomes. Extra successful trials are not authorized.
+
+### MQTT run/session isolation
+
+H sender/receiver now use deterministic run-unique client identities and a run-unique topic namespace. Fresh first connections must show `session_present=false`; otherwise the attempt is technically invalid.
+
+Physical verification of this rule on POWDER is still OPEN.
+
+### S3 restart domain
+
+The rule is frozen but non-scored physical/implementation verification remains OPEN:
+
+- telemetry generator stays outside the gateway restart domain and continues at 1 Hz;
+- only the gateway/client process restarts;
+- W1 durable state survives;
+- B1 recreates the volatile client with the same run-specific client identity inside the same S3 run;
+- source record sequence remains continuous;
+- restart timestamps/downtime are recorded;
+- no node reboot/power cycle substitutes for the gateway-process restart.
+
+### B1 instrumentation
+
+B1 now records accepted QoS1 publishes, including accepted disconnected submissions, PUBACK callbacks, and accepted-but-unacknowledged state. This must not be described as exact Paho internal queue occupancy.
+
+### Record identity integrity
+
+`DurableQueue.enqueue()` now fails closed if an existing `record_id` is reused with different content/checksum. Exact duplicate content remains idempotent.
 
 ## WP2-H active gate
 
-The only active scientific gate is the non-scored W1 recovery pilot required to freeze common horizon `H`.
+The active physical scientific gate remains non-scored W1 recovery-horizon calibration.
 
-Frozen calibration design:
+Target successful trial schedule:
 
-- exactly **3 valid W1 hard-outage calibration trials**;
-- workload = **1 record/s**;
-- readiness/warm-up 30 s -> Q0 60 s -> Q3 120 s -> Q0 until backlog drain;
-- TLS enabled on the MQTT calibration path;
-- p95 estimator = empirical nearest-rank; with n=3 this is the maximum valid observed drain time;
-- backlog drain completes only after both sink cohort completeness and zero W1 durable pending cohort records;
-- `H = max(120 s, ceil_to_30s(2 × p95))`;
-- if calculated `H > 300 s`, **STOP AND INVESTIGATE; do not cap**.
+`30 s readiness/warm-up -> Q0 60 s -> Q3 120 s -> Q0 until backlog drain`
 
-Implemented components:
+Frozen H rule:
 
-- `src/wellpulse/horizon.py` — deterministic H calculation;
-- `src/wellpulse/powder_w1.py` — non-blocking durable W1 replay above frozen Paho QoS1;
-- `scripts/wp_pwd01_h_sender.py` — Q0 readiness, 1 Hz generation, independent RF controller, Q3/Q0 timing, queue evidence;
-- `scripts/wp_pwd01_h_receiver.py` — TLS MQTT sink attempt ledger with SHA-256;
-- `scripts/finalize_wp_pwd01_h_calibration.py` — deterministic sink/queue drain reconstruction and H calculation;
-- `powder/wp2_h_epc_broker.sh` — ephemeral TLS broker bootstrap with private keys excluded from evidence.
+`H = max(120 s, ceil_to_30s(2 × p95))`
 
-## Remaining execution blocker for H
+With exactly three successful trials, empirical nearest-rank p95 is the maximum of the three observed successful drain times. If H exceeds 300 s, **STOP AND INVESTIGATE; do not cap**.
 
-There is currently no live POWDER experiment. A fresh `srslte-controlled-rf` experiment must be instantiated in an available reservation, and its live bindings must be verified rather than inherited from G4/G5.
+## Remaining execution blockers
 
-The repository's automated SSH secret path is also **known bad**: the current `POWDER_SSH_PRIVATE_KEY` diagnostic shows a public-key value rather than a private key. Do not trust automated remote execution through that secret until it is repaired or explicitly bypassed with the canonical local acceptance key. No private key/passphrase may enter Git or evidence.
+1. No fresh live POWDER experiment exists now; a new `srslte-controlled-rf` experiment must be instantiated during an available reservation and its live bindings verified.
+2. Automated `POWDER_SSH_PRIVATE_KEY` path remains known bad because the stored Actions value has public-key form rather than private-key form. Repair or explicitly bypass using the canonical local acceptance key. No private key/passphrase may enter Git/evidence/chat.
 
-An approved `nuc1+nuc2` fallback reservation remains available for **2026-08-26 19:00–22:00 Africa/Cairo** and should be used for this unfinished WP2 validation, not RF hunting.
+Fallback reservation remains available for `nuc1+nuc2` on **2026-08-26 19:00–22:00 Africa/Cairo**.
 
 ## Scientific programme state
 
 - WP0 Novelty & Venue Lock: **8/8 PASS**.
-- WP1 Confirmatory Protocol & Statistics Freeze: **12/12 design complete**, comparator sufficiency remains **OPEN PRE-SCORE**.
-- WP2 RF Calibration & Measurement Validation: **ACTIVE**; RF-state sub-gate PASS, H physical calibration OPEN, remaining pre-score gates OPEN.
+- WP1 Confirmatory Protocol & Statistics Freeze: **12/12 design complete**; comparator sufficiency and consortium P1 refinements remain OPEN PRE-SCORE.
+- WP2 RF Calibration & Measurement Validation: **ACTIVE**.
 - WP3 Conducted-RF Confirmatory Campaign: **0/30 — BLOCKED**.
 - WP4 OTA External Replication: **0/15 — BLOCKED**.
 - WP5 Analysis + Artifact + Paper Closure: **0/20 scientific closure**.
 
-## Comparator gate
+## Remaining pre-score work
 
-B1 remains the matched same-Paho-Python comparator but must not be represented as the strongest durable MQTT client generally. Candidate `B2_MQTT_DURABLE_CLIENT` remains an open pre-score gate; if it qualifies, prefer a compact S2/S3 sensitivity comparison rather than expanding the full primary matrix.
+1. execute the amended physical H calibration and freeze H;
+2. physically verify MQTT run/session isolation on the H path;
+3. reproduce frozen Paho/runtime configuration remotely;
+4. verify MQTT traverses `tun_srsue` / experimental radio path;
+5. verify identity/checksum evidence physically;
+6. verify clock/evidence alignment;
+7. reconstruct a non-scored pilot deterministically without manual spreadsheet edits;
+8. audit B1/W1 implementation matching with corrected B1 instrumentation;
+9. verify the S3 restart domain non-scored;
+10. close the B2 durable-client comparator decision;
+11. resolve consortium P1 analysis/claim amendments;
+12. repair or explicitly bypass the known-bad SSH automation path before trusted scored automation.
 
 ## Exact next action
 
@@ -86,12 +121,14 @@ At the next fresh `srslte-controlled-rf` experiment:
 
 1. capture live bindings and verify profile/runtime identity;
 2. establish LTE and pass explicit Q0 user-plane readiness;
-3. run the frozen **three-trial non-scored W1 H calibration** only;
-4. reconstruct the bundle deterministically and freeze H if `H <= 300 s`;
-5. preserve any invalid trial as invalid evidence and replace only for documented technical invalidity.
+3. verify route through `tun_srsue`;
+4. verify fresh MQTT session isolation;
+5. execute the amended W1 H calibration until exactly three `VALID_W1_RECOVERY_SUCCESS` trials exist, replacing only predefined `TECHNICALLY_INVALID` attempts;
+6. if any `VALID_W1_RECOVERY_FAILURE` occurs, stop and investigate rather than replacing it;
+7. reconstruct all attempted trials deterministically and freeze H only if the frozen rule passes.
 
-Do not open WP3, do not run B1/W1 scored pairs, and do not change `scored_runs_authorized` until every remaining pre-score gate closes.
+Do not open WP3, do not run B1/W1/B2 scored pairs, and do not change `scored_runs_authorized` until every remaining pre-score gate closes.
 
 ## Evidence boundary
 
-Accepted evidence proves controlled physical-RF attenuation states and locally verified H-pilot implementation. It does **not** yet prove the physical H value, WellPulse-vs-MQTT scientific effects, pump mechanics, hydraulics, groundwater, agronomy, Siwa field performance, or generic rural-field generalization.
+Accepted evidence proves controlled physical-RF attenuation states and locally verified P0/H-pilot implementation. It does **not** yet prove physical H, WellPulse-vs-MQTT scientific effects, pump mechanics, hydraulics, groundwater, agronomy, Siwa field performance, or generic rural-field generalization.
