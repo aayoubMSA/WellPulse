@@ -6,19 +6,66 @@ TMP="/tmp/wp2-golden-owner"
 mkdir -p "$TMP" evidence/powder
 
 PORTAL_HTTP="${PORTAL_HTTP:-https://boss.emulab.net:43794}"
-PORTAL_TOKEN="${PORTAL_TOKEN:?POWDER_API_TOKEN/PORTAL_TOKEN is required}"
+PORTAL_TOKEN="${PORTAL_TOKEN:-}"
 POWDER_USERNAME="${POWDER_USERNAME:-aayoub}"
-POWDER_SSH_PRIVATE_KEY="${POWDER_SSH_PRIVATE_KEY:?POWDER_SSH_PRIVATE_KEY is required}"
+POWDER_SSH_PRIVATE_KEY="${POWDER_SSH_PRIVATE_KEY:-}"
 POWDER_SSH_KEY_PASSPHRASE="${POWDER_SSH_KEY_PASSPHRASE:-}"
-RCLONE_CONFIG_B64="${RCLONE_CONFIG_B64:?WP_RCLONE_CONFIG_B64 is required before experiment creation}"
+RCLONE_CONFIG_B64="${RCLONE_CONFIG_B64:-}"
 EXPECTED_KEY_FP="${WP_EXPECTED_KEY_FP:-SHA256:jQGQvU86rtuEchT50N1HuB4Cmizpvbmp0zSBR4rowxY}"
 PROFILE_PROJECT="PowderProfiles"
 PROFILE_NAME="srslte-controlled-rf"
 BINDINGS='{"enb_node":"nuc1","ue_node":"nuc2","ue_type":"srsue"}'
 
+export PORTAL_HTTP PORTAL_TOKEN POWDER_SSH_PRIVATE_KEY POWDER_SSH_KEY_PASSPHRASE RCLONE_CONFIG_B64
+
+EXPID=""
+RUN_ID=""
+EXP_NAME=""
+STOP_AT=""
+GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+OWNER_FINALIZED=0
+SSH_AGENT_STARTED=0
+
 bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-58s' "$p" "$m"; }
 fail(){ echo; echo "WP2_GOLDEN_OWNER=FAIL:$1" >&2; exit "${2:-90}"; }
 utc(){ date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+write_summary(){
+  local rc="${1:-unknown}" verdict="${2:-UNKNOWN}" now out
+  now="$(utc)"
+  out="evidence/powder/wp2-golden-owner-${RUN_ID:-pre-run}.md"
+  cat > "$out" <<EOF
+# WP2 Golden — GitHub-owned execution checkpoint
+
+- Checked UTC: $now
+- GitHub run ID: ${GITHUB_RUN_ID:-manual}
+- GitHub SHA: $GIT_SHA
+- Experiment ID: ${EXPID:-not_created}
+- Experiment name: ${EXP_NAME:-not_set}
+- Profile: $PROFILE_PROJECT/$PROFILE_NAME
+- Bindings: enb_node=nuc1; ue_node=nuc2; ue_type=srsue
+- Golden run ID: ${RUN_ID:-not_started}
+- Controller exit code: $rc
+- Controller verdict: **$verdict**
+- Scored run: **NO**
+- Credential material recorded: **NO**
+- Automatic termination allowed without verified G9: **NO**
+EOF
+}
+
+on_exit(){
+  local rc=$?
+  set +e
+  if [[ "$SSH_AGENT_STARTED" -eq 1 ]]; then ssh-agent -k >/dev/null 2>&1 || true; fi
+  if [[ -n "$EXPID" && "$OWNER_FINALIZED" -ne 1 && "$rc" -ne 0 ]]; then
+    echo "OWNER_FAIL_CLOSED=1"
+    echo "EXPERIMENT_LEFT_LIVE=$EXPID"
+    echo "AUTOMATIC_TERMINATION=PROHIBITED"
+    write_summary "$rc" "FAIL_CLOSED_LEFT_LIVE"
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
 
 [[ -f "$REQUEST" ]] || fail REQUEST_MISSING 2
 EXECUTE="$(jq -r '.execute // ""' "$REQUEST")"
@@ -30,7 +77,9 @@ STOP_AT="$(jq -r '.stop_at // ""' "$REQUEST")"
 
 # Secrets are validated before any Portal mutation.
 bar 3 'Validating GitHub-held credentials before mutation'; echo
-[[ -n "$PORTAL_TOKEN" && -n "$POWDER_SSH_PRIVATE_KEY" && -n "$RCLONE_CONFIG_B64" ]] || fail REQUIRED_SECRET_MISSING 4
+[[ -n "$PORTAL_TOKEN" ]] || fail POWDER_API_TOKEN_MISSING 4
+[[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || fail POWDER_SSH_PRIVATE_KEY_MISSING 4
+[[ -n "$RCLONE_CONFIG_B64" ]] || fail WP_RCLONE_CONFIG_B64_MISSING 4
 
 rm -rf /tmp/portal-api "$TMP/ssh"
 mkdir -p "$TMP/ssh" "$HOME/.ssh"
@@ -55,8 +104,8 @@ ACTUAL_FP="$(ssh-keygen -lf "$TMP/public.key" | awk '{print $2}')"
 [[ "$ACTUAL_FP" == "$EXPECTED_KEY_FP" ]] || fail SSH_KEY_FINGERPRINT_MISMATCH 5
 
 eval "$(ssh-agent -s)" >/dev/null
+SSH_AGENT_STARTED=1
 setsid -w ssh-add "$HOME/.ssh/id_ed25519_powder" </dev/null >/dev/null
-trap 'ssh-agent -k >/dev/null 2>&1 || true' EXIT
 
 bar 7 'Installing official Emulab Portal API client'; echo
 git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api >/dev/null 2>&1
@@ -95,19 +144,6 @@ EXPID="$(jq -r '.id // empty' "$TMP/create.json")"
 [[ "$EXPID" =~ ^[0-9A-Fa-f-]{36}$ ]] || fail CREATE_RETURNED_NO_UUID 21
 echo "$EXPID" > "$TMP/experiment-id"
 echo "EXPERIMENT_ID=$EXPID"
-
-# After mutation, every failure is fail-closed with no automatic termination unless
-# the Golden run later proves dual verified escrow and emits TEARDOWN_AUTHORIZED=YES.
-leave_live(){
-  local rc=$?
-  set +e
-  echo "OWNER_FAIL_CLOSED=1"
-  echo "EXPERIMENT_LEFT_LIVE=$EXPID"
-  echo "AUTOMATIC_TERMINATION=PROHIBITED"
-  write_summary "$rc" "FAIL_CLOSED_LEFT_LIVE"
-  exit "$rc"
-}
-trap leave_live ERR
 
 bar 18 'Waiting for POWDER READY state'; echo
 READY=0
@@ -169,8 +205,9 @@ ssh_wait "$CORE_USER" "$CORE_EXT" "$CORE_PORT" CORE
 ssh_wait "$UE_USER" "$UE_EXT" "$UE_PORT" UE
 
 bar 34 'Packaging exact GitHub checkout for both nodes'; echo
-GIT_SHA="$(git rev-parse HEAD)"
-tar -czf "$TMP/wellpulse-repo.tgz" --exclude='./.git/objects/pack/*.pack' .
+# actions/checkout must use persist-credentials:false; strip any accidental extraheader defensively.
+git config --local --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true
+tar -czf "$TMP/wellpulse-repo.tgz" .
 
 copy_repo(){
   local user=$1 host=$2 port=$3
@@ -181,8 +218,8 @@ copy_repo "$CORE_USER" "$CORE_EXT" "$CORE_PORT"
 copy_repo "$UE_USER" "$UE_EXT" "$UE_PORT"
 
 bar 39 'Bootstrapping deterministic runtime dependencies'; echo
-CORE_BOOT='sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mosquitto rsync tmux python3-pip openssl >/dev/null && python3 -m pip install --user --quiet paho-mqtt'
-UE_BOOT='sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync tmux python3-pip openssl curl unzip >/dev/null && python3 -m pip install --user --quiet paho-mqtt && curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null'
+CORE_BOOT='sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mosquitto rsync tmux python3-pip openssl >/dev/null && python3 -m pip install --user --quiet paho-mqtt==2.1.0'
+UE_BOOT='sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync tmux python3-pip openssl curl unzip >/dev/null && python3 -m pip install --user --quiet paho-mqtt==2.1.0 && curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null'
 ssh -A "${SSH_COMMON[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_EXT" "$CORE_BOOT"
 ssh -A "${SSH_COMMON[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "$UE_BOOT"
 
@@ -198,13 +235,14 @@ ssh -A "${SSH_COMMON[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" 'mkdir -p "$HOME/.con
 rm -f "$TMP/rclone.conf"
 
 bar 48 'Verifying Drive and internal node-to-node SSH before science'; echo
+PRE_OK=0
 for i in $(seq 1 5); do
   if ssh -A "${SSH_COMMON[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" 'rclone lsf gdrive: >/dev/null 2>&1 && getent hosts enb1 >/dev/null && ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new aayoub@enb1 true'; then
-    echo "PRE_GOLDEN_REMOTE_AND_INTERNAL_SSH=PASS"; break
+    PRE_OK=1; echo "PRE_GOLDEN_REMOTE_AND_INTERNAL_SSH=PASS"; break
   fi
-  [[ "$i" -eq 5 ]] && fail PRE_GOLDEN_CONNECTIVITY_FAILED 31
   sleep 15
 done
+[[ "$PRE_OK" -eq 1 ]] || fail PRE_GOLDEN_CONNECTIVITY_FAILED 31
 
 RUN_ID="wp2-golden-gh-${GITHUB_RUN_ID:-manual}-$(date -u +%Y%m%dT%H%M%SZ)"
 echo "$RUN_ID" > "$TMP/run-id"
@@ -222,33 +260,11 @@ if [[ "$GOLDEN_RC" -eq 0 ]] && grep -q '^GOLDEN_E2E=PASS$' "$TMP/golden-console.
   TEARDOWN_OK=1
 fi
 
-write_summary(){
-  local rc="${1:-$GOLDEN_RC}" verdict="${2:-UNKNOWN}"
-  local now; now="$(utc)"
-  local out="evidence/powder/wp2-golden-owner-${RUN_ID:-pre-run}.md"
-  cat > "$out" <<EOF
-# WP2 Golden — GitHub-owned execution checkpoint
-
-- Checked UTC: $now
-- GitHub run ID: ${GITHUB_RUN_ID:-manual}
-- GitHub SHA: $GIT_SHA
-- Experiment ID: $EXPID
-- Experiment name: $EXP_NAME
-- Profile: $PROFILE_PROJECT/$PROFILE_NAME
-- Bindings: enb_node=nuc1; ue_node=nuc2; ue_type=srsue
-- Golden run ID: ${RUN_ID:-not_started}
-- Golden exit code: $rc
-- Controller verdict: **$verdict**
-- Scored run: **NO**
-- Credential material recorded: **NO**
-- Automatic termination allowed without verified G9: **NO**
-EOF
-}
-
 if [[ "$TEARDOWN_OK" -ne 1 ]]; then
   echo "GOLDEN_OWNER_VERDICT=STOP_DO_NOT_TERMINATE"
   echo "EXPERIMENT_ID=$EXPID"
   write_summary "$GOLDEN_RC" "STOP_DO_NOT_TERMINATE"
+  OWNER_FINALIZED=1
   exit 70
 fi
 
@@ -271,6 +287,7 @@ echo
 
 bar 100 'GitHub-owned Golden lifecycle complete'; echo
 write_summary 0 "PASS_DUAL_ESCROW_AND_TERMINATED"
+OWNER_FINALIZED=1
 echo "WP2_GOLDEN_OWNER=PASS"
 echo "GOLDEN_E2E=PASS"
 echo "EVIDENCE_ESCROW_GATE=PASS"
