@@ -17,15 +17,12 @@ jobs:
   api-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     env:
       PORTAL_HTTP: https://boss.emulab.net:43794
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install official Portal API client
+      - name: Install Portal API
         shell: bash
         run: |
           set -euo pipefail
@@ -33,10 +30,7 @@ jobs:
           rm -rf /tmp/portal-api
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-          portal-cli resgroup search --help >/tmp/search-help.txt 2>&1 || true
-          portal-cli resgroup search_raw --help >/tmp/search-raw-help.txt 2>&1 || true
-
-      - name: Search earliest same-resource slot
+      - name: Search generic NUC5300 pair
         shell: bash
         run: |
           set -euo pipefail
@@ -46,55 +40,50 @@ jobs:
             "project": "WellPulse",
             "nodetypes": {
               "nodetypes": [
-                {"nodetype": "nuc1", "count": 1, "urn": "urn:publicid:IDN+emulab.net+authority+cm"},
-                {"nodetype": "nuc2", "count": 1, "urn": "urn:publicid:IDN+emulab.net+authority+cm"}
+                {"nodetype": "nuc5300", "count": 2, "urn": "urn:publicid:IDN+emulab.net+authority+cm"}
               ]
             }
           }
           JSON
-
           set +e
           portal-cli resgroup search_raw --duration 3 --body @/tmp/wp-res-search/body.json > /tmp/wp-res-search/search3.json 2>/tmp/wp-res-search/search3.err
           RC3=$?
           portal-cli resgroup search_raw --duration 2 --body @/tmp/wp-res-search/body.json > /tmp/wp-res-search/search2.json 2>/tmp/wp-res-search/search2.err
           RC2=$?
+          portal-cli resgroup search_raw --duration 1 --body @/tmp/wp-res-search/body.json > /tmp/wp-res-search/search1.json 2>/tmp/wp-res-search/search1.err
+          RC1=$?
           set -e
-
-          python - "$RC3" "$RC2" <<'PY'
+          python - "$RC3" "$RC2" "$RC1" <<'PY'
           import json, os, re, sys, datetime
           from pathlib import Path
-          rc3, rc2 = map(int, sys.argv[1:3])
+          rcs=list(map(int,sys.argv[1:4]))
           def readj(p):
-              try: return json.loads(Path(p).read_text())
-              except Exception: return None
-          def safeerr(p):
+              try:return json.loads(Path(p).read_text())
+              except:return None
+          def err(p):
               t=Path(p).read_text(errors='replace') if Path(p).exists() else ''
-              t=re.sub(r'(?i)(token|authorization|bearer)\s*[:=]\s*\S+', r'\1=REDACTED', t)
-              return t[-1200:]
+              return re.sub(r'(?i)(token|authorization|bearer)\s*[:=]\s*\S+',r'\1=REDACTED',t)[-1000:]
           now=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
           with Path('evidence/powder/api-smoke.md').open('w',encoding='utf-8') as f:
-              f.write('# POWDER early-window availability search\n\n')
+              f.write('# POWDER generic NUC5300 early-window search\n\n')
               f.write(f'- Checked UTC: {now}\n')
               f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA","unknown")}\n')
-              f.write('- Request: `nuc1 x1 + nuc2 x1`, Emulab, project `WellPulse`\n')
+              f.write('- Request: `nuc5300 x2`, Emulab, project `WellPulse`\n')
               f.write('- Resource mutation attempted: **NONE**\n')
-              f.write(f'- 3-hour search exit: `{rc3}`\n')
-              f.write(f'- 2-hour search exit: `{rc2}`\n')
-              f.write('- Token content recorded: **NO**\n\n')
-              f.write('## 3-hour result\n\n```json\n'+json.dumps(readj('/tmp/wp-res-search/search3.json'),indent=2,sort_keys=True)+'\n```\n')
-              f.write('\n## 2-hour result\n\n```json\n'+json.dumps(readj('/tmp/wp-res-search/search2.json'),indent=2,sort_keys=True)+'\n```\n')
-              if rc3 != 0: f.write('\n## 3-hour stderr\n\n```text\n'+safeerr('/tmp/wp-res-search/search3.err')+'\n```\n')
-              if rc2 != 0: f.write('\n## 2-hour stderr\n\n```text\n'+safeerr('/tmp/wp-res-search/search2.err')+'\n```\n')
-              f.write('\n## CLI search help\n\n```text\n'+Path('/tmp/search-raw-help.txt').read_text(errors='replace')[-4000:]+'\n```\n')
+              f.write('- Existing 19:00–22:00 fallback reservation modified: **NO**\n')
+              for hours,rc in zip((3,2,1),rcs):
+                  f.write(f'\n## {hours}-hour result\n\n')
+                  f.write(f'- Exit: `{rc}`\n\n```json\n{json.dumps(readj(f"/tmp/wp-res-search/search{hours}.json"),indent=2,sort_keys=True)}\n```\n')
+                  if rc: f.write(f'\n```text\n{err(f"/tmp/wp-res-search/search{hours}.err")}\n```\n')
+              f.write('\n- Token content recorded: **NO**\n')
           PY
-
-      - name: Commit sanitized search evidence
+      - name: Commit evidence
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add evidence/powder/api-smoke.md
-          git commit -m "Record earliest POWDER NUC-pair window search" || exit 0
+          git commit -m "Record generic NUC5300 early-window search" || exit 0
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
