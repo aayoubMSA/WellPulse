@@ -1,8 +1,8 @@
-# WP-PWD01 Golden E2E mandatory evidence inventory v1.1
+# WP-PWD01 Golden E2E mandatory evidence inventory v1.2
 # Format: CLASS|RELATIVE_PATH|NONEMPTY|DESCRIPTION
 # CLASS:
 #   REQUIRED   = must exist before Evidence Escrow Gate starts
-#   CONDITIONAL = required only for the selected architecture/configuration
+#   CONDITIONAL = preserved when the platform exposes that exact file
 #   GENERATED  = produced by Evidence Escrow Gate itself and verified by teardown guard
 
 REQUIRED|sender/sender_summary.json|yes|Sender/run summary and frozen clocks
@@ -16,11 +16,13 @@ REQUIRED|receiver/telemetry_received.csv|yes|All receiver attempts with receive 
 REQUIRED|receiver/receiver_events.jsonl|yes|Receiver/session event ledger
 REQUIRED|substrate/service_restore.txt|yes|G5 deterministic restoration console/timestamps
 REQUIRED|substrate/service_ready_probe.txt|yes|G6 architecture-blind readiness proof
-REQUIRED|substrate/core_start.console|yes|Profile-authoritative core/eNB startup console
-REQUIRED|substrate/ue_start.console|yes|Profile-authoritative UE startup console
-REQUIRED|substrate/epc.log|yes|EPC/MME/SPGW diagnostic log copied before teardown
-REQUIRED|substrate/enb.log|yes|eNB/RAN diagnostic log copied before teardown
-REQUIRED|substrate/ue.log|yes|UE/NAS/RRC/PHY diagnostic log copied before teardown
+REQUIRED|substrate/core_start.console|yes|Profile-authoritative core/eNB startup command console
+REQUIRED|substrate/ue_start.console|yes|Profile-authoritative UE startup command console
+REQUIRED|substrate/core_tmux_capture.txt|yes|Complete available core/eNB tmux pane capture after rehearsal
+REQUIRED|substrate/ue_tmux_capture.txt|yes|Complete available UE tmux pane capture after rehearsal
+CONDITIONAL|substrate/epc.log|yes|Native EPC/MME/SPGW log when exposed by profile/runtime
+CONDITIONAL|substrate/enb.log|yes|Native eNB/RAN log when exposed by profile/runtime
+CONDITIONAL|substrate/ue.log|yes|Native UE/NAS/RRC/PHY log when exposed by profile/runtime
 REQUIRED|runtime/core_runtime_fingerprint.txt|yes|Core/eNB runtime/config/code fingerprint
 REQUIRED|runtime/ue_runtime_fingerprint.txt|yes|UE/application runtime/config/code fingerprint
 REQUIRED|orchestration/golden_console.txt|yes|Top-level progress-visible G0-G10 console log
