@@ -1,1 +1,4 @@
-trigger=2026-08-26T11:16Z
+experiment_id=979d0001-9af9-4494-a626-809cfa4f6bd7
+purpose=manifest_and_ssh_both_nodes
+resource_mutation=false
+trigger_utc=2026-08-26T17:08:00Z
