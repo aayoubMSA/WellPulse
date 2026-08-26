@@ -15,6 +15,14 @@ PYTHON_SCRIPTS = [
 ]
 
 
+def load_script(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class WP2HPilotScriptTests(unittest.TestCase):
     def test_python_pilot_scripts_compile(self):
         for path in PYTHON_SCRIPTS:
@@ -30,12 +38,15 @@ class WP2HPilotScriptTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stdout)
 
+    def test_q0_packet_loss_parser_rejects_100_percent_loss(self):
+        sender = load_script("h_sender", ROOT / "scripts" / "wp_pwd01_h_sender.py")
+        self.assertTrue(sender.has_zero_packet_loss("5 packets transmitted, 5 received, 0% packet loss"))
+        self.assertTrue(sender.has_zero_packet_loss("5 packets transmitted, 5 received, 0.0% packet loss"))
+        self.assertFalse(sender.has_zero_packet_loss("5 packets transmitted, 0 received, 100% packet loss"))
+        self.assertFalse(sender.has_zero_packet_loss("no packet-loss summary"))
+
     def test_finalizer_reconstructs_conservative_drain_time(self):
-        script = ROOT / "scripts" / "finalize_wp_pwd01_h_calibration.py"
-        spec = importlib.util.spec_from_file_location("h_finalize", script)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        module = load_script("h_finalize", ROOT / "scripts" / "finalize_wp_pwd01_h_calibration.py")
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
