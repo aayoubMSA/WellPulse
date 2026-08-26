@@ -7,11 +7,11 @@ RUN_ID="${WP_RUN_ID:?WP_RUN_ID is required}"
 PY="${WP_PYTHON:-python3}"
 MANIFEST="$PERSIST_DIR/escrow/SOURCE_SHA256SUMS.txt"
 
-fail(){ echo "TEARDOWN_GUARD=FAIL_RCLONE:$1"; exit 71; }
+fail(){ echo "TEARDOWN_GUARD=FAIL_RCLONE:$1"; echo 'TEARDOWN_AUTHORIZED=NO'; exit 71; }
 command -v rclone >/dev/null 2>&1 || fail RCLONE_MISSING
 [[ -s "$MANIFEST" ]] || fail SOURCE_MANIFEST_MISSING
-[[ -s "$PERSIST_DIR/escrow/EVIDENCE_ESCROW_GATE.PASS" ]] || fail PERSISTENT_PASS_MISSING
-grep -q "run_id=$RUN_ID" "$PERSIST_DIR/escrow/EVIDENCE_ESCROW_GATE.PASS" || fail PERSISTENT_RUN_ID
+[[ -s "$PERSIST_DIR/escrow/PERSISTENT_ESCROW_GATE.PASS" ]] || fail PERSISTENT_PASS_MISSING
+grep -q "run_id=$RUN_ID" "$PERSIST_DIR/escrow/PERSISTENT_ESCROW_GATE.PASS" || fail PERSISTENT_RUN_ID
 (
   cd "$PERSIST_DIR"
   sha256sum -c escrow/SOURCE_SHA256SUMS.txt >/dev/null
