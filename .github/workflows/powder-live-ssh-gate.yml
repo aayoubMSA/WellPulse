@@ -22,7 +22,7 @@ jobs:
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
       POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
       POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
-      EXPERIMENT_ID: 979d0001-9af9-4494-a626-809cfa4f6bd7
+      EXPERIMENT_ID: 9153e16a-1eb1-45f5-88bf-303636a9d1ec
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +72,7 @@ jobs:
           portal-cli experiment get --experiment-id "$EXPERIMENT_ID" > /tmp/wp-live/status.json
           STATUS="$(jq -r '.status // "unknown"' /tmp/wp-live/status.json)"
           echo "EXPERIMENT_STATUS=$STATUS"
-          [[ "$(jq -r '.name' /tmp/wp-live/status.json)" == "WP-HCAL-D" ]]
+          [[ "$(jq -r '.name' /tmp/wp-live/status.json)" == "WP-HCAL-E" ]]
           [[ "$(jq -r '.project' /tmp/wp-live/status.json)" == "WellPulse" ]]
           [[ "$(jq -r '.profile_name' /tmp/wp-live/status.json)" == "srslte-controlled-rf" ]]
           [[ "$(jq -r '.profile_project' /tmp/wp-live/status.json)" == "PowderProfiles" ]]
@@ -193,7 +193,7 @@ jobs:
           safe={k:status.get(k) for k in ('id','name','project','status','profile_name','profile_project','profile_uuid','profile_version','profile_revision','created_at','started_at','expires_at','bindings') if k in status}
           gate='PASS' if Path('/tmp/wp-live/ssh-gate').exists() and Path('/tmp/wp-live/ssh-gate').read_text().strip()=='PASS' else 'FAIL'
           out=[
-              '# WP2 H-Cal D Live Manifest + SSH Gate — latest','',
+              '# WP2 H-Cal E Live Manifest + SSH Gate — latest','',
               f'- Checked UTC: {dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}',
               f'- Git SHA: {os.environ.get("GITHUB_SHA","unknown")}',
               '- Evidence class: **READ_ONLY INFRASTRUCTURE PRE-SCIENCE GATE**',
@@ -206,7 +206,7 @@ jobs:
               '## SSH results','~~~json',json.dumps(results,indent=2,sort_keys=True),'~~~','',
               '- Credentials recorded: **NO**'
           ]
-          Path('evidence/powder/wp2-hcal-d-live-gate-latest.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          Path('evidence/powder/wp2-hcal-e-live-gate-latest.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
           PY
 
       - name: Commit sanitized live-gate evidence
@@ -214,12 +214,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          OUT=evidence/powder/wp2-hcal-d-live-gate-latest.md
+          OUT=evidence/powder/wp2-hcal-e-live-gate-latest.md
           [[ -f "$OUT" ]] || exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$OUT"
-          git commit -m "Record WP2 H-cal D live manifest and SSH gate" || exit 0
+          git commit -m "Record WP2 H-cal E live manifest and SSH gate" || exit 0
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
 
