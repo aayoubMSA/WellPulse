@@ -7,74 +7,225 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: powder-live-ssh-gate
+  cancel-in-progress: false
 
 jobs:
   ssh-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
       POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
       POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXPERIMENT_ID: 979d0001-9af9-4494-a626-809cfa4f6bd7
     steps:
-      - name: Materialize and unlock key
+      - uses: actions/checkout@v4
+
+      - name: Install Portal client and unlock current automation identity
         shell: bash
         run: |
           set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "PORTAL_TOKEN_MISSING"; exit 2; }
           [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "PRIVATE_KEY_MISSING"; exit 2; }
           [[ -n "$POWDER_SSH_KEY_PASSPHRASE" ]] || { echo "PASSPHRASE_MISSING"; exit 3; }
-          mkdir -p "$HOME/.ssh"
+          rm -rf /tmp/portal-api /tmp/wp-live
+          mkdir -p /tmp/wp-live "$HOME/.ssh" evidence/powder
           chmod 700 "$HOME/.ssh"
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
           umask 077
           python - <<'PY'
           import os
           from pathlib import Path
-          raw=os.environ['POWDER_SSH_PRIVATE_KEY']
-          raw=raw.replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
           p=Path.home()/'.ssh'/'id_ed25519_powder'
           p.write_text(raw, encoding='utf-8', newline='\n')
           lines=raw.splitlines()
           assert lines and lines[0]=='-----BEGIN OPENSSH PRIVATE KEY-----'
           assert lines[-1]=='-----END OPENSSH PRIVATE KEY-----'
-          print('KEY_STRUCTURE=PASS')
-          print('KEY_LINE_COUNT='+str(len(lines)))
           PY
           chmod 600 "$HOME/.ssh/id_ed25519_powder"
-          cat > /tmp/wp-askpass <<'EOF'
+          cat > /tmp/wp-live/askpass <<'EOF'
           #!/usr/bin/env bash
           printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
           EOF
-          chmod 700 /tmp/wp-askpass
-          export SSH_ASKPASS=/tmp/wp-askpass
-          export SSH_ASKPASS_REQUIRE=force
-          export DISPLAY=:0
+          chmod 700 /tmp/wp-live/askpass
+          export SSH_ASKPASS=/tmp/wp-live/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
           eval "$(ssh-agent -s)" >/dev/null
           setsid -w ssh-add "$HOME/.ssh/id_ed25519_powder" </dev/null
-          ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/wp-public.key </dev/null
-          FP="$(ssh-keygen -lf /tmp/wp-public.key | awk '{print $2}')"
-          echo "ACTUAL_FINGERPRINT=$FP"
-          echo "PRIVATE_KEY_UNLOCK=PASS"
-          echo "SSH_AGENT_LOAD=PASS"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/wp-live/public.key </dev/null
+          ssh-keygen -lf /tmp/wp-live/public.key | awk '{print "AUTOMATION_FINGERPRINT="$2}'
+          echo "IDENTITY_UNLOCK=PASS"
 
-      - name: SSH nuc1 read-only gate
+      - name: Read exact experiment state and live manifest
+        id: state
         shell: bash
         run: |
           set -euo pipefail
-          ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            aayoub@nuc1.emulab.net \
-            'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'
-          echo "SSH_NUC1=PASS"
+          portal-cli experiment get --experiment-id "$EXPERIMENT_ID" > /tmp/wp-live/status.json
+          STATUS="$(jq -r '.status // "unknown"' /tmp/wp-live/status.json)"
+          echo "EXPERIMENT_STATUS=$STATUS"
+          [[ "$(jq -r '.name' /tmp/wp-live/status.json)" == "WP-HCAL-D" ]]
+          [[ "$(jq -r '.project' /tmp/wp-live/status.json)" == "WellPulse" ]]
+          [[ "$(jq -r '.profile_name' /tmp/wp-live/status.json)" == "srslte-controlled-rf" ]]
+          [[ "$(jq -r '.profile_project' /tmp/wp-live/status.json)" == "PowderProfiles" ]]
+          [[ "$(jq -r '.bindings.enb_node' /tmp/wp-live/status.json)" == "nuc1" ]]
+          [[ "$(jq -r '.bindings.ue_node' /tmp/wp-live/status.json)" == "nuc2" ]]
+          [[ "$(jq -r '.bindings.ue_type' /tmp/wp-live/status.json)" == "srsue" ]]
+          if [[ "$STATUS" == "ready" || "$STATUS" == "running" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            portal-cli experiment manifests get --experiment-id "$EXPERIMENT_ID" > /tmp/wp-live/manifests.json
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: SSH nuc2 read-only gate
+      - name: Parse live node mapping and SSH endpoints
+        if: steps.state.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            aayoub@nuc2.emulab.net \
-            'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'
-          echo "SSH_NUC2=PASS"
+          python - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/wp-live/manifests.json').read_text())
+          xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()):
+                  xmls.append(x)
+          walk(obj)
+          maps={}
+          endpoints={}
+          for text in xmls:
+              try:
+                  root=ET.fromstring(text)
+              except Exception:
+                  continue
+              for node in root.iter():
+                  if node.tag.rsplit('}',1)[-1] != 'node':
+                      continue
+                  cid=node.attrib.get('client_id')
+                  if not cid:
+                      continue
+                  maps[cid]=node.attrib.get('component_id','')
+                  for el in node.iter():
+                      if el.tag.rsplit('}',1)[-1]=='login' and el.attrib.get('hostname'):
+                          endpoints[cid]=(el.attrib.get('username','aayoub'),el.attrib['hostname'],el.attrib.get('port','22'))
+                          break
+          assert maps.get('enb1','').endswith('+nuc1'), maps
+          assert maps.get('rue1','').endswith('+nuc2'), maps
+          assert 'enb1' in endpoints and 'rue1' in endpoints, endpoints
+          Path('/tmp/wp-live/mapping.json').write_text(json.dumps({'physical':maps,'endpoints':endpoints},indent=2,sort_keys=True))
+          Path('/tmp/wp-live/endpoints.tsv').write_text(
+              ''.join(f'{cid}\t{u}\t{h}\t{p}\n' for cid,(u,h,p) in endpoints.items() if cid in {'enb1','rue1'})
+          )
+          print('LIVE_MANIFEST_BINDINGS=PASS')
+          print('LIVE_ENDPOINTS='+json.dumps(endpoints,sort_keys=True))
+          PY
 
-      - name: Ownership SSH gate complete
+      - name: Prove SSH on both manifest-derived endpoints
+        if: steps.state.outputs.ready == 'true'
+        id: ssh
         shell: bash
         run: |
-          echo "LIVE_SSH_OWNERSHIP_GATE=PASS"
+          set -uo pipefail
+          : > /tmp/wp-live/ssh-results.tsv
+          while IFS=$'\t' read -r CID USER HOST PORT; do
+            set +e
+            ssh -vv               -o BatchMode=yes               -o IdentitiesOnly=yes               -o IdentityAgent="$SSH_AUTH_SOCK"               -i "$HOME/.ssh/id_ed25519_powder"               -o ConnectTimeout=15               -o StrictHostKeyChecking=accept-new               -o UserKnownHostsFile="$HOME/.ssh/known_hosts"               -p "$PORT" "$USER@$HOST"               'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'               > "/tmp/wp-live/ssh-$CID.out" 2> "/tmp/wp-live/ssh-$CID.err"
+            RC=$?
+            set -e
+            printf '%s\t%s\t%s\t%s\t%s\n' "$CID" "$USER" "$HOST" "$PORT" "$RC" >> /tmp/wp-live/ssh-results.tsv
+          done < /tmp/wp-live/endpoints.tsv
+          python - <<'PY'
+          from pathlib import Path
+          rows=[line.rstrip('\n').split('\t') for line in Path('/tmp/wp-live/ssh-results.tsv').read_text().splitlines()]
+          got={r[0]:int(r[4]) for r in rows}
+          print('SSH_RESULTS='+repr(got))
+          if got.get('enb1')==0 and got.get('rue1')==0:
+              Path('/tmp/wp-live/ssh-gate').write_text('PASS\n')
+              print('SSH_BOTH_NODES=PASS')
+          else:
+              Path('/tmp/wp-live/ssh-gate').write_text('FAIL\n')
+              print('SSH_BOTH_NODES=FAIL')
+          PY
+
+      - name: Write sanitized live-gate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          from pathlib import Path
+          def load_json(p):
+              try: return json.loads(Path(p).read_text())
+              except Exception: return {}
+          def clean_tail(p):
+              try: s=Path(p).read_text(errors='replace')
+              except Exception: return ''
+              s=re.sub(r'(?i)(authorization|bearer|token|passphrase)\s*[:=]\s*\S+',r'\1=REDACTED',s)
+              lines=[x for x in s.splitlines() if 'Offering public key' not in x and 'identity file' not in x]
+              return '\n'.join(lines[-12:])
+          status=load_json('/tmp/wp-live/status.json')
+          mapping=load_json('/tmp/wp-live/mapping.json')
+          results=[]
+          try:
+              for line in Path('/tmp/wp-live/ssh-results.tsv').read_text().splitlines():
+                  cid,user,host,port,rc=line.split('\t')
+                  results.append({'logical_node':cid,'user':user,'host':host,'port':port,'ssh_rc':int(rc),'stderr_tail':clean_tail(f'/tmp/wp-live/ssh-{cid}.err')})
+          except Exception:
+              pass
+          safe={k:status.get(k) for k in ('id','name','project','status','profile_name','profile_project','profile_uuid','profile_version','profile_revision','created_at','started_at','expires_at','bindings') if k in status}
+          gate='PASS' if Path('/tmp/wp-live/ssh-gate').exists() and Path('/tmp/wp-live/ssh-gate').read_text().strip()=='PASS' else 'FAIL'
+          out=[
+              '# WP2 H-Cal D Live Manifest + SSH Gate — latest','',
+              f'- Checked UTC: {dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}',
+              f'- Git SHA: {os.environ.get("GITHUB_SHA","unknown")}',
+              '- Evidence class: **READ_ONLY INFRASTRUCTURE PRE-SCIENCE GATE**',
+              '- Resource mutation: **NONE**',
+              '- RF/LTE/MQTT/scientific workload: **NONE**',
+              f'- Experiment state: **{safe.get("status","unknown")}**',
+              f'- SSH both live nodes gate: **{gate}**','',
+              '## Sanitized experiment state','~~~json',json.dumps(safe,indent=2,sort_keys=True),'~~~','',
+              '## Live manifest mapping','~~~json',json.dumps(mapping,indent=2,sort_keys=True),'~~~','',
+              '## SSH results','~~~json',json.dumps(results,indent=2,sort_keys=True),'~~~','',
+              '- Credentials recorded: **NO**'
+          ]
+          Path('evidence/powder/wp2-hcal-d-live-gate-latest.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+
+      - name: Commit sanitized live-gate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/wp2-hcal-d-live-gate-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          git commit -m "Record WP2 H-cal D live manifest and SSH gate" || exit 0
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Enforce current gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ steps.state.outputs.ready }}" == "true" ]]
+          [[ "$(cat /tmp/wp-live/ssh-gate)" == "PASS" ]]
