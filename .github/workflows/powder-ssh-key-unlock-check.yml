@@ -1,0 +1,45 @@
+name: POWDER SSH Key Unlock Check
+
+on:
+  push:
+    paths:
+      - ".powder-ssh-key-unlock-check-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXPECTED_FP: SHA256:fLOBcEmuJ/ozS3Zyo1kRimvbnOm4Fb1yzP0f5X5TOgs
+    steps:
+      - name: Validate encrypted private key and fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo "PRIVATE_KEY_MISSING"; exit 2; }
+          [[ -n "$POWDER_SSH_KEY_PASSPHRASE" ]] || { echo "PASSPHRASE_MISSING"; exit 3; }
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519_powder"
+          chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          cat > /tmp/wp-askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp-askpass
+          export SSH_ASKPASS=/tmp/wp-askpass
+          export SSH_ASKPASS_REQUIRE=force
+          export DISPLAY=:0
+          setsid -w ssh-keygen -y -f "$HOME/.ssh/id_ed25519_powder" > /tmp/wp-public.key </dev/null
+          FP="$(ssh-keygen -lf /tmp/wp-public.key | awk '{print $2}')"
+          [[ "$FP" == "$EXPECTED_FP" ]] || { echo "FINGERPRINT_MISMATCH"; exit 4; }
+          echo "PRIVATE_KEY_UNLOCK=PASS"
+          echo "FINGERPRINT_MATCH=PASS"
+          rm -f "$HOME/.ssh/id_ed25519_powder" /tmp/wp-public.key /tmp/wp-askpass
