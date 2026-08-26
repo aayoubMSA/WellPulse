@@ -33,7 +33,6 @@ jobs:
       POWDER_USERNAME: aayoub
       POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
       POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
-      RCLONE_CONFIG_B64: ${{ secrets.WP_RCLONE_CONFIG_B64 }}
 
     steps:
       - name: Checkout canonical WellPulse state
@@ -73,6 +72,46 @@ jobs:
             scripts/wp2_golden_rclone_verify.py
           echo "OWNER_STATIC_GATE=PASS"
 
+      - name: Recover and verify encrypted Drive transport config before POWDER mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo 'OWNER_PREMUTATION=SSH_SECRET_MISSING'; exit 20; }
+          test -s powder/secure/wp_rclone_config.enc || { echo 'OWNER_PREMUTATION=ENCRYPTED_DRIVE_CONFIG_MISSING'; exit 21; }
+          umask 077
+          ENC_PASS="$(printf '%s' "$POWDER_SSH_PRIVATE_KEY" | sha256sum | awk '{print $1}')"
+          export ENC_PASS
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in powder/secure/wp_rclone_config.enc \
+            -out /tmp/wp2-rclone.conf \
+            -pass env:ENC_PASS
+          unset ENC_PASS
+          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null
+          rclone --config /tmp/wp2-rclone.conf lsf gdrive: >/dev/null
+          B64="$(base64 -w0 /tmp/wp2-rclone.conf)"
+          echo "::add-mask::$B64"
+          echo "RCLONE_CONFIG_B64=$B64" >> "$GITHUB_ENV"
+          rm -f /tmp/wp2-rclone.conf
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path('/tmp/wp2-owner-key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 /tmp/wp2-owner-key
+          cat >/tmp/wp2-owner-askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp2-owner-askpass
+          export SSH_ASKPASS=/tmp/wp2-owner-askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f /tmp/wp2-owner-key >/tmp/wp2-owner-key.pub </dev/null
+          FP="$(ssh-keygen -lf /tmp/wp2-owner-key.pub | awk '{print $2}')"
+          echo "WP_EXPECTED_KEY_FP=$FP" >> "$GITHUB_ENV"
+          rm -f /tmp/wp2-owner-key /tmp/wp2-owner-key.pub /tmp/wp2-owner-askpass
+          echo "OWNER_PREMUTATION_DRIVE_AND_SSH=PASS"
+
       - name: Execute GitHub-owned Golden lifecycle
         id: owner
         continue-on-error: true
@@ -84,6 +123,8 @@ jobs:
 
       - name: Commit sanitized lifecycle checkpoint
         if: always()
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -101,8 +142,8 @@ jobs:
             exit 0
           fi
           git commit -m "Record GitHub-owned WP2 Golden lifecycle checkpoint"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git pull --rebase "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" main
+          git push "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
 
       - name: Final fail-closed workflow verdict
         if: always()
@@ -111,7 +152,7 @@ jobs:
           set -euo pipefail
           if [[ "${{ steps.owner.outcome }}" != "success" ]]; then
             echo "WP2_GOLDEN_OWNER_WORKFLOW=FAIL_CLOSED"
-            echo "No teardown is authorized by this workflow unless the controller emitted verified G9/G10 PASS."
+            echo "No teardown is authorized unless the controller emitted verified G9/G10 PASS."
             exit 1
           fi
           echo "WP2_GOLDEN_OWNER_WORKFLOW=PASS"
