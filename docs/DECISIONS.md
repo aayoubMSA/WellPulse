@@ -106,3 +106,12 @@ A strengthened inter-run washout/readiness gate is mandatory before every scored
 S0 pair 2 was counterbalanced to W1-first before any scored data existed; all other frozen B1/W1 orders remain unchanged.
 
 Authority: `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`.
+
+## D-020 — POWDER terminate/recreate resource-release gate
+On 2026-08-26, `WP-HCAL-A` was terminated and a replacement `WP-HCAL-B` was instantiated immediately against the same reserved `nuc1+nuc2` resources. The replacement entered a transient `pending/booting` state with a reservation-allocation warning even though the WellPulse project still held the relevant reservation.
+
+Treat this as an **observed operational hazard**, not proof of a universal POWDER causal rule: termination acceptance does not guarantee that the allocator has fully released and reconverged the reserved nodes for immediate reuse.
+
+Future same-resource replacement workflows must therefore insert a positive **resource-release/convergence gate** between termination and recreation. At minimum, confirm the old experiment no longer resolves/owns the resources and that the portal/allocator has converged before creating the replacement. Do not use immediate terminate→create as the default recovery path inside a time-critical reservation.
+
+The 2026-08-26 `WP-HCAL-A -> WP-HCAL-B` sequence is troubleshooting provenance only and does not contribute scientific evidence or completion credit.
