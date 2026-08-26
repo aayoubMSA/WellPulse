@@ -1,0 +1,61 @@
+name: POWDER H Calibration Release
+
+on:
+  push:
+    paths:
+      - ".powder-hcal-release-trigger"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - name: Install Portal client
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+      - name: Terminate WP-HCAL-B and verify release request
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment list > /tmp/list.json
+          ID="$(python - <<'PY'
+          import json
+          x=json.load(open('/tmp/list.json'))
+          items=x if isinstance(x,list) else x.get('experiments') or x.get('items') or x.get('value') or []
+          hits=[i for i in items if isinstance(i,dict) and (i.get('name') or i.get('experiment_name') or i.get('slug'))=='WP-HCAL-B']
+          print((hits[0].get('id') or hits[0].get('uuid') or hits[0].get('experiment_id')) if len(hits)==1 else '')
+          PY
+          )"
+          if [[ -z "$ID" ]]; then
+            echo "WP-HCAL-B already absent"
+            exit 0
+          fi
+          portal-cli experiment terminate --experiment-id "$ID"
+          echo "TERMINATION_REQUEST=PASS"
+          for i in $(seq 1 18); do
+            set +e
+            portal-cli experiment get --experiment-id "$ID" >/tmp/post.json 2>/dev/null
+            RC=$?
+            set -e
+            if [[ $RC -ne 0 ]]; then
+              echo "OLD_EXPERIMENT_ABSENT=PASS"
+              exit 0
+            fi
+            STATUS="$(jq -r '.status // "unknown"' /tmp/post.json)"
+            echo "post-terminate status=$STATUS"
+            if [[ "$STATUS" =~ ^(terminated|failed|error)$ ]]; then
+              echo "OLD_EXPERIMENT_TERMINAL=PASS"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Release still converging; no recreate attempted."
