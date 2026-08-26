@@ -7,7 +7,18 @@ pre_score_amendments:
   consortium_review: docs/CONSORTIUM_PRE_WP3_REVIEW_2026-08-26.md
   p0_amendment: experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md
   p0_status: IMPLEMENTED_LOCAL_PREFLIGHT_PASS_PHYSICAL_GATES_OPEN
-  p1_status: OPEN_NOT_YET_FULLY_FROZEN_INTO_SCORED_PROTOCOL
+  p1_amendment: experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md
+  p1_status: FROZEN_PRE_SCORE_PHYSICAL_AND_IMPLEMENTATION_GATES_OPEN
+
+scientific_interpretation:
+  primary_question: when_durable_application_record_semantics_add_value_beyond_correctly_configured_mqtt
+  S0: healthy_path_integrity_equivalence_and_overhead_sanity
+  S1: network_only_integrity_primary_recovery_overhead_secondary
+  S2: network_only_integrity_primary_recovery_overhead_secondary_volatile_process_state_survives
+  S3: primary_process_state_durability_integrity_stress
+  cross_testbed_term: cross_testbed_consistency_or_triangulation
+  prohibited_term_for_primary_cross_layer_claim: transportability
+  workload_claim_boundary: low_rate_1_hz_telemetry
 
 controlled_rf_profile:
   selected_profile: srslte-controlled-rf
@@ -29,7 +40,9 @@ randomization:
   seed: 26082401
   unit_of_analysis: run
   frozen_order_file: experiments/WP-PWD01/randomization-plan.csv
+  p1_s0_amendment: S0_pair_2_counterbalanced_W1_then_B1_before_any_scored_data
   rule: use the pre-generated B1/W1 order within each paired block; reserve pairs 4-5 execute only under the precision rule
+  b2_sensitivity_order_file: experiments/WP-PWD01/b2-sensitivity-plan.csv
 
 matched_mqtt_transport:
   implementation: PahoQoS1Session
@@ -71,9 +84,23 @@ modes:
     role: LEGACY_SANITY_ONLY
     description: Historical non-durable lower-bound baseline; excluded from primary POWDER scored matrix
   B2_MQTT_DURABLE_CLIENT:
-    role: CANDIDATE_SENSITIVITY_COMPARATOR
-    status: PRE_SCORE_SEMANTICS_GATE_OPEN
-    scope_if_qualified: compact S2/S3 sensitivity only; exact amendment must be frozen before scoring
+    role: SECONDARY_SENSITIVITY_COMPARATOR
+    status: LOCAL_SEMANTICS_PASS_REMOTE_IMPLEMENTATION_OPEN
+    semantics_plan: experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md
+    semantics_evidence: evidence/local/wp2-b2-semantics-latest.md
+    implementation: Eclipse_Paho_Java_1_2_5
+    protocol: MQTTv311
+    qos: 1
+    clean_session: false
+    file_persistence: MqttDefaultFilePersistence
+    disconnected_buffer_enabled: true
+    disconnected_buffer_size: 4096
+    persist_disconnected_buffer: true
+    delete_oldest_messages: false
+    scope: exactly_3_S2_plus_3_S3_runs_only
+    adaptive_replication: prohibited
+    order_file: experiments/WP-PWD01/b2-sensitivity-plan.csv
+    interpretation: non_primary_sensitivity_due_runtime_client_difference
 
 rf_states:
   authority: experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md
@@ -98,6 +125,7 @@ rf_states:
 
 workload:
   telemetry_rate_hz: 1
+  claim_boundary: low_rate_telemetry_only
   generation_must_not_block_on_puback: true
   generation_continues_during_recovery_horizon: true
   warmup_duration_s: 30
@@ -106,6 +134,10 @@ workload:
   recovery_horizon_s: TBD_AFTER_NON_SCORED_H_CALIBRATION
   recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); stop_and_investigate_if_over_300s
   h_calibration_plan: experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md
+  h_interpretation: common_operational_observation_window_not_effect_optimized
+  h_same_for_all_arms_and_scenarios: required
+  h_reestimation_after_scoring: prohibited
+  h_n3_p95_wording: maximum_of_three_observed_successful_W1_calibration_drains
   h_calibration_outcome_rule:
     technically_invalid: preserve_and_replace_only_for_predefined_technical_invalidity
     valid_w1_recovery_failure: preserve_block_h_freeze_do_not_replace_as_invalid
@@ -126,29 +158,32 @@ scenarios:
     scored_schedule: "Q0 60s -> Q0 120s -> Q0 H"
     paired_blocks_min: 3
     paired_blocks_max: 3
-    purpose: healthy integrity and overhead control
+    purpose: healthy integrity equivalence and overhead sanity
   S1_INTERMITTENT:
     scored_schedule: "Q0 60s -> [Q2 20s / Q0 20s] x3 -> Q0 H"
     paired_blocks_min: 3
     paired_blocks_max: 5
-    purpose: repeated RF-caused near-threshold disruption and recovery
+    purpose: repeated RF-caused near-threshold network-only integrity; recovery/overhead secondary
   S2_HARD_OUTAGE:
     scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
     paired_blocks_min: 3
     paired_blocks_max: 5
-    purpose: deterministic RF-induced outage and recovery while volatile gateway process state survives
+    purpose: deterministic network-only RF outage integrity while volatile gateway process state survives; recovery/overhead secondary
+    b2_sensitivity_runs: 3
   S3_OUTAGE_RESTART:
     scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
     restart_event: "gateway process restart 60s into Q3; not node reboot"
     paired_blocks_min: 3
     paired_blocks_max: 5
-    purpose: volatile MQTT state versus durable application state under compound failure
+    purpose: primary durability/integrity stress under destruction of volatile gateway client state
+    b2_sensitivity_runs: 3
     restart_domain:
       telemetry_generator_outside_restart_domain: required
       generation_continues_at_1_hz: required
       gateway_client_process_only: required
       w1_durable_state_survives_restart: required
       b1_same_run_client_identity_reused_after_restart: required
+      b2_same_run_client_identity_and_file_persistence_reused_after_restart: required
       source_sequence_continuity: required
       restart_timestamps_and_downtime: required
       node_reboot_or_power_cycle: prohibited
@@ -162,11 +197,16 @@ precision_stopping_rule:
   additional_pairs_if_not_precise: 2
   maximum_pairs: 5
   forbidden_basis_for_stopping: [effect_direction, p_value, favorable_result]
-  consortium_p1_review_status: OPEN_REVIEW_ALIGNMENT_WITH_RECOVERY_QUESTION_BEFORE_SCORING
+  p1_resolution: completeness_only_confirmatory_precision_rule_retained
+  recovery_metrics_role: predeclared_secondary_engineering_characterization_not_separately_powered
+  confirmatory_recovery_advantage_claim: prohibited
 
 planned_conducted_scored_runs:
-  minimum: 24
-  maximum: 36
+  primary_b1_w1_minimum: 24
+  primary_b1_w1_maximum: 36
+  b2_fixed_sensitivity: 6
+  total_minimum_if_all_gates_authorized: 30
+  total_maximum_if_all_gates_authorized: 42
 
 primary_endpoint:
   name: unique_primary_cohort_telemetry_completeness_at_H
@@ -191,6 +231,17 @@ secondary_endpoints:
   - network_bytes_packets_and_retransmission_indicators
   - radio_metrics_when_exposed
 
+inter_run_washout_readiness:
+  q0_end_to_end_user_plane_window: required
+  experimental_tunnel_route: required
+  run_unique_mqtt_namespace: required
+  architecture_state_fresh_or_empty: required
+  unresolved_prior_broker_session_residue: prohibited
+  q0_radio_metrics_within_calibrated_envelope: required
+  frozen_runtime_version_config_match: required
+  clock_evidence_capture_healthy: required
+  failure_classification: predefined_technical_invalidity_only
+
 ota_replication:
   required_after_conducted_gate: true
   scenarios: [S1_INTERMITTENT, S2_HARD_OUTAGE]
@@ -198,6 +249,23 @@ ota_replication:
   scored_runs: 12
   do_not_repeat: S3_OUTAGE_RESTART
   rat_matching_preference: use same RAT as conducted layer when a scientifically adequate current OTA profile is executable
+  cross_layer_statistical_pooling: prohibited
+  interpretation_term: external_replication_for_OTA_only
+
+pre_score_snapshot:
+  required_before_scored_runs_authorized_true: true
+  must_include:
+    - protocol_and_all_pre_score_amendments
+    - analysis_plan_version
+    - run_matrix_hash
+    - b1_w1_randomization_hash
+    - b2_sensitivity_plan_hash
+    - implementation_commit
+    - B1_W1_B2_runtime_locks
+    - evidence_schema
+    - frozen_H_and_calibration_manifest
+    - comparator_decision
+    - explicit_scored_authorization_decision
 
 pre_score_gate_status:
   controlled_physical_rf_profile_and_numeric_states: PASS
@@ -214,8 +282,12 @@ pre_score_gate_status:
   s3_restart_domain_separation: OPEN_NON_SCORED_VERIFICATION_REQUIRED
   evidence_capture_clock_alignment: OPEN
   deterministic_non_scored_analysis_reconstruction: OPEN
-  b2_comparator_decision: OPEN
-  consortium_p1_analysis_claim_amendments: OPEN
+  b2_local_semantics: PASS_3_OF_3
+  b2_comparator_decision: PASS_QUALIFIED_COMPACT_S2_S3_ONLY
+  b2_remote_runtime_path_restart_implementation: OPEN_NON_SCORED_VERIFICATION_REQUIRED
+  consortium_p1_analysis_claim_amendments: PASS_FROZEN
+  inter_run_washout_readiness_rule: PASS_FROZEN_PHYSICAL_ENFORCEMENT_OPEN
+  pre_score_reproducibility_snapshot: OPEN_BLOCKED_UNTIL_H_AND_IMPLEMENTATION_GATES_CLOSE
   automated_powder_ssh_private_key_path: KNOWN_BAD_REPAIR_OR_BYPASS_REQUIRED
 
 freeze_requirements:
@@ -224,15 +296,16 @@ freeze_requirements:
   - Apply P0 H outcome classification; never replace a valid adverse W1 result as technical invalidity
   - Use deterministic run-unique MQTT publisher/receiver client identities and topic namespaces
   - Require fresh-run initial session_present=false and preserve session evidence
-  - Reproduce pinned Paho 2.1.0 transport settings in remote runtime manifest
+  - Reproduce pinned Paho 2.1.0 B1/W1 transport settings in remote runtime manifest
   - Verify payload traverses experimental cellular data path rather than POWDER control network
-  - Freeze recovery horizon H and verify cohort_cutoff_utc/horizon_end_utc timing
+  - Freeze recovery horizon H once and use the identical common H for B1 W1 B2 and all scenarios
   - Verify record identity/checksum preservation and fail-closed collision semantics
   - Audit B1/W1 matching with corrected B1 accepted/unacknowledged instrumentation semantics
   - Verify S3 restart-domain separation non-scored before scored authorization
+  - Verify B2 Java 1.2.5 persistent-client runtime path and restart semantics non-scored on POWDER before B2 scoring
+  - Enforce inter-run washout/readiness before every scored run
   - Verify evidence capture and clock alignment
   - Verify analysis reconstructs primary endpoint from a non-scored pilot bundle
-  - Close B2 durable-client decision/amendment
-  - Resolve consortium P1 analysis/claim amendments before scored authorization
+  - Create immutable pre-score reproducibility snapshot before scored authorization
   - Repair or bypass known-bad automated POWDER SSH private-key path before scored automation is trusted
   - Set scored_runs_authorized true only after all gates close
