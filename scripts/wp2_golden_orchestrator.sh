@@ -23,7 +23,14 @@ GATES="$EVDIR/orchestration/gate_events.jsonl"
 exec > >(tee -a "$CONSOLE") 2>&1
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
-bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-52s' "$p" "$m"; }
+bar(){
+  local p="$1" m="$2" n
+  n=$((p/5))
+  printf '\r['
+  printf '%*s' "$n" ''|tr ' ' '#'
+  printf '%*s' "$((20-n))" ''|tr ' ' '-'
+  printf '] %3d%%  %-52s' "$p" "$m"
+}
 gate(){ "$PY" - "$1" "$2" "$3" <<'PY' >> "$GATES"
 import json,sys,datetime
 print(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'gate':sys.argv[1],'status':sys.argv[2],'detail':sys.argv[3]},sort_keys=True,separators=(',',':')))
@@ -108,11 +115,9 @@ gate G7 PASS 300S_COMPLETE
 bar 74 'Collecting receiver and substrate evidence'; echo
 ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
 scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@${CORE_HOST}:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
-# Capture all available tmux panes rather than inventing log paths.
 ssh_core "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/core_tmux_capture.txt" || fail G8 CORE_TMUX_CAPTURE
 ssh_ue "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/ue_tmux_capture.txt" || fail G8 UE_TMUX_CAPTURE
 [[ -s "$EVDIR/substrate/core_tmux_capture.txt" && -s "$EVDIR/substrate/ue_tmux_capture.txt" ]] || fail G8 EMPTY_TMUX_CAPTURE
-# Preserve native logs when the runtime exposes them; absence does not fabricate substitute data.
 scp_core "/tmp/epc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || scp_core "/tmp/srsepc.log" "$EVDIR/substrate/epc.log" 2>/dev/null || true
 scp_core "/tmp/enb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || scp_core "/tmp/srsenb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || true
 scp_ue "/tmp/ue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || scp_ue "/tmp/wp2-srsue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || true
