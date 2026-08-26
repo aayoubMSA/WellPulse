@@ -1,9 +1,9 @@
 # POWDER existing-experiment observer — latest
 
-- Checked UTC: 2026-08-24T17:57:16Z
-- GitHub SHA: 13ecea8ba28ff44bd48afbaa5c93305f766a151c
+- Checked UTC: 2026-08-26T00:13:52Z
+- GitHub SHA: 6be5ac238cc6460f59cdf66a4b4fa2ec3b3791ed
 - Evidence class: **INFRASTRUCTURE_ONLY_NON_SCORED**
-- Experiment ID: `a0095527-4e6b-4da5-8b59-f50f1282da67`
+- Experiment ID: `575d246e-8d01-4827-9a84-f4368d272cea`
 - Experiment name: ``
 - State: ``
 - Profile: ``
