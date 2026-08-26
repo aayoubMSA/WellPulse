@@ -31,7 +31,6 @@ jobs:
         run: |
           set -euo pipefail
           [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN secret"; exit 2; }
-          echo "POWDER API token secret is configured."
 
       - name: Install official Portal API client
         shell: bash
@@ -40,16 +39,16 @@ jobs:
           rm -rf /tmp/portal-api
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-          portal-cli --help >/tmp/portal-root-help.txt 2>&1
           portal-cli experiment create --help >/tmp/experiment-create-help.txt 2>&1 || true
+          portal-cli resgroup --help >/tmp/resgroup-help.txt 2>&1 || true
 
-      - name: Run authenticated read-only early-window capability checks
+      - name: Run authenticated read-only reservation checks
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/powder
           portal-cli experiment list >/tmp/powder-experiments.json
-          portal-cli profile list >/tmp/powder-profiles.json
+          portal-cli resgroup list >/tmp/powder-resgroups.json
 
           python - <<'PY'
           import json, datetime, os, re
@@ -66,83 +65,48 @@ jobs:
 
           ex_raw = load('/tmp/powder-experiments.json', [])
           exps = ex_raw if isinstance(ex_raw, list) else ex_raw.get('experiments', [])
-          wp = []
+          wp_exps = []
           for x in exps:
               if isinstance(x, dict) and x.get('project') == 'WellPulse':
-                  wp.append({k:x.get(k) for k in ['id','name','status','profile_name','profile_project','started_at','expires_at']})
+                  wp_exps.append({k:x.get(k) for k in ['id','name','status','profile_name','profile_project','started_at','expires_at']})
 
-          pr_raw = load('/tmp/powder-profiles.json', [])
-          profs = pr_raw if isinstance(pr_raw, list) else pr_raw.get('profiles', [])
-          matches = [p for p in profs if isinstance(p, dict)
-                     and p.get('name') == 'srslte-controlled-rf'
-                     and p.get('project') == 'PowderProfiles']
-
-          create_help = strip_ansi(Path('/tmp/experiment-create-help.txt').read_text(errors='replace'))
-          relevant_help = [line.rstrip() for line in create_help.splitlines()
-                           if re.search(r'start|schedule|reserv|duration|profile|binding|project|name', line, re.I)]
-          root_help = strip_ansi(Path('/tmp/portal-root-help.txt').read_text(errors='replace'))
-          root_res_lines = [line.rstrip() for line in root_help.splitlines() if re.search(r'reserv|resgroup|schedule', line, re.I)]
-
-          openapi = load('/tmp/portal-api/openapi.json', {})
-          all_paths = openapi.get('paths') or {}
-          relevant_paths = {}
-          for path, spec in all_paths.items():
-              if 'reserv' not in path.lower() and 'resgroup' not in path.lower():
+          rg_raw = load('/tmp/powder-resgroups.json', [])
+          rgs = rg_raw if isinstance(rg_raw, list) else rg_raw.get('resgroups', [])
+          wp_rgs = []
+          for rg in rgs:
+              if not isinstance(rg, dict) or rg.get('project') != 'WellPulse':
                   continue
-              ops = {}
-              for method in ['get','post','put','patch','delete']:
-                  op = spec.get(method) if isinstance(spec, dict) else None
-                  if not isinstance(op, dict):
-                      continue
-                  params = []
-                  for p in op.get('parameters') or []:
-                      if isinstance(p, dict):
-                          params.append({'name':p.get('name'),'in':p.get('in'),'required':p.get('required',False)})
-                  body = op.get('requestBody') or {}
-                  schemas = []
-                  for media in (body.get('content') or {}).values():
-                      if isinstance(media, dict) and isinstance(media.get('schema'), dict):
-                          s = media['schema']
-                          schemas.append({'ref':s.get('$ref'),'required':s.get('required'), 'properties':sorted((s.get('properties') or {}).keys())})
-                  ops[method] = {'operationId':op.get('operationId'),'summary':op.get('summary'),'parameters':params,'body_schemas':schemas}
-              relevant_paths[path] = ops
+              safe = {k:rg.get(k) for k in ['id','project','group','creator','start_at','expires_at','reason']}
+              safe['nodetypes'] = rg.get('nodetypes')
+              safe['ranges'] = rg.get('ranges')
+              safe['routes'] = rg.get('routes')
+              safe['powder_zones'] = rg.get('powder_zones')
+              wp_rgs.append(safe)
 
-          schemas_out = {}
-          schemas = ((openapi.get('components') or {}).get('schemas') or {})
-          for name, s in schemas.items():
-              if 'reserv' in name.lower() or 'resgroup' in name.lower():
-                  props = {}
-                  for pn, pv in (s.get('properties') or {}).items():
-                      if isinstance(pv, dict):
-                          props[pn] = {'type':pv.get('type'),'ref':pv.get('$ref'),'format':pv.get('format')}
-                  schemas_out[name] = {'required':s.get('required') or [], 'properties':props}
+          help_text = strip_ansi(Path('/tmp/experiment-create-help.txt').read_text(errors='replace'))
+          create_lines = [line.rstrip() for line in help_text.splitlines()
+                          if re.search(r'start|stop|duration|profile|binding|project|name', line, re.I)]
+          rg_help = strip_ansi(Path('/tmp/resgroup-help.txt').read_text(errors='replace'))
 
           now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
           out = Path('evidence/powder/api-smoke.md')
           with out.open('w', encoding='utf-8') as f:
-              f.write('# POWDER Portal API smoke — early-window probe\n\n')
+              f.write('# POWDER Portal API smoke — current reservation state\n\n')
               f.write(f'- Checked UTC: {now}\n')
               f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA", "unknown")}\n')
               f.write('- Authentication gate: **PASS**\n')
               f.write('- Resource mutation attempted: **NONE**\n')
-              f.write(f'- Exact `PowderProfiles/srslte-controlled-rf` matches in profile-list response: **{len(matches)}**\n')
-              f.write(f'- Visible WellPulse experiments: **{len(wp)}**\n')
-              for x in wp:
-                  f.write(f'  - `{x.get("name")}` | `{x.get("status")}` | `{x.get("profile_project")}/{x.get("profile_name")}` | start `{x.get("started_at")}` | expires `{x.get("expires_at")}`\n')
-              f.write(f'- Reservation/resgroup API paths discovered: **{len(relevant_paths)}**\n')
+              f.write(f'- Visible WellPulse experiments: **{len(wp_exps)}**\n')
+              f.write(f'- Visible WellPulse reservation groups: **{len(wp_rgs)}**\n')
               f.write('- Token content recorded: **NO**\n')
-
-              f.write('\n## Experiment-create scheduling options\n\n```text\n')
-              f.write('\n'.join(relevant_help[:120]))
+              f.write('\n## WellPulse reservation groups — sanitized\n\n```json\n')
+              f.write(json.dumps(wp_rgs, indent=2, sort_keys=True))
               f.write('\n```\n')
-              f.write('\n## Root reservation-related CLI lines\n\n```text\n')
-              f.write('\n'.join(root_res_lines[:80]) or '(none exposed at root CLI)')
+              f.write('\n## Experiment scheduling options\n\n```text\n')
+              f.write('\n'.join(create_lines[:100]))
               f.write('\n```\n')
-              f.write('\n## Reservation/resgroup OpenAPI operations\n\n```json\n')
-              f.write(json.dumps(relevant_paths, indent=2, sort_keys=True))
-              f.write('\n```\n')
-              f.write('\n## Reservation/resgroup schema fields\n\n```json\n')
-              f.write(json.dumps(schemas_out, indent=2, sort_keys=True))
+              f.write('\n## Resgroup CLI\n\n```text\n')
+              f.write('\n'.join(rg_help.splitlines()[:160]))
               f.write('\n```\n')
           PY
 
@@ -155,6 +119,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$OUT"
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Record POWDER reservation API schema probe"
+          git commit -m "Record current WellPulse POWDER reservations"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
