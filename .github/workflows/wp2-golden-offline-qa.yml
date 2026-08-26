@@ -1,0 +1,32 @@
+name: WP2 Golden Offline QA
+
+on:
+  push:
+    paths:
+      - 'scripts/wp2_golden_*'
+      - 'scripts/reconstruct_wp2_golden.py'
+      - 'scripts/wp_pwd01_golden_sender.py'
+      - 'experiments/WP-PWD01/evidence_inventory_golden_v1.txt'
+      - '.github/workflows/wp2-golden-offline-qa.yml'
+  workflow_dispatch:
+
+jobs:
+  offline-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rsync
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync
+      - name: Bash syntax QA
+        run: |
+          bash -n scripts/wp2_golden_service_restore.sh
+          bash -n scripts/wp2_golden_service_ready_probe.sh
+          bash -n scripts/wp2_golden_evidence_escrow.sh
+          bash -n scripts/wp2_golden_teardown_guard.sh
+          bash -n scripts/wp2_golden_offline_qa.sh
+      - name: Python compile QA
+        run: |
+          python3 -m py_compile scripts/reconstruct_wp2_golden.py
+          python3 -m py_compile scripts/wp_pwd01_golden_sender.py
+      - name: Reconstruction, dual escrow, and fail-closed interlock QA
+        run: bash scripts/wp2_golden_offline_qa.sh
