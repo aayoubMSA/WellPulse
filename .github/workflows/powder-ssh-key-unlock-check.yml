@@ -27,8 +27,21 @@ jobs:
           mkdir -p "$HOME/.ssh"
           chmod 700 "$HOME/.ssh"
           umask 077
-          printf '%s\n' "$POWDER_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519_powder"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY']
+          raw=raw.replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          p=Path.home()/'.ssh'/'id_ed25519_powder'
+          p.write_text(raw, encoding='utf-8', newline='\n')
+          lines=raw.splitlines()
+          print('KEY_STRUCTURE_BEGIN=' + ('PASS' if lines and lines[0]=='-----BEGIN OPENSSH PRIVATE KEY-----' else 'FAIL'))
+          print('KEY_STRUCTURE_END=' + ('PASS' if lines and lines[-1]=='-----END OPENSSH PRIVATE KEY-----' else 'FAIL'))
+          print('KEY_LINE_COUNT=' + str(len(lines)))
+          PY
           chmod 600 "$HOME/.ssh/id_ed25519_powder"
+          head -n1 "$HOME/.ssh/id_ed25519_powder" | grep -qx -- '-----BEGIN OPENSSH PRIVATE KEY-----' || exit 5
+          tail -n1 "$HOME/.ssh/id_ed25519_powder" | grep -qx -- '-----END OPENSSH PRIVATE KEY-----' || exit 6
           cat > /tmp/wp-askpass <<'EOF'
           #!/usr/bin/env bash
           printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
