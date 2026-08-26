@@ -25,9 +25,39 @@ jobs:
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
           echo "PORTAL_CLIENT=PASS"
-      - name: Discover supported experiment commands
+      - name: Discover WP-HCAL-A experiment identity
         shell: bash
         run: |
           set -euo pipefail
-          portal-cli experiment --help
-          echo "EXPERIMENT_CLI_HELP=PASS"
+          portal-cli experiment list --help
+          portal-cli experiment list > /tmp/experiments.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/experiments.json').read_text())
+          items=obj if isinstance(obj,list) else obj.get('experiments') or obj.get('items') or obj.get('value') or []
+          hits=[]
+          for x in items:
+              if not isinstance(x,dict):
+                  continue
+              name=str(x.get('name') or x.get('experiment_name') or x.get('slug') or '')
+              if name=='WP-HCAL-A':
+                  hits.append(x)
+          print('MATCH_COUNT='+str(len(hits)))
+          if len(hits)!=1:
+              print('VISIBLE_NAMES='+','.join(str(x.get('name') or x.get('experiment_name') or x.get('slug') or '') for x in items if isinstance(x,dict)))
+              raise SystemExit(3)
+          x=hits[0]
+          expid=x.get('id') or x.get('uuid') or x.get('experiment_id')
+          status=x.get('status') or x.get('state') or 'unknown'
+          project=x.get('project') or x.get('project_id') or x.get('project_name') or 'unknown'
+          print('EXPERIMENT_NAME=WP-HCAL-A')
+          print('EXPERIMENT_ID='+str(expid))
+          print('EXPERIMENT_STATUS='+str(status))
+          print('EXPERIMENT_PROJECT='+str(project))
+          Path('/tmp/experiment_id').write_text(str(expid))
+          PY
+          ID="$(cat /tmp/experiment_id)"
+          portal-cli experiment get --experiment-id "$ID" > /tmp/status.json
+          jq '{id,name,status,project,profile_id,profile_name,profile_project,bindings}' /tmp/status.json
+          echo "EXPERIMENT_DISCOVERY=PASS"
