@@ -1,0 +1,178 @@
+name: WP2 H Early Window
+
+on:
+  push:
+    paths:
+      - ".wp2-h-early-window-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp2-h-early-window
+  cancel-in-progress: false
+
+jobs:
+  allocate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Portal API
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN"; exit 2; }
+          rm -rf /tmp/portal-api
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+
+      - name: Attempt immediate non-scored controlled-RF allocation
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/powder /tmp/wp-h-early
+          NAME="WP-HCAL-EARLY-0826"
+
+          # Do not create a duplicate if a prior attempt already exists.
+          portal-cli experiment list >/tmp/wp-h-early/list-before.json 2>/tmp/wp-h-early/list-before.err || true
+          EXISTING_ID=$(python - "$NAME" <<'PY'
+          import json,sys
+          try: raw=json.load(open('/tmp/wp-h-early/list-before.json'))
+          except: raw=[]
+          exps=raw if isinstance(raw,list) else raw.get('experiments',[])
+          for x in exps:
+              if isinstance(x,dict) and x.get('project')=='WellPulse' and x.get('name')==sys.argv[1]:
+                  print(x.get('id','')); break
+          PY
+          )
+
+          CREATED=0
+          CREATE_RC=0
+          if [[ -n "$EXISTING_ID" ]]; then
+            EXPID="$EXISTING_ID"
+            printf '{"note":"existing experiment reused","id":"%s"}\n' "$EXPID" >/tmp/wp-h-early/create.json
+          else
+            set +e
+            portal-cli experiment create \
+              --name "$NAME" \
+              --project WellPulse \
+              --profile-name srslte-controlled-rf \
+              --profile-project PowderProfiles \
+              --duration 3 \
+              >/tmp/wp-h-early/create.json 2>/tmp/wp-h-early/create.err
+            CREATE_RC=$?
+            set -e
+            EXPID=$(python - <<'PY'
+          import json
+          try:
+              x=json.load(open('/tmp/wp-h-early/create.json'))
+              print(x.get('id','') if isinstance(x,dict) else '')
+          except: print('')
+          PY
+            )
+            [[ -n "$EXPID" ]] && CREATED=1
+          fi
+
+          STATUS_RC=99
+          if [[ -n "${EXPID:-}" ]]; then
+            for i in 1 2 3 4 5 6; do
+              set +e
+              portal-cli experiment get --experiment-id "$EXPID" >/tmp/wp-h-early/status.json 2>/tmp/wp-h-early/status.err
+              STATUS_RC=$?
+              set -e
+              [[ "$STATUS_RC" -eq 0 ]] || break
+              STATE=$(python - <<'PY'
+          import json
+          try:
+              x=json.load(open('/tmp/wp-h-early/status.json')); print(x.get('status',''))
+          except: print('')
+          PY
+              )
+              [[ "$STATE" == "ready" || "$STATE" == "failed" ]] && break
+              sleep 15
+            done
+          fi
+
+          # Fail-safe topology check. Nexus mode adds adbnode. If observed, terminate.
+          WRONG_TOPOLOGY=0
+          if [[ -s /tmp/wp-h-early/status.json ]]; then
+            WRONG_TOPOLOGY=$(python - <<'PY'
+          import json
+          try:x=json.load(open('/tmp/wp-h-early/status.json'))
+          except:x={}
+          clients=[]
+          for ag in (x.get('aggregates') or {}).values():
+              for n in (ag.get('nodes') or []):
+                  if isinstance(n,dict): clients.append(str(n.get('client_id','')))
+          print(1 if 'adbnode' in clients else 0)
+          PY
+            )
+          fi
+
+          TERMINATED_WRONG=0
+          if [[ "$WRONG_TOPOLOGY" == "1" && -n "${EXPID:-}" ]]; then
+            portal-cli experiment terminate --experiment-id "$EXPID" >/tmp/wp-h-early/terminate.json 2>/tmp/wp-h-early/terminate.err || true
+            TERMINATED_WRONG=1
+          fi
+
+          python - "$CREATE_RC" "$STATUS_RC" "$CREATED" "$TERMINATED_WRONG" "${EXPID:-}" <<'PY'
+          import json,os,re,sys,datetime
+          from pathlib import Path
+          create_rc,status_rc,created,terminated=map(int,sys.argv[1:5]); expid=sys.argv[5]
+          def load(p):
+              try:return json.loads(Path(p).read_text())
+              except:return None
+          def serr(p):
+              if not Path(p).exists():return ''
+              t=Path(p).read_text(errors='replace')
+              t=re.sub(r'(?i)(token|authorization|bearer)\s*[:=]\s*\S+',r'\1=REDACTED',t)
+              return t[-1800:]
+          c=load('/tmp/wp-h-early/create.json'); s=load('/tmp/wp-h-early/status.json')
+          safe={}
+          if isinstance(s,dict):
+              safe={k:s.get(k) for k in ['id','name','project','status','profile_name','profile_project','created_at','started_at','expires_at','bindings']}
+              nodes=[]
+              for urn,ag in (s.get('aggregates') or {}).items():
+                  for n in (ag.get('nodes') or []):
+                      if isinstance(n,dict):
+                          nodes.append({'client_id':n.get('client_id'),'status':n.get('status'),'state':n.get('state')})
+              safe['nodes']=nodes
+          now=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          with Path('evidence/powder/wp2-h-early-window-latest.md').open('w',encoding='utf-8') as f:
+              f.write('# WP2-H Early Window Allocation — latest\n\n')
+              f.write(f'- Checked UTC: {now}\n')
+              f.write(f'- Git SHA: {os.environ.get("GITHUB_SHA","unknown")}\n')
+              f.write('- Evidence class: **NON-SCORED INFRASTRUCTURE SCHEDULING ONLY**\n')
+              f.write('- Scientific workload executed: **NO**\n')
+              f.write('- RF manipulation executed: **NO**\n')
+              f.write('- Existing 19:00–22:00 fallback reservation modified: **NO**\n')
+              f.write(f'- Create exit: `{create_rc}`\n')
+              f.write(f'- New experiment created: **{"YES" if created else "NO"}**\n')
+              f.write(f'- Experiment ID: `{expid or "none"}`\n')
+              f.write(f'- Wrong Nexus/adbnode topology detected and terminated: **{"YES" if terminated else "NO"}**\n')
+              f.write('- Credentials recorded: **NO**\n')
+              f.write('\n## Sanitized status\n\n```json\n'+json.dumps(safe,indent=2,sort_keys=True)+'\n```\n')
+              if create_rc and not expid:
+                  f.write('\n## Allocation rejection\n\n```text\n'+serr('/tmp/wp-h-early/create.err')+'\n```\n')
+              if status_rc not in (0,99):
+                  f.write('\n## Status error\n\n```text\n'+serr('/tmp/wp-h-early/status.err')+'\n```\n')
+          PY
+
+      - name: Commit sanitized allocation evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=evidence/powder/wp2-h-early-window-latest.md
+          [[ -f "$OUT" ]] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUT"
+          git commit -m "Record WP2-H early-window allocation result" || exit 0
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
