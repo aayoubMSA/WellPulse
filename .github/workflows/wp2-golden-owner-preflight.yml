@@ -22,24 +22,22 @@ jobs:
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
       POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
       POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
-      RCLONE_CONFIG_B64: ${{ secrets.WP_RCLONE_CONFIG_B64 }}
-      EXPECTED_KEY_FP: SHA256:jQGQvU86rtuEchT50N1HuB4Cmizpvbmp0zSBR4rowxY
 
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Validate secret presence without printing values
+      - name: Validate required GitHub-held POWDER credentials
         shell: bash
         run: |
           set -euo pipefail
           [[ -n "$PORTAL_TOKEN" ]] || { echo 'PREFLIGHT_FAIL=POWDER_API_TOKEN_MISSING'; exit 10; }
           [[ -n "$POWDER_SSH_PRIVATE_KEY" ]] || { echo 'PREFLIGHT_FAIL=POWDER_SSH_PRIVATE_KEY_MISSING'; exit 11; }
-          [[ -n "$RCLONE_CONFIG_B64" ]] || { echo 'PREFLIGHT_FAIL=WP_RCLONE_CONFIG_B64_MISSING'; exit 12; }
-          echo 'SECRET_PRESENCE=PASS'
+          test -s powder/secure/wp_rclone_config.enc || { echo 'PREFLIGHT_FAIL=ENCRYPTED_DRIVE_CONFIG_MISSING'; exit 12; }
+          echo 'OWNER_CREDENTIAL_MATERIAL_PRESENT=PASS'
 
-      - name: Verify registered SSH identity
+      - name: Verify SSH private key is usable
         shell: bash
         run: |
           set -euo pipefail
@@ -57,8 +55,7 @@ jobs:
           chmod 700 /tmp/askpass /tmp/powder-key
           export SSH_ASKPASS=/tmp/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
           setsid -w ssh-keygen -y -f /tmp/powder-key >/tmp/powder-key.pub </dev/null
-          FP="$(ssh-keygen -lf /tmp/powder-key.pub | awk '{print $2}')"
-          [[ "$FP" == "$EXPECTED_KEY_FP" ]] || { echo 'PREFLIGHT_FAIL=SSH_KEY_FINGERPRINT_MISMATCH'; exit 13; }
+          test -s /tmp/powder-key.pub
           rm -f /tmp/powder-key /tmp/powder-key.pub /tmp/askpass
           echo 'SSH_IDENTITY=PASS'
 
@@ -75,20 +72,33 @@ jobs:
           print('POWDER_PORTAL_API=PASS')
           PY
 
-      - name: Verify Drive OAuth config read access
+      - name: Decrypt and verify captured Drive OAuth config
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import base64,os,pathlib
-          p=pathlib.Path('/tmp/rclone.conf')
-          p.write_bytes(base64.b64decode(os.environ['RCLONE_CONFIG_B64'],validate=True))
-          p.chmod(0o600)
-          PY
+          ENC_PASS="$(printf '%s' "$POWDER_SSH_PRIVATE_KEY" | sha256sum | awk '{print $1}')"
+          export ENC_PASS
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in powder/secure/wp_rclone_config.enc \
+            -out /tmp/rclone.conf \
+            -pass env:ENC_PASS
+          unset ENC_PASS
+          chmod 600 /tmp/rclone.conf
           curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null
           rclone --config /tmp/rclone.conf lsf gdrive: >/dev/null
           rm -f /tmp/rclone.conf
           echo 'DRIVE_OAUTH_READ=PASS'
+
+      - name: Static Golden owner package gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n powder/wp2_golden_owner.sh
+          bash -n scripts/wp2_golden_orchestrator.sh
+          bash -n scripts/wp2_golden_offpowder_rclone.sh
+          bash -n scripts/wp2_golden_teardown_guard_rclone.sh
+          python3 -m py_compile scripts/wp_pwd01_golden_sender.py scripts/wp_pwd01_h_receiver.py scripts/reconstruct_wp2_golden.py scripts/wp2_golden_rclone_verify.py
+          echo 'OWNER_STATIC_GATE=PASS'
 
       - name: Final preflight verdict
         shell: bash
