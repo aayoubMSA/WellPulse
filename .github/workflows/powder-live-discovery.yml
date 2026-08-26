@@ -1,0 +1,33 @@
+name: POWDER Live Experiment Discovery
+
+on:
+  push:
+    paths:
+      - ".powder-live-discovery-trigger"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - name: Install official Portal API client
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || { echo "PORTAL_TOKEN_MISSING"; exit 2; }
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          echo "PORTAL_CLIENT=PASS"
+      - name: Discover supported experiment commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          portal-cli experiment --help
+          echo "EXPERIMENT_CLI_HELP=PASS"
