@@ -13,7 +13,8 @@ exec > >(tee -a "$OUT") 2>&1
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
 bar(){
-  local p="$1" msg="$2" n=$((p/5))
+  local p="$1" msg="$2" n
+  n=$((p/5))
   printf '\r['
   printf '%*s' "$n" '' | tr ' ' '#'
   printf '%*s' "$((20-n))" '' | tr ' ' '-'
@@ -29,8 +30,7 @@ printf '=== WP2 Golden architecture-blind service-ready probe ===\n'
 printf 'PROBE_START_UTC=%s\n' "$(utc)"
 printf 'RESTORE_START_EPOCH=%s\nBOUND_S=%s\n' "$START_EPOCH" "$BOUND_S"
 
-bar 10 'Waiting for tun_srsue'
-echo
+bar 10 'Waiting for tun_srsue'; echo
 while within_bound; do
   if ip -4 addr show dev tun_srsue 2>/dev/null | grep -q 'inet '; then break; fi
   sleep 1
@@ -38,23 +38,20 @@ done
 ip -4 addr show dev tun_srsue >/dev/null 2>&1 || { echo 'SERVICE_READY=FAIL_NO_TUNNEL'; exit 20; }
 printf 'TUNNEL_READY_UTC=%s\n' "$(utc)"
 
-bar 25 'Verifying broker route via tun_srsue'
-echo
+bar 25 'Verifying broker route via tun_srsue'; echo
 ROUTE=$(ip route get "$HOST" 2>&1 || true)
 echo "$ROUTE"
 grep -q 'dev tun_srsue' <<<"$ROUTE" || { echo 'SERVICE_READY=FAIL_ROUTE'; exit 21; }
 printf 'ROUTE_READY_UTC=%s\n' "$(utc)"
 
-bar 45 'Requiring 5/5 ICMP over LTE tunnel'
-echo
+bar 45 'Requiring 5/5 ICMP over LTE tunnel'; echo
 PING_OUT=$(ping -I tun_srsue -c 5 -W 2 "$HOST" 2>&1 || true)
 echo "$PING_OUT"
 grep -Eq '5 packets transmitted, 5 received|5 packets transmitted, 5 packets received' <<<"$PING_OUT" || { echo 'SERVICE_READY=FAIL_ICMP'; exit 22; }
 grep -q '0% packet loss' <<<"$PING_OUT" || { echo 'SERVICE_READY=FAIL_ICMP_LOSS'; exit 23; }
 printf 'ICMP_READY_UTC=%s\n' "$(utc)"
 
-bar 70 'Verifying TLS broker identity and CA'
-echo
+bar 70 'Verifying TLS broker identity and CA'; echo
 LEFT=$(remaining)
 [[ "$LEFT" -gt 0 ]] || { echo 'SERVICE_READY=FAIL_TIMEOUT_BEFORE_TLS'; exit 24; }
 TLS_OUT=$(timeout "${LEFT}s" openssl s_client -connect "${HOST}:${PORT}" -CAfile "$CA_FILE" -verify_return_error -verify_ip "$HOST" </dev/null 2>&1 || true)
@@ -65,8 +62,7 @@ NOW=$(date +%s)
 ELAPSED=$((NOW-START_EPOCH))
 [[ "$ELAPSED" -le "$BOUND_S" ]] || { echo "SERVICE_READY=FAIL_BOUND_EXCEEDED ELAPSED_S=$ELAPSED"; exit 26; }
 
-bar 100 'Architecture-blind service ready PASS'
-echo
+bar 100 'Architecture-blind service ready PASS'; echo
 printf 'T_SERVICE_READY=%s\n' "$(utc)"
 printf 'SERVICE_RESTORE_ELAPSED_S=%s\n' "$ELAPSED"
 printf 'WP2_GOLDEN_SERVICE_READY=PASS\n'
