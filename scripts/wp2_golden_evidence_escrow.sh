@@ -29,46 +29,52 @@ done < "$INVENTORY"
 
 bar 15 'Freezing source SHA-256 manifest'; echo
 mkdir -p "$SRC/escrow"
-find "$SRC" -type f ! -path '*/escrow/SOURCE_SHA256SUMS.txt' ! -path '*/escrow/PERSISTENT_SHA256SUMS.txt' ! -path '*/escrow/OFF_POWDER_SHA256SUMS.txt' ! -path '*/escrow/escrow_provenance.json' ! -path '*/escrow/EVIDENCE_ESCROW_GATE.PASS' -print0 | sort -z | xargs -0 sha256sum > "$SRC/escrow/SOURCE_SHA256SUMS.txt"
+(
+  cd "$SRC"
+  find . -type f \
+    ! -path './escrow/SOURCE_SHA256SUMS.txt' \
+    ! -path './escrow/PERSISTENT_SHA256SUMS.txt' \
+    ! -path './escrow/OFF_POWDER_SHA256SUMS.txt' \
+    ! -path './escrow/escrow_provenance.json' \
+    ! -path './escrow/EVIDENCE_ESCROW_GATE.PASS' \
+    -print0 | sort -z | xargs -0 sha256sum > escrow/SOURCE_SHA256SUMS.txt
+)
 [[ -s "$SRC/escrow/SOURCE_SHA256SUMS.txt" ]] || fail "SOURCE_MANIFEST_EMPTY"
 
 bar 30 'Copying immutable bundle to /proj'; echo
 mkdir -p "$DEST_PERSIST"
 rsync -a --delete "$SRC/" "$DEST_PERSIST/"
 
-bar 45 'Verifying persistent copy'; echo
-(
-  cd "$SRC"
-  find . -type f ! -path './escrow/PERSISTENT_SHA256SUMS.txt' ! -path './escrow/OFF_POWDER_SHA256SUMS.txt' ! -path './escrow/escrow_provenance.json' ! -path './escrow/EVIDENCE_ESCROW_GATE.PASS' -print0 | sort -z | xargs -0 sha256sum
-) > "$DEST_PERSIST/escrow/PERSISTENT_SHA256SUMS.txt"
+bar 45 'Verifying /proj copy against source hashes'; echo
 (
   cd "$DEST_PERSIST"
-  sha256sum -c escrow/PERSISTENT_SHA256SUMS.txt >/dev/null
+  sha256sum -c escrow/SOURCE_SHA256SUMS.txt >/dev/null
+  cp escrow/SOURCE_SHA256SUMS.txt escrow/PERSISTENT_SHA256SUMS.txt
 ) || fail "PERSISTENT_VERIFY_FAILED"
 
-bar 60 'Copying bundle off POWDER'; echo
+bar 60 'Copying verified bundle off POWDER'; echo
 mkdir -p "$DEST_OFF"
 rsync -a --delete "$DEST_PERSIST/" "$DEST_OFF/"
 
-bar 75 'Verifying off-POWDER copy'; echo
+bar 75 'Verifying off-POWDER copy against source hashes'; echo
 (
   cd "$DEST_OFF"
-  find . -type f ! -path './escrow/OFF_POWDER_SHA256SUMS.txt' ! -path './escrow/escrow_provenance.json' ! -path './escrow/EVIDENCE_ESCROW_GATE.PASS' -print0 | sort -z | xargs -0 sha256sum > escrow/OFF_POWDER_SHA256SUMS.txt
-  sha256sum -c escrow/OFF_POWDER_SHA256SUMS.txt >/dev/null
+  sha256sum -c escrow/SOURCE_SHA256SUMS.txt >/dev/null
+  cp escrow/SOURCE_SHA256SUMS.txt escrow/OFF_POWDER_SHA256SUMS.txt
 ) || fail "OFF_POWDER_VERIFY_FAILED"
 
 bar 88 'Writing provenance record'; echo
 python3 - "$SRC" "$DEST_PERSIST" "$DEST_OFF" "$RUN_ID" "$EXPERIMENT_ID" <<'PY'
 import json,sys,datetime,pathlib
 src,persist,off,run_id,exp=sys.argv[1:]
-out=pathlib.Path(persist)/'escrow'/'escrow_provenance.json'
 payload={
  'run_id':run_id,'experiment_id':exp,'source':src,'persistent_copy':persist,'off_powder_copy':off,
  'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
  'gate':'DUAL_COPY_VERIFIED'
 }
-out.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
-(pathlib.Path(off)/'escrow'/'escrow_provenance.json').write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
+text=json.dumps(payload,indent=2,sort_keys=True)+'\n'
+(pathlib.Path(persist)/'escrow'/'escrow_provenance.json').write_text(text)
+(pathlib.Path(off)/'escrow'/'escrow_provenance.json').write_text(text)
 PY
 
 bar 95 'Creating PASS markers only after dual verification'; echo
