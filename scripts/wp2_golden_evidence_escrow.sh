@@ -11,7 +11,14 @@ DEST_PERSIST="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
 DEST_OFF="$OFF_ROOT/$EXPERIMENT_ID/$RUN_ID"
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
-bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
+bar(){
+  local p="$1" m="$2" n
+  n=$((p/5))
+  printf '\r['
+  printf '%*s' "$n" ''|tr ' ' '#'
+  printf '%*s' "$((20-n))" ''|tr ' ' '-'
+  printf '] %3d%%  %-48s' "$p" "$m"
+}
 fail(){ echo; echo "EVIDENCE_ESCROW_GATE=FAIL:$1" >&2; exit 40; }
 
 [[ -d "$SRC" ]] || fail "SOURCE_NOT_DIRECTORY"
