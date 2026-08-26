@@ -5,6 +5,7 @@ ROOT="${1:-$(mktemp -d)}"
 SRC="$ROOT/source"
 PERSIST="$ROOT/persist"
 OFF="$ROOT/offtestbed"
+RCLONE_LOCAL="$ROOT/rclone-remote"
 RUN_ID="wp2-golden-offline-qa"
 EXP_ID="OFFLINE-QA"
 
@@ -19,7 +20,7 @@ bar(){
 
 echo '=== WP2 Golden offline QA ==='
 bar 5 'Creating synthetic evidence tree'; echo
-mkdir -p "$SRC"/{sender,receiver,substrate,runtime,orchestration,analysis}
+mkdir -p "$SRC"/{sender,receiver,substrate,runtime,orchestration,analysis} "$RCLONE_LOCAL"
 
 cat > "$SRC/sender/attenuation_timeline.csv" <<'EOF'
 command_start_utc,command_end_utc,programmed_attenuation_db,attenuator_ids
@@ -64,13 +65,13 @@ printf 'ue runtime\n' > "$SRC/runtime/ue_runtime_fingerprint.txt"
 printf 'golden console\n' > "$SRC/orchestration/golden_console.txt"
 printf '{"gate":"offline_qa"}\n' > "$SRC/orchestration/gate_events.jsonl"
 
-bar 25 'Running Golden reconstruction from raw files'; echo
+bar 20 'Running Golden reconstruction from raw files'; echo
 python3 scripts/reconstruct_wp2_golden.py --root "$SRC"
 grep -q '"primary_cohort_count": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"received_valid_by_horizon": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"completeness_300": 1.0' "$SRC/analysis/golden_reconstruction.json"
 
-bar 45 'Running dual-copy escrow simulation'; echo
+bar 40 'Running dual-filesystem escrow simulation'; echo
 WP_EVIDENCE_SRC="$SRC" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
 WP_PERSIST_ROOT="$PERSIST" WP_OFF_POWDER_ROOT="$OFF" \
 WP_EVIDENCE_INVENTORY="experiments/WP-PWD01/evidence_inventory_golden_v1.txt" \
@@ -78,10 +79,19 @@ bash scripts/wp2_golden_evidence_escrow.sh
 
 PDIR="$PERSIST/$EXP_ID/$RUN_ID"
 ODIR="$OFF/$EXP_ID/$RUN_ID"
-bar 70 'Running teardown interlock against both copies'; echo
+bar 58 'Running filesystem teardown interlock'; echo
 WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" \
 bash scripts/wp2_golden_teardown_guard.sh | tee "$ROOT/teardown.txt"
 grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/teardown.txt"
+
+bar 70 'Testing rclone remote copy/read-back SHA verification'; echo
+RROOT=":local:$RCLONE_LOCAL"
+WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
+bash scripts/wp2_golden_offpowder_rclone.sh | tee "$ROOT/rclone-copy.txt"
+REMOTE_DIR="$RROOT/$EXP_ID/$RUN_ID"
+WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$REMOTE_DIR" WP_RUN_ID="$RUN_ID" \
+bash scripts/wp2_golden_teardown_guard_rclone.sh | tee "$ROOT/rclone-guard.txt"
+grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/rclone-guard.txt"
 
 bar 85 'Testing fail-closed corruption behavior'; echo
 printf 'corruption\n' >> "$ODIR/sender/telemetry_generated.csv"
