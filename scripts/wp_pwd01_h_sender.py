@@ -34,11 +34,26 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def parse_utc(value: str) -> datetime:
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    dt = datetime.fromisoformat(text)
+    if dt.tzinfo is None:
+        raise ValueError(f"timestamp lacks timezone: {value}")
+    return dt.astimezone(timezone.utc)
+
+
 def run_capture(cmd: list[str], *, check: bool = False) -> tuple[int, str]:
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
     if check and proc.returncode != 0:
         raise RuntimeError(f"command failed rc={proc.returncode}: {' '.join(cmd)}\n{proc.stdout}")
     return proc.returncode, proc.stdout.strip()
+
+
+def has_zero_packet_loss(output: str) -> bool:
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)% packet loss", output)
+    return bool(match and float(match.group(1)) == 0.0)
 
 
 def main() -> int:
@@ -139,13 +154,16 @@ def main() -> int:
     generator_queue = DurableQueue(queue_path)
     session = PahoQoS1Session(config, client_id=("wp-h-tx-" + args.run_id)[-64:], event_log=events_path)
     worker_stop = threading.Event()
+    trial_abort = threading.Event()
+    q0_restored_event = threading.Event()
     worker_error: list[str] = []
+    rf_error: list[str] = []
     shared_lock = threading.Lock()
-    shared_pending_ids: set[str] = set()
     shared_snapshot = None
+    rf_state: dict[str, object] = {}
 
     def replay_worker() -> None:
-        nonlocal shared_pending_ids, shared_snapshot
+        nonlocal shared_snapshot
         worker_queue = DurableQueue(queue_path)
         replay = DurablePahoReplay(worker_queue, session)
         last_log = 0.0
@@ -155,9 +173,7 @@ def main() -> int:
                 writer.writerow(["utc", "connected", "pending_count", "app_inflight_count", "published_calls", "puback_callbacks"])
                 while not worker_stop.is_set():
                     snap = replay.pump_once()
-                    pending_ids = replay.pending_record_ids()
                     with shared_lock:
-                        shared_pending_ids = pending_ids
                         shared_snapshot = snap
                     now = time.monotonic()
                     if now - last_log >= 0.5:
@@ -174,8 +190,43 @@ def main() -> int:
                     worker_stop.wait(0.05)
         except Exception as exc:
             worker_error.append(f"{type(exc).__name__}: {exc}")
+            trial_abort.set()
         finally:
             worker_queue.close()
+
+    def wait_until(target_mono: float) -> bool:
+        while True:
+            if trial_abort.is_set():
+                return False
+            remaining = target_mono - time.monotonic()
+            if remaining <= 0:
+                return True
+            trial_abort.wait(min(0.1, remaining))
+
+    def rf_controller(start_mono: float) -> None:
+        try:
+            if not wait_until(start_mono + WARMUP_S + PRE_IMPAIRMENT_Q0_S):
+                return
+            _q3_command_start, q3_command_end = set_attenuation(Q3_DB)
+            q3_effective_mono = time.monotonic()
+            with shared_lock:
+                rf_state["q3_effective_utc"] = q3_command_end
+                rf_state["q3_effective_mono"] = q3_effective_mono
+
+            if not wait_until(q3_effective_mono + Q3_DURATION_S):
+                return
+            q0_command_start_mono = time.monotonic()
+            q0_command_start, q0_command_end = set_attenuation(Q0_DB)
+            cutoff_mono = time.monotonic()
+            with shared_lock:
+                rf_state["q0_restore_command_start_utc"] = q0_command_start
+                rf_state["cohort_cutoff_utc"] = q0_command_end
+                rf_state["cohort_cutoff_mono"] = cutoff_mono
+                rf_state["q3_full_state_duration_s"] = q0_command_start_mono - q3_effective_mono
+            q0_restored_event.set()
+        except Exception as exc:
+            rf_error.append(f"{type(exc).__name__}: {exc}")
+            trial_abort.set()
 
     summary = {
         "run_id": args.run_id,
@@ -184,22 +235,26 @@ def main() -> int:
         "route_output": route_output,
         "q0_readiness_pre": None,
         "q0_health_post": None,
-        "q3_start_utc": None,
+        "q3_effective_utc": None,
+        "q3_full_state_duration_s": None,
         "cohort_cutoff_utc": None,
         "queue_pending_zero_utc": None,
         "cohort_record_count": None,
         "generated_record_count": 0,
+        "generation_max_lag_s": 0.0,
         "worker_error": None,
+        "rf_error": None,
     }
 
     worker = None
-    generated_ids: list[str] = []
+    rf_thread = None
+    generated_meta: list[tuple[str, str]] = []
     cutoff_ids: set[str] = set()
     try:
         set_attenuation(Q0_DB)
         ping_rc, ping_output = run_capture(["ping", "-I", "tun_srsue", "-c", "5", "-W", "2", args.host])
         summary["q0_readiness_pre"] = {"rc": ping_rc, "output": ping_output}
-        if ping_rc != 0 or not re.search(r"0(?:\.0+)?% packet loss", ping_output):
+        if ping_rc != 0 or not has_zero_packet_loss(ping_output):
             raise RuntimeError("mandatory Q0 LTE user-plane readiness gate failed")
 
         session.connect()
@@ -221,39 +276,41 @@ def main() -> int:
             gen_fh.flush()
 
             start_mono = time.monotonic()
+            rf_thread = threading.Thread(target=rf_controller, args=(start_mono,), name="rf-controller", daemon=True)
+            rf_thread.start()
             next_record_mono = start_mono
-            q3_applied = False
-            q0_restored = False
-            cutoff_mono = None
             queue_zero_mono = None
+            cutoff_mono = None
+            cutoff_seen = False
             sequence = 0
 
             while True:
                 if worker_error:
                     raise RuntimeError("replay worker failed: " + worker_error[-1])
+                if rf_error:
+                    raise RuntimeError("RF controller failed: " + rf_error[-1])
+
+                if q0_restored_event.is_set() and not cutoff_seen:
+                    with shared_lock:
+                        cutoff_text = str(rf_state["cohort_cutoff_utc"])
+                        cutoff_mono = float(rf_state["cohort_cutoff_mono"])
+                        summary["q3_effective_utc"] = str(rf_state["q3_effective_utc"])
+                        summary["q3_full_state_duration_s"] = float(rf_state["q3_full_state_duration_s"])
+                    summary["cohort_cutoff_utc"] = cutoff_text
+                    cutoff_dt = parse_utc(cutoff_text)
+                    cutoff_ids = {rid for rid, ts in generated_meta if parse_utc(ts) <= cutoff_dt}
+                    summary["cohort_record_count"] = len(cutoff_ids)
+                    cutoff_seen = True
 
                 now = time.monotonic()
-                elapsed = now - start_mono
-
-                if not q3_applied and elapsed >= WARMUP_S + PRE_IMPAIRMENT_Q0_S:
-                    q3_start, _ = set_attenuation(Q3_DB)
-                    summary["q3_start_utc"] = q3_start
-                    q3_applied = True
-
-                if not q0_restored and elapsed >= WARMUP_S + PRE_IMPAIRMENT_Q0_S + Q3_DURATION_S:
-                    _restore_start, restore_end = set_attenuation(Q0_DB)
-                    summary["cohort_cutoff_utc"] = restore_end
-                    cutoff_mono = time.monotonic()
-                    cutoff_ids = set(generated_ids)
-                    summary["cohort_record_count"] = len(cutoff_ids)
-                    q0_restored = True
-
                 if now >= next_record_mono:
+                    lag = max(0.0, now - next_record_mono)
+                    summary["generation_max_lag_s"] = max(float(summary["generation_max_lag_s"]), lag)
                     sequence += 1
                     record = make_record(args.run_id, "BOOT-001", sequence)
                     payload_json = record.canonical_payload()
                     generator_queue.enqueue(record)
-                    generated_ids.append(record.record_id)
+                    generated_meta.append((record.record_id, record.generated_at_utc))
                     gen_writer.writerow(
                         {
                             "record_id": record.record_id,
@@ -265,9 +322,8 @@ def main() -> int:
                     gen_fh.flush()
                     next_record_mono += 1.0
 
-                if q0_restored:
-                    with shared_lock:
-                        pending_now = set(shared_pending_ids)
+                if cutoff_seen:
+                    pending_now = {row[0] for row in generator_queue.pending_rows()}
                     cohort_pending = pending_now.intersection(cutoff_ids)
                     if not cohort_pending and queue_zero_mono is None:
                         queue_zero_mono = time.monotonic()
@@ -279,10 +335,13 @@ def main() -> int:
                         summary["status"] = "STOP_AND_INVESTIGATE_H_WOULD_EXCEED_300S"
                         break
 
-                sleep_for = max(0.01, min(0.1, next_record_mono - time.monotonic()))
+                sleep_for = max(0.005, min(0.05, next_record_mono - time.monotonic()))
                 time.sleep(sleep_for)
 
-        summary["generated_record_count"] = len(generated_ids)
+        summary["generated_record_count"] = len(generated_meta)
+        trial_abort.set()
+        if rf_thread is not None:
+            rf_thread.join(timeout=5)
         worker_stop.set()
         if worker is not None:
             worker.join(timeout=5)
@@ -300,7 +359,7 @@ def main() -> int:
         post_rc, post_output = run_capture(["ping", "-I", "tun_srsue", "-c", "3", "-W", "2", args.host])
         summary["q0_health_post"] = {"rc": post_rc, "output": post_output}
         if summary["status"] == "QUEUE_DRAIN_OBSERVED_PENDING_SINK_RECONSTRUCTION" and (
-            post_rc != 0 or not re.search(r"0(?:\.0+)?% packet loss", post_output)
+            post_rc != 0 or not has_zero_packet_loss(post_output)
         ):
             summary["status"] = "INVALID_POST_Q0_USER_PLANE_HEALTH"
 
@@ -309,7 +368,10 @@ def main() -> int:
         summary["error"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
+        trial_abort.set()
         worker_stop.set()
+        if rf_thread is not None and rf_thread.is_alive():
+            rf_thread.join(timeout=5)
         if worker is not None and worker.is_alive():
             worker.join(timeout=5)
         try:
@@ -324,6 +386,8 @@ def main() -> int:
         generator_queue.close()
         if worker_error:
             summary["worker_error"] = worker_error[-1]
+        if rf_error:
+            summary["rf_error"] = rf_error[-1]
         summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     return 0 if summary["status"] == "QUEUE_DRAIN_OBSERVED_PENDING_SINK_RECONSTRUCTION" else 20
