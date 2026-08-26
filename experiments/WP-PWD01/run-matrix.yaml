@@ -1,20 +1,22 @@
 experiment_id: WP-PWD01
 protocol_version: v0.4
-status: DESIGN_FROZEN_PENDING_LIFECYCLE_AND_RF_CALIBRATION
+status: PRE_SCORE_VALIDATION_ACTIVE
 scored_runs_authorized: false
 
 controlled_rf_profile:
-  selected_profile: TBD_AFTER_NON_SCORED_FEASIBILITY
-  rejected_current_profile:
+  selected_profile: srslte-controlled-rf
+  selected_profile_revision: a6da96560b6526dc6816761282722c996418fd8c
+  rat: LTE
+  selection_status: FROZEN_AFTER_G4_G5_NON_SCORED_QUALIFICATION
+  binding_rule: verify live logical-to-physical bindings for every new experiment; never assume prior G4/G5 bindings
+  rf_path_attenuation_ids: [1, 33, 2, 34]
+  attenuation_rule: change all four IDs together
+  rejected_profile:
     name: PowderTeam/srs-rf-matrix
-    reason: current topology requires n310; WellPulse entitlement is 0 and portal says unchanged resubmission will always fail
-  candidate_profile:
+    reason: current topology requires n310; WellPulse entitlement is 0 and unchanged resubmission is not viable
+  superseded_feasibility_candidate:
     name: PowderProfiles/srsran-handover
-    profile_uuid_published: d7d95166-c42a-11eb-b1eb-e4434b2381fc
-    creator: dmaas
-    role: feasibility_only_until_lifecycle_gate_passes
-    rat: LTE
-    scientific_requirement: programmable physical RF attenuation; RAT is not itself a novelty claim
+    role: historical feasibility candidate only; not the frozen conducted-RF profile
 
 randomization:
   paired_blocks: true
@@ -48,24 +50,31 @@ modes:
   B0_PUBLISH_ONLY:
     role: LEGACY_SANITY_ONLY
     description: Historical non-durable lower-bound baseline; excluded from primary POWDER scored matrix
+  B2_MQTT_DURABLE_CLIENT:
+    role: CANDIDATE_SENSITIVITY_COMPARATOR
+    status: PRE_SCORE_SEMANTICS_GATE_OPEN
+    scope_if_qualified: compact S2/S3 sensitivity only; exact amendment must be frozen before scoring
 
 rf_states:
+  authority: experiments/WP-PWD01/RF_CALIBRATION_FREEZE_v1.md
   Q0:
     meaning: strong/stable
-    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
-    observed_radio_context: TBD
+    numeric_setting_db: 0
+    observed_radio_context: RSRP about -60 dBm; DL SNR about 40-45 dB; clean user-plane PASS
   Q1:
     meaning: degraded_but_continuously_connected_characterization_only
-    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
-    observed_radio_context: TBD
+    numeric_setting_db: 40
+    observed_radio_context: RSRP about -100 dBm; DL SNR about 18-19 dB; continuous user-plane delivery
   Q2:
     meaning: near_threshold_intermittent
-    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
-    observed_radio_context: TBD
+    numeric_setting_db: 52
+    observed_radio_context: clean isolated 20 s window produced 6 replies and 12 misses; clean Q0 recovery
   Q3:
     meaning: effective_application_data_outage
-    numeric_setting: TBD_AFTER_NON_SCORED_CALIBRATION
-    observed_radio_context: TBD
+    numeric_setting_db: 55
+    observed_radio_context: valid isolated approximately 20 s application-data outage with recovery after Q0 reset
+  readiness_rule: every scientific/non-scored calibration or scored run begins at Q0 with explicit LTE user-plane PASS; attach/IP alone is insufficient
+  further_attenuation_hunting_authorized: false
 
 workload:
   telemetry_rate_hz: 1
@@ -74,8 +83,9 @@ workload:
   warmup_duration_s: 30
   pre_impairment_q0_s: 60
   impairment_window_s: 120
-  recovery_horizon_s: TBD_AFTER_NON_SCORED_CALIBRATION
-  recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); review_if_over_300s
+  recovery_horizon_s: TBD_AFTER_NON_SCORED_H_CALIBRATION
+  recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); stop_and_investigate_if_over_300s
+  h_calibration_plan: experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md
 
 primary_cohort:
   cutoff: final_Q0_restoration_after_impairment
@@ -154,14 +164,28 @@ ota_replication:
   do_not_repeat: S3_OUTAGE_RESTART
   rat_matching_preference: use same RAT as conducted layer when a scientifically adequate current OTA profile is executable
 
+pre_score_gate_status:
+  controlled_physical_rf_profile_and_numeric_states: PASS
+  q0_user_plane_readiness_rule: PASS_FROZEN
+  recovery_horizon_H: OPEN_ACTIVE_GATE
+  remote_paho_runtime_reproduction: OPEN
+  experimental_radio_path_verification_for_mqtt: OPEN
+  record_identity_checksum_preservation: OPEN
+  b1_w1_implementation_matching: OPEN
+  evidence_capture_clock_alignment: OPEN
+  deterministic_non_scored_analysis_reconstruction: OPEN
+  b2_comparator_decision: OPEN
+  automated_powder_ssh_private_key_path: KNOWN_BAD_REPAIR_OR_BYPASS_REQUIRED
+
 freeze_requirements:
-  - Select one executable controlled physical-RF profile and pass automated create-ready-manifest-SSH-terminate with fail-safe cleanup
-  - Pass pinned Paho 2.1.0 local transport tests and reproduce exact settings in remote runtime manifest
+  - Use frozen srslte-controlled-rf profile revision and verify live bindings every experiment
+  - Reproduce pinned Paho 2.1.0 transport settings in remote runtime manifest
   - Verify payload traverses experimental cellular data path rather than POWDER control network
-  - Calibrate numeric Q0-Q3 and record observed RF context
+  - Preserve frozen Q0-Q3 values and mandatory Q0 user-plane readiness gate
   - Freeze recovery horizon H and verify cohort_cutoff_utc/horizon_end_utc timing
-  - Freeze exact profile identifier/version/bindings and node classes
   - Audit B1/W1 matching
   - Verify evidence capture and clock alignment
   - Verify analysis reconstructs primary endpoint from a non-scored pilot bundle
+  - Close B2 durable-client decision/amendment
+  - Repair or bypass known-bad automated POWDER SSH private-key path before scored automation is trusted
   - Set scored_runs_authorized true only after all gates close
