@@ -1,10 +1,28 @@
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+import hashlib
 import importlib.metadata
 import json
 import ssl
 import threading
+
+
+def _run_token(value: str) -> str:
+    token = "".join(ch for ch in value.lower() if ch.isalnum())[:4] or "run"
+    return token
+
+
+def make_run_client_id(run_id: str, architecture: str) -> str:
+    """Return a deterministic run-unique MQTT client ID with conservative length."""
+    digest = hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:12]
+    return f"wp-{_run_token(architecture)}-{digest}"
+
+
+def make_run_topic(run_id: str, architecture: str) -> str:
+    """Return a deterministic run-isolated topic namespace."""
+    digest = hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:16]
+    return f"wellpulse/wp-pwd01/{_run_token(architecture)}/{digest}/records"
 
 
 @dataclass(frozen=True)
@@ -59,6 +77,11 @@ class PahoQoS1Session:
     It provides no disk spool. A process restart therefore destroys any local
     pending state that has not reached the broker. This is the low-level session
     to be matched between B1 and W1 in WP-PWD01.
+
+    `unacked_accepted_count` tracks publish calls that Paho accepted into its
+    QoS1 processing path but has not yet acknowledged. It must not be described
+    as exact internal queue occupancy; Paho does not expose that scientific
+    quantity directly.
     """
 
     def __init__(self, config: PahoQoS1Config, client_id: str, event_log: str | Path | None = None):
@@ -76,6 +99,8 @@ class PahoQoS1Session:
             raise ValueError("WP-PWD01 B1/W1 matched session requires clean_session=False")
         if config.max_queued_messages <= 0:
             raise ValueError("WP-PWD01 requires an explicit bounded outgoing queue")
+        if not client_id:
+            raise ValueError("WP-PWD01 requires an explicit run-isolated MQTT client ID")
 
         self.config = config
         self.client_id = client_id
@@ -84,9 +109,12 @@ class PahoQoS1Session:
         self._event_lock = threading.Lock()
         self._state_lock = threading.Lock()
         self._connected = False
-        self._outstanding_mids: set[int] = set()
+        self._accepted_unacked_mids: set[int] = set()
         self._published_calls = 0
+        self._accepted_publish_calls = 0
         self._acked_calls = 0
+        self._session_present: bool | None = None
+        self._connection_count = 0
 
         self.client = mqtt.Client(
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
@@ -125,12 +153,18 @@ class PahoQoS1Session:
                 fh.flush()
 
     def _on_connect(self, client, userdata, flags, reason_code, properties) -> None:
+        session_present = bool(getattr(flags, "session_present", False))
         with self._state_lock:
             self._connected = not bool(getattr(reason_code, "is_failure", False))
+            self._session_present = session_present
+            self._connection_count += 1
         self._event(
             "mqtt_connect",
             reason_code=str(reason_code),
-            session_present=bool(getattr(flags, "session_present", False)),
+            session_present=session_present,
+            connection_count=self._connection_count,
+            client_id=self.client_id,
+            topic=self.config.topic,
         )
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties) -> None:
@@ -140,42 +174,74 @@ class PahoQoS1Session:
 
     def _on_publish(self, client, userdata, mid, reason_code, properties) -> None:
         with self._state_lock:
-            self._outstanding_mids.discard(int(mid))
+            self._accepted_unacked_mids.discard(int(mid))
             self._acked_calls += 1
         self._event("mqtt_puback", mid=int(mid), reason_code=str(reason_code))
 
     def connect(self) -> None:
-        self._event("mqtt_connect_start", host=self.config.host, port=self.config.port)
+        self._event(
+            "mqtt_connect_start",
+            host=self.config.host,
+            port=self.config.port,
+            client_id=self.client_id,
+            topic=self.config.topic,
+        )
         self.client.connect(self.config.host, self.config.port, self.config.keepalive_s)
         self.client.loop_start()
 
     def publish_async(self, payload_json: str):
         """Submit a QoS1 message without blocking telemetry generation.
 
-        Paho may keep accepted QoS>0 messages in its bounded in-memory outgoing
-        queue while disconnected. Queue exhaustion is a real B1 failure and is
-        recorded rather than hidden by application-level retry logic.
+        Paho may retain accepted QoS>0 messages in its bounded in-memory outgoing
+        state while disconnected. `MQTT_ERR_NO_CONN` therefore does not mean the
+        call was scientifically dropped: for QoS1 it can still be accepted into
+        Paho's local volatile path. Queue exhaustion is recorded as a real B1
+        failure. Other return codes are rejected explicitly.
         """
         info = self.client.publish(self.config.topic, payload_json, qos=1, retain=False)
         rc = int(info.rc)
         mid = int(info.mid)
+        success_rc = int(self._mqtt.MQTT_ERR_SUCCESS)
+        no_conn_rc = int(self._mqtt.MQTT_ERR_NO_CONN)
+        queue_full_rc = int(self._mqtt.MQTT_ERR_QUEUE_SIZE)
+        accepted = rc in {success_rc, no_conn_rc}
+
         with self._state_lock:
             self._published_calls += 1
-            if rc == int(self._mqtt.MQTT_ERR_SUCCESS):
-                self._outstanding_mids.add(mid)
+            if accepted:
+                self._accepted_publish_calls += 1
+                self._accepted_unacked_mids.add(mid)
             connected = self._connected
-        self._event("mqtt_publish_call", mid=mid, rc=rc, connected=connected)
-        if rc == int(self._mqtt.MQTT_ERR_QUEUE_SIZE):
+
+        self._event(
+            "mqtt_publish_call",
+            mid=mid,
+            rc=rc,
+            connected=connected,
+            accepted_into_volatile_qos1_path=accepted,
+        )
+        if rc == queue_full_rc:
             raise RuntimeError("Paho volatile outgoing queue is full")
+        if not accepted:
+            raise RuntimeError(f"Paho publish was not accepted; rc={rc}")
         return info
 
     def snapshot(self) -> dict:
         with self._state_lock:
+            unacked = len(self._accepted_unacked_mids)
             return {
                 "connected": self._connected,
                 "published_calls": self._published_calls,
+                "accepted_publish_calls": self._accepted_publish_calls,
                 "puback_callbacks": self._acked_calls,
-                "outstanding_mid_count": len(self._outstanding_mids),
+                "unacked_accepted_count": unacked,
+                # Backward-compatible key. Semantics are accepted-but-unacked,
+                # not exact Paho internal queue occupancy.
+                "outstanding_mid_count": unacked,
+                "session_present": self._session_present,
+                "connection_count": self._connection_count,
+                "client_id": self.client_id,
+                "topic": self.config.topic,
             }
 
     def close_at_horizon(self) -> None:
