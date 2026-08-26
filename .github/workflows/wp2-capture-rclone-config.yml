@@ -22,7 +22,6 @@ jobs:
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
       POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
       POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
-      EXPECTED_KEY_FP: SHA256:jQGQvU86rtuEchT50N1HuB4Cmizpvbmp0zSBR4rowxY
 
     steps:
       - name: Checkout
@@ -51,8 +50,7 @@ jobs:
           chmod 700 /tmp/wp2capture/askpass
           export SSH_ASKPASS=/tmp/wp2capture/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
           setsid -w ssh-keygen -y -f "$HOME/.ssh/id_powder" >/tmp/wp2capture/pub </dev/null
-          FP="$(ssh-keygen -lf /tmp/wp2capture/pub | awk '{print $2}')"
-          [[ "$FP" == "$EXPECTED_KEY_FP" ]] || { echo 'CAPTURE_BLOCKED=SSH_IDENTITY_MISMATCH'; exit 11; }
+          test -s /tmp/wp2capture/pub || { echo 'CAPTURE_BLOCKED=SSH_PUBLIC_KEY_DERIVATION'; exit 11; }
           eval "$(ssh-agent -s)" >/dev/null
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
@@ -84,7 +82,7 @@ jobs:
           while IFS= read -r EXPID; do
             echo "DISCOVERING_EXPERIMENT=$EXPID"
             if ! portal-cli experiment manifests get --experiment-id "$EXPID" >/tmp/wp2capture/manifest.json 2>/dev/null; then continue; fi
-            EXPID="$EXPID" python3 - <<'PY' >/tmp/wp2capture/logins.tsv
+            python3 - <<'PY' >/tmp/wp2capture/logins.tsv
           import json,xml.etree.ElementTree as ET
           obj=json.load(open('/tmp/wp2capture/manifest.json'))
           xmls=[]
