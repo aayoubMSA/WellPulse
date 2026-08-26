@@ -23,102 +23,78 @@ jobs:
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
 
     steps:
-      - name: Checkout WellPulse
-        uses: actions/checkout@v4
-
-      - name: Validate API secret presence
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ -n "$PORTAL_TOKEN" ]] || { echo "Missing POWDER_API_TOKEN secret"; exit 2; }
+      - uses: actions/checkout@v4
 
       - name: Install official Portal API client
         shell: bash
         run: |
           set -euo pipefail
+          [[ -n "$PORTAL_TOKEN" ]] || exit 2
           rm -rf /tmp/portal-api
           git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api
           python -m pip install --quiet '/tmp/portal-api[cli]'
-          portal-cli experiment create --help >/tmp/experiment-create-help.txt 2>&1 || true
-          portal-cli resgroup --help >/tmp/resgroup-help.txt 2>&1 || true
+          portal-cli resgroup search --help >/tmp/search-help.txt 2>&1 || true
+          portal-cli resgroup search_raw --help >/tmp/search-raw-help.txt 2>&1 || true
 
-      - name: Run authenticated read-only reservation checks
+      - name: Search earliest same-resource slot
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence/powder
-          portal-cli experiment list >/tmp/powder-experiments.json
-          portal-cli resgroup list >/tmp/powder-resgroups.json
+          mkdir -p evidence/powder /tmp/wp-res-search
+          cat > /tmp/wp-res-search/body.json <<'JSON'
+          {
+            "project": "WellPulse",
+            "nodetypes": {
+              "nodetypes": [
+                {"nodetype": "nuc1", "count": 1, "urn": "urn:publicid:IDN+emulab.net+authority+cm"},
+                {"nodetype": "nuc2", "count": 1, "urn": "urn:publicid:IDN+emulab.net+authority+cm"}
+              ]
+            }
+          }
+          JSON
 
-          python - <<'PY'
-          import json, datetime, os, re
+          set +e
+          portal-cli resgroup search_raw --duration 3 --body @/tmp/wp-res-search/body.json > /tmp/wp-res-search/search3.json 2>/tmp/wp-res-search/search3.err
+          RC3=$?
+          portal-cli resgroup search_raw --duration 2 --body @/tmp/wp-res-search/body.json > /tmp/wp-res-search/search2.json 2>/tmp/wp-res-search/search2.err
+          RC2=$?
+          set -e
+
+          python - "$RC3" "$RC2" <<'PY'
+          import json, os, re, sys, datetime
           from pathlib import Path
-
-          def load(path, default):
-              try:
-                  return json.loads(Path(path).read_text())
-              except Exception:
-                  return default
-
-          def strip_ansi(text):
-              return re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', text)
-
-          ex_raw = load('/tmp/powder-experiments.json', [])
-          exps = ex_raw if isinstance(ex_raw, list) else ex_raw.get('experiments', [])
-          wp_exps = []
-          for x in exps:
-              if isinstance(x, dict) and x.get('project') == 'WellPulse':
-                  wp_exps.append({k:x.get(k) for k in ['id','name','status','profile_name','profile_project','started_at','expires_at']})
-
-          rg_raw = load('/tmp/powder-resgroups.json', [])
-          rgs = rg_raw if isinstance(rg_raw, list) else rg_raw.get('resgroups', [])
-          wp_rgs = []
-          for rg in rgs:
-              if not isinstance(rg, dict) or rg.get('project') != 'WellPulse':
-                  continue
-              safe = {k:rg.get(k) for k in ['id','project','group','creator','start_at','expires_at','reason']}
-              safe['nodetypes'] = rg.get('nodetypes')
-              safe['ranges'] = rg.get('ranges')
-              safe['routes'] = rg.get('routes')
-              safe['powder_zones'] = rg.get('powder_zones')
-              wp_rgs.append(safe)
-
-          help_text = strip_ansi(Path('/tmp/experiment-create-help.txt').read_text(errors='replace'))
-          create_lines = [line.rstrip() for line in help_text.splitlines()
-                          if re.search(r'start|stop|duration|profile|binding|project|name', line, re.I)]
-          rg_help = strip_ansi(Path('/tmp/resgroup-help.txt').read_text(errors='replace'))
-
-          now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-          out = Path('evidence/powder/api-smoke.md')
-          with out.open('w', encoding='utf-8') as f:
-              f.write('# POWDER Portal API smoke — current reservation state\n\n')
+          rc3, rc2 = map(int, sys.argv[1:3])
+          def readj(p):
+              try: return json.loads(Path(p).read_text())
+              except Exception: return None
+          def safeerr(p):
+              t=Path(p).read_text(errors='replace') if Path(p).exists() else ''
+              t=re.sub(r'(?i)(token|authorization|bearer)\s*[:=]\s*\S+', r'\1=REDACTED', t)
+              return t[-1200:]
+          now=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          with Path('evidence/powder/api-smoke.md').open('w',encoding='utf-8') as f:
+              f.write('# POWDER early-window availability search\n\n')
               f.write(f'- Checked UTC: {now}\n')
-              f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA", "unknown")}\n')
-              f.write('- Authentication gate: **PASS**\n')
+              f.write(f'- WellPulse SHA: {os.environ.get("GITHUB_SHA","unknown")}\n')
+              f.write('- Request: `nuc1 x1 + nuc2 x1`, Emulab, project `WellPulse`\n')
               f.write('- Resource mutation attempted: **NONE**\n')
-              f.write(f'- Visible WellPulse experiments: **{len(wp_exps)}**\n')
-              f.write(f'- Visible WellPulse reservation groups: **{len(wp_rgs)}**\n')
-              f.write('- Token content recorded: **NO**\n')
-              f.write('\n## WellPulse reservation groups — sanitized\n\n```json\n')
-              f.write(json.dumps(wp_rgs, indent=2, sort_keys=True))
-              f.write('\n```\n')
-              f.write('\n## Experiment scheduling options\n\n```text\n')
-              f.write('\n'.join(create_lines[:100]))
-              f.write('\n```\n')
-              f.write('\n## Resgroup CLI\n\n```text\n')
-              f.write('\n'.join(rg_help.splitlines()[:160]))
-              f.write('\n```\n')
+              f.write(f'- 3-hour search exit: `{rc3}`\n')
+              f.write(f'- 2-hour search exit: `{rc2}`\n')
+              f.write('- Token content recorded: **NO**\n\n')
+              f.write('## 3-hour result\n\n```json\n'+json.dumps(readj('/tmp/wp-res-search/search3.json'),indent=2,sort_keys=True)+'\n```\n')
+              f.write('\n## 2-hour result\n\n```json\n'+json.dumps(readj('/tmp/wp-res-search/search2.json'),indent=2,sort_keys=True)+'\n```\n')
+              if rc3 != 0: f.write('\n## 3-hour stderr\n\n```text\n'+safeerr('/tmp/wp-res-search/search3.err')+'\n```\n')
+              if rc2 != 0: f.write('\n## 2-hour stderr\n\n```text\n'+safeerr('/tmp/wp-res-search/search2.err')+'\n```\n')
+              f.write('\n## CLI search help\n\n```text\n'+Path('/tmp/search-raw-help.txt').read_text(errors='replace')[-4000:]+'\n```\n')
           PY
 
-      - name: Commit sanitized API smoke evidence
+      - name: Commit sanitized search evidence
         shell: bash
         run: |
           set -euo pipefail
-          OUT=evidence/powder/api-smoke.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$OUT"
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Record current WellPulse POWDER reservations"
+          git add evidence/powder/api-smoke.md
+          git commit -m "Record earliest POWDER NUC-pair window search" || exit 0
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
