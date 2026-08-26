@@ -143,7 +143,7 @@ jobs:
           : > /tmp/wp-live/ssh-results.tsv
           while IFS=$'\t' read -r CID USER HOST PORT; do
             set +e
-            ssh -vv               -o BatchMode=yes               -o IdentitiesOnly=yes               -o IdentityAgent="$SSH_AUTH_SOCK"               -i "$HOME/.ssh/id_ed25519_powder"               -o ConnectTimeout=15               -o StrictHostKeyChecking=accept-new               -o UserKnownHostsFile="$HOME/.ssh/known_hosts"               -p "$PORT" "$USER@$HOST"               'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'               > "/tmp/wp-live/ssh-$CID.out" 2> "/tmp/wp-live/ssh-$CID.err"
+            ssh -n -vv               -o BatchMode=yes               -o IdentitiesOnly=yes               -o IdentityAgent="$SSH_AUTH_SOCK"               -i "$HOME/.ssh/id_ed25519_powder"               -o ConnectTimeout=15               -o StrictHostKeyChecking=accept-new               -o UserKnownHostsFile="$HOME/.ssh/known_hosts"               -p "$PORT" "$USER@$HOST"               'printf "HOST="; hostname; printf " USER="; whoami; printf " UTC="; date -u +%Y-%m-%dT%H:%M:%SZ; printf " KERNEL="; uname -srmo'               > "/tmp/wp-live/ssh-$CID.out" 2> "/tmp/wp-live/ssh-$CID.err"
             RC=$?
             set -e
             printf '%s\t%s\t%s\t%s\t%s\n' "$CID" "$USER" "$HOST" "$PORT" "$RC" >> /tmp/wp-live/ssh-results.tsv
