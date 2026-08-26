@@ -1,0 +1,2 @@
+triggered_utc=2026-08-27
+mode=read_only_powder_capture_encrypt_commit_ciphertext
