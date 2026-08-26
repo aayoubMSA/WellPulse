@@ -29,7 +29,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          portal-cli experiment list --help
           portal-cli experiment list > /tmp/experiments.json
           python - <<'PY'
           import json
@@ -38,26 +37,59 @@ jobs:
           items=obj if isinstance(obj,list) else obj.get('experiments') or obj.get('items') or obj.get('value') or []
           hits=[]
           for x in items:
-              if not isinstance(x,dict):
-                  continue
+              if not isinstance(x,dict): continue
               name=str(x.get('name') or x.get('experiment_name') or x.get('slug') or '')
-              if name=='WP-HCAL-A':
-                  hits.append(x)
+              if name=='WP-HCAL-A': hits.append(x)
           print('MATCH_COUNT='+str(len(hits)))
-          if len(hits)!=1:
-              print('VISIBLE_NAMES='+','.join(str(x.get('name') or x.get('experiment_name') or x.get('slug') or '') for x in items if isinstance(x,dict)))
-              raise SystemExit(3)
+          if len(hits)!=1: raise SystemExit(3)
           x=hits[0]
           expid=x.get('id') or x.get('uuid') or x.get('experiment_id')
-          status=x.get('status') or x.get('state') or 'unknown'
-          project=x.get('project') or x.get('project_id') or x.get('project_name') or 'unknown'
-          print('EXPERIMENT_NAME=WP-HCAL-A')
           print('EXPERIMENT_ID='+str(expid))
-          print('EXPERIMENT_STATUS='+str(status))
-          print('EXPERIMENT_PROJECT='+str(project))
           Path('/tmp/experiment_id').write_text(str(expid))
           PY
           ID="$(cat /tmp/experiment_id)"
           portal-cli experiment get --experiment-id "$ID" > /tmp/status.json
           jq '{id,name,status,project,profile_id,profile_name,profile_project,bindings}' /tmp/status.json
+          [[ "$(jq -r .status /tmp/status.json)" == "ready" ]] || { echo "NOT_READY"; exit 4; }
           echo "EXPERIMENT_DISCOVERY=PASS"
+      - name: Retrieve and parse live manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="$(cat /tmp/experiment_id)"
+          portal-cli experiment manifests get --experiment-id "$ID" > /tmp/manifests.json
+          python - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/manifests.json').read_text())
+          xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()):
+                  xmls.append(x)
+          walk(obj)
+          nodes=[]; logins=[]
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for el in root.iter():
+                  tag=el.tag.rsplit('}',1)[-1]
+                  if tag=='node':
+                      cid=el.attrib.get('client_id')
+                      comp=el.attrib.get('component_id')
+                      if cid: nodes.append((cid,comp or ''))
+                  if tag=='login' and el.attrib.get('hostname'):
+                      logins.append((el.attrib.get('username',''),el.attrib['hostname'],el.attrib.get('port','22')))
+          nodes=list(dict.fromkeys(nodes)); logins=list(dict.fromkeys(logins))
+          print('NODE_COUNT='+str(len(nodes)))
+          for cid,comp in nodes: print(f'NODE_MAP={cid}|{comp}')
+          print('SSH_ENDPOINT_COUNT='+str(len(logins)))
+          for u,h,p in logins: print(f'SSH_ENDPOINT={u}|{h}|{p}')
+          cids={c for c,_ in nodes}
+          if not {'enb1','rue1'}.issubset(cids): raise SystemExit(5)
+          if len(logins)<2: raise SystemExit(6)
+          print('MANIFEST_GATE=PASS')
+          PY
