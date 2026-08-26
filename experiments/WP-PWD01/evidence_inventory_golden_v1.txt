@@ -1,6 +1,9 @@
-# WP-PWD01 Golden E2E mandatory evidence inventory v1
+# WP-PWD01 Golden E2E mandatory evidence inventory v1.1
 # Format: CLASS|RELATIVE_PATH|NONEMPTY|DESCRIPTION
-# CLASS is REQUIRED or CONDITIONAL.
+# CLASS:
+#   REQUIRED   = must exist before Evidence Escrow Gate starts
+#   CONDITIONAL = required only for the selected architecture/configuration
+#   GENERATED  = produced by Evidence Escrow Gate itself and verified by teardown guard
 
 REQUIRED|sender/sender_summary.json|yes|Sender/run summary and frozen clocks
 REQUIRED|sender/golden_manifest.json|yes|Golden run/environment manifest
@@ -24,8 +27,8 @@ REQUIRED|orchestration/golden_console.txt|yes|Top-level progress-visible G0-G10 
 REQUIRED|orchestration/gate_events.jsonl|yes|Machine-readable gate transition/result ledger
 REQUIRED|analysis/golden_reconstruction.json|yes|Machine-readable reconstruction from escrowed raw evidence
 REQUIRED|analysis/golden_reconstruction.md|yes|Human-readable reconstruction report
-REQUIRED|escrow/SOURCE_SHA256SUMS.txt|yes|Source-node admitted-artifact SHA-256 manifest
-REQUIRED|escrow/PERSISTENT_SHA256SUMS.txt|yes|Verified /proj copy manifest
-REQUIRED|escrow/OFF_POWDER_SHA256SUMS.txt|yes|Verified off-POWDER copy manifest
-REQUIRED|escrow/escrow_provenance.json|yes|Run/experiment/source/destination/hash/timestamp provenance
-REQUIRED|escrow/EVIDENCE_ESCROW_GATE.PASS|yes|Fail-closed dual-copy authorization marker
+GENERATED|escrow/SOURCE_SHA256SUMS.txt|yes|Source-node admitted-artifact SHA-256 manifest
+GENERATED|escrow/PERSISTENT_SHA256SUMS.txt|yes|Verified /proj copy manifest
+GENERATED|escrow/OFF_POWDER_SHA256SUMS.txt|yes|Verified off-POWDER copy manifest
+GENERATED|escrow/escrow_provenance.json|yes|Run/experiment/source/destination/hash/timestamp provenance
+GENERATED|escrow/EVIDENCE_ESCROW_GATE.PASS|yes|Fail-closed dual-copy authorization marker
