@@ -76,4 +76,33 @@ Freeze the common recovery horizon from exactly **three valid non-scored W1 hard
 
 For calibration, backlog drain completes only when both conditions are true for the pre-restoration cohort: every record has reached the sink with matching identity/checksum, and the W1 durable queue has no pending cohort record. If the resulting `H > 300 s`, stop and investigate; do not cap it.
 
-Authority: `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md`. The calibration is W1-only and non-scored; it does not authorize B1/W1 scoring, reopen RF calibration, or alter the frozen randomization plan.
+Authority: `experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md` as amended by the P0 pre-score amendment. Technical invalidity is now separated from a valid adverse W1 recovery failure; a valid adverse W1 result cannot be replaced as invalid.
+
+## D-018 — Durable standard MQTT comparator B2
+A local non-scored semantics gate on 2026-08-26 qualified `B2_MQTT_DURABLE_CLIENT` using Eclipse Paho Java 1.2.5, MQTT v3.1.1, QoS1, `cleanSession=false`, `MqttDefaultFilePersistence`, and persistent disconnected buffering of size 4096 with delete-oldest disabled.
+
+Across three independent trials, five QoS1 records generated while the broker was unavailable survived abrupt client-process destruction and were all delivered after broker/client recovery: **5/5 unique, 0 missing, 0 duplicates in every trial**.
+
+Therefore B2 is frozen as a **secondary sensitivity comparator**, not the primary arm. The scored sensitivity scope, if later authorized after remote runtime/path verification, is exactly three B2 runs in S2 and three B2 runs in S3; no B2 in S0/S1 and no adaptive B2 replication. B2-vs-W1 must remain labeled non-primary because Java/runtime/client differences prevent clean causal equivalence with the matched Python B1/W1 comparison.
+
+Authorities: `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`, `evidence/local/wp2-b2-semantics-latest.md`, and `experiments/WP-PWD01/b2-sensitivity-plan.csv`.
+
+## D-019 — Consortium P1 inferential and claim freeze
+The confirmatory POWDER story is failure-domain bounded rather than assuming WellPulse wins every outage condition.
+
+- S0: healthy-path integrity equivalence and overhead sanity.
+- S1: network-only intermittent integrity is primary; recovery/overhead are predeclared secondary engineering characterization.
+- S2: network-only hard-outage integrity is primary while volatile process state survives; recovery/overhead remain secondary.
+- S3: primary durability/integrity stress when gateway/client volatile state is destroyed.
+
+The primary inferential endpoint remains unique primary-cohort telemetry completeness at common H. The existing precision-stopping rule remains completeness-only. The manuscript may report recovery endpoints but must not claim a separately powered confirmatory recovery advantage.
+
+H is frozen as one common operational observation horizon for all arms/scenarios before any scored result exists; architecture/scenario-specific or post-outcome H re-estimation is prohibited. With n=3 calibration trials, the nearest-rank p95 must be described as the maximum of the three observed successful W1 drain times.
+
+Use `cross-testbed consistency` or `cross-testbed triangulation`, not broad transportability, and keep the confirmatory claim bounded to the frozen 1 Hz low-rate telemetry regime.
+
+A strengthened inter-run washout/readiness gate is mandatory before every scored run, and an immutable pre-score reproducibility snapshot must exist before `scored_runs_authorized=true`.
+
+S0 pair 2 was counterbalanced to W1-first before any scored data existed; all other frozen B1/W1 orders remain unchanged.
+
+Authority: `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`.
