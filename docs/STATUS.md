@@ -1,141 +1,95 @@
 # Project Validation Status
 
-## Current state — 2026-08-26 16:25 Africa/Cairo
+## Current state — 2026-08-26 post-H1 closeout
 
 - FIT IoT-LAB scientific layer: **FINAL PASS**.
 - POWDER G0–G5: **PASS**.
 - RF calibration: **PASS / FROZEN**.
-- Consortium review: **PROCEED WITH MATERIAL PRE-SCORE AMENDMENTS**.
-- P0 amendment: **IMPLEMENTED / LOCAL PASS; physical safeguards still open where applicable**.
-- P1 amendment: **FROZEN PRE-SCORE**.
-- B2 durable-client local semantics: **PASS 3/3 / QUALIFIED AS COMPACT SENSITIVITY COMPARATOR**.
-- WP2: **IN PROGRESS — physical W1 H calibration is the active scientific frontier**.
+- Consortium pre-WP3 review: **PROCEED WITH MATERIAL PRE-SCORE AMENDMENTS**.
+- B2 durable-client local semantics: **PASS 3/3 / compact S2+S3 sensitivity comparator**.
+- WP2: **ACTIVE — POST-H1 / PRE-AMENDMENT / PRE-SCORE**.
+- H1 Trial #1: **`VALID_W1_RECOVERY_FAILURE`**.
+- H: **UNFROZEN**.
 - WP3/WP4: **BLOCKED**.
 - WP5: **not scientifically closed**.
 - Scientific weighted completion: **20%**.
 - `scored_runs_authorized = false`.
+- Repository: **private**.
 
-## Frozen scientific interpretation
+## H1 physical evidence
 
-- S0: healthy-path integrity equivalence + overhead sanity.
-- S1: network-only integrity primary; recovery/overhead secondary.
-- S2: network-only integrity primary while volatile client state survives; recovery/overhead secondary.
-- S3: primary process-state durability/integrity stress.
-- Primary inferential endpoint remains unique primary-cohort completeness at common H.
-- Precision stopping remains completeness-only.
-- No separately powered confirmatory recovery-advantage claim.
-- Use cross-testbed consistency/triangulation, not broad transportability.
-- Claim remains bounded to 1 Hz low-rate telemetry.
+Experiment: `WP-HCAL-E` (`9153e16a-1eb1-45f5-88bf-303636a9d1ec`), profile revision `a6da96560b6526dc6816761282722c996418fd8c`, mapping `enb1 -> nuc1`, `rue1 -> nuc2`.
 
-## Frozen RF state
+Run `wp2h1-a1-20260826-001` satisfied entry/runtime/RF gates and then failed to restore a usable LTE user plane within the frozen post-Q0 bound.
 
-- Q0 = **0 dB**.
-- Q1 = **40 dB**.
-- Q2 = **52 dB**.
-- Q3 = **55 dB**.
-- attenuation IDs = `1 33 2 34`, always together.
-- no additional RF sweep authorized.
+Key values:
 
-Every scientific/non-scored/scored run requires Q0 end-to-end LTE user-plane PASS; attach/IP alone is insufficient.
+- Q3 full-state: `120.000117905 s`.
+- Q0/RF restore cutoff: `2026-08-26T18:16:00.428045+00:00`.
+- generated records: 361.
+- pre-restoration cohort: 211.
+- final pending: 270.
+- inflight: 20.
+- published calls: 111.
+- PUBACK callbacks: 91.
+- pre-Q3 Q0 health: 5/5 ping PASS.
+- post-restoration health: 0/3 ping.
+- queue pending zero: not reached.
 
-## H active gate
+This is adverse valid evidence and is not replaceable as technical invalidity.
 
-Target successful non-scored W1 trial:
+## Failure diagnosis
 
-`30 s readiness -> Q0 60 s -> Q3 120 s -> Q0 until backlog drain`
+Radio recovery occurred sufficiently for later strong uplink decoding, while EPC/MME/SPGW showed stale/context/IP churn and repeated attach/session cleanup failures. The observed non-recovery is therefore dominated by the LTE substrate/testbed state machine rather than a demonstrated application/MQTT durability failure.
 
-Outcome classes:
+## Recovery characterization
 
-- `TECHNICALLY_INVALID` — replaceable only for predefined technical invalidity.
-- `VALID_W1_RECOVERY_FAILURE` — adverse valid evidence; not replaceable; blocks H freeze.
-- `VALID_W1_RECOVERY_SUCCESS` — exactly three required.
+- UE-only restart: FAIL.
+- core/RAN reset with UE still running: FAIL to restore user plane.
+- coordinated `stop UE -> EPC -> eNB -> fresh UE`: PASS.
+- after that recovery, exact TLS/MQTTv3.1.1/QoS1/round-trip/SHA-256 application path: **PASS 3/3 fresh sessions**.
 
-Common horizon:
+The coordinated sequence is not yet an approved in-scenario action.
 
-`H = max(120 s, ceil_to_30s(2 × p95))`
+## Evidence/reproducibility
 
-With n=3 successful trials, p95 is the maximum observed drain. H is frozen once before scoring and used identically for all arms/scenarios. If H > 300 s, stop and investigate; never cap.
+Original H1 raw archives, recovery-characterization archives, runtime/config fingerprints, and final node-local evidence manifests are preserved.
 
-## Current automation/credential state
+Final node-local manifest anchors:
 
-The secure GitHub Actions path is now **credential-ready**:
+- nuc1: 22 files, SHA-256 `9596f23f4e9359d3395f29f6e0081d5acdec05dc6a986c0e0b0f19ac5fa35811`.
+- nuc2: 34 files, SHA-256 `343a9deb1e432c0f5d30cbf55def3d133726a214a595d9f7f0723a5e87d8ec2e`.
 
-- official Portal API authentication works;
-- SSH private-key structure is valid;
-- passphrase unlock works;
-- identity loads into `ssh-agent`;
-- corresponding public key is registered with POWDER for future experiments.
+The raw files, not the hashes alone, contain the record-level data required for scientific tables and figures.
 
-This supersedes the earlier stale statement that `POWDER_SSH_PRIVATE_KEY` was unusable.
+## Current scientific frontier
 
-Fresh-node SSH acceptance remains **OPEN** because the last READY experiment was created before registration of the current public key. Do not ask the user to re-enter secret material without actual evidence of credential invalidity.
+Authority: `docs/CONSORTIUM_WP2_RECOVERY_SEMANTICS_GATE_2026-08-26.md`.
 
-## 14:00–16:00 POWDER window
+No H rerun is allowed yet.
 
-Status: **CLOSED / SCIENTIFICALLY CLEAN**.
+Current path:
 
-- `WP-HCAL-A` reached READY and physical `nuc1+nuc2` mapping was verified.
-- SSH failed with the current automation identity because that identity was not injected into the already-running experiment.
-- current public key was registered with POWDER.
-- immediate terminate/recreate (`A -> B`) did not recover to READY.
-- after cooldown, the resource-release gate passed.
-- `WP-HCAL-C` creation succeeded but remained mostly `pending` with intermittent `provisioning`; it never reached READY.
-- after reservation expiry, final read-only Portal API check found zero active H-cal experiments and release gate PASS.
-- no H, LTE user-plane, MQTT, or scored scientific run occurred.
+`RS-1 offline evidence reconstruction -> RS-2 LTE mechanism review -> RS-3 recovery-clock/H estimand review -> RS-4 adversarial review -> RS-5 prospective amendment -> RS-6 Golden E2E rehearsal design -> RS-7 GO/KILL`
 
-Mandatory pre-read:
+Canonical RS-1 sender tool:
 
-`powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
+`scripts/wp2_rs1a_sender_reconstruct.py`
 
-Mandatory allocator rule D-020:
+Candidate clocks under review:
 
-`terminate -> verify release -> convergence interval -> recreate only if still necessary`
+- `t_rf_restore`;
+- `t_service_ready`;
+- `t_app_complete`.
 
-Never use immediate same-resource recreate as the default recovery path.
-
-## Open pre-score gates
-
-1. fresh experiment READY under current registered automation key;
-2. SSH acceptance on both live nodes;
-3. physical H calibration and H freeze;
-4. physical MQTT session isolation;
-5. remote B1/W1 Paho/runtime reproduction;
-6. experimental LTE route verification via `tun_srsue`;
-7. physical record identity/checksum verification;
-8. evidence/clock alignment;
-9. deterministic non-scored analysis reconstruction;
-10. B1/W1 implementation matching audit;
-11. non-scored S3 restart-domain verification;
-12. non-scored B2 remote runtime/path/restart verification;
-13. immutable pre-score reproducibility snapshot;
-14. explicit scored authorization.
-
-## Current reservation
-
-**2026-08-26 19:00–22:00 Africa/Cairo — `nuc1+nuc2`**.
+No protocol amendment is frozen yet.
 
 ## Exact next action
 
-Before touching POWDER, read:
+1. Work offline from the preserved H1 node archives.
+2. Execute RS-1A through RS-1E and preserve/hashes derived outputs.
+3. Complete RS-2, RS-3 and RS-4 before writing a prospective amendment.
+4. Freeze a Golden E2E non-scored rehearsal only after the amendment is defensible.
+5. Reopen H only after `GO_REOPEN_H`.
 
-1. `HANDOVER_CURRENT.md`
-2. `docs/AGENT_HANDOVER_POWDER_NEXT.md`
-3. `powder/PRE_EXPERIMENT_GATE_2026-08-26.md`
-4. D-020 in `docs/DECISIONS.md`
-
-Then:
-
-1. verify the reservation is live and still owns `nuc1+nuc2`;
-2. instantiate exactly one fresh `PowderProfiles/srslte-controlled-rf` experiment early;
-3. wait for READY without teardown/recreate churn;
-4. verify exact profile revision, manifest, live node bindings and SSH endpoints;
-5. prove current automation-key SSH on both nodes;
-6. establish EPC/eNB + UE;
-7. pass Q0 end-to-end LTE user-plane readiness;
-8. prove route to `172.16.0.1` via `tun_srsue`;
-9. verify remote Paho/runtime and fresh MQTT session isolation;
-10. only then execute H attempts until exactly three `VALID_W1_RECOVERY_SUCCESS` trials exist;
-11. stop for any valid W1 recovery failure or H > 300 implication;
-12. freeze H only through deterministic finalization.
-
-No WP3, no scored B1/W1/B2, and no RF reopening until all pre-score gates close.
+No scored B1/W1/B2, no WP3, and no RF recalibration before the gate closes.
