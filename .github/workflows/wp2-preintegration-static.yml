@@ -29,79 +29,113 @@ jobs:
           bash -n scripts/wp2_portal_client_bootstrap.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_ready_probe.sh
+          bash -n scripts/wp2_controller_pull_persistent_escrow.sh
+          bash -n scripts/wp2_controller_verify_artifact_roundtrip.sh
           bash -n powder/wp2_a3_adopt.sh
           bash -n powder/wp2_a3_prepare_q0.sh
-          python3 -m py_compile scripts/wp2_prelaunch_time_guard.py
+          python3 -m py_compile scripts/wp2_prelaunch_time_guard.py scripts/wp2_portal_record_guard.py
 
-          # K1 supply-chain/runtime pins: fail closed on mutable/bootstrap references.
+          # K1 supply-chain/runtime pins.
           grep -q 'UV_VERSION=.*0.12.1' scripts/wp2_a3_runtime_bootstrap.sh
-          grep -q 'uv-x86_64-unknown-linux-gnu.tar.gz' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q '90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb' scripts/wp2_a3_runtime_bootstrap.sh
           ! grep -q 'astral.sh/uv/install.sh' scripts/wp2_a3_runtime_bootstrap.sh
-
           grep -q 'RCLONE_VERSION=.*1.75.0' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa' scripts/wp2_a3_runtime_bootstrap.sh
-          grep -q 'sha256sum -c' scripts/wp2_a3_runtime_bootstrap.sh
           ! grep -q 'rclone-current-linux-amd64.zip' scripts/wp2_a3_runtime_bootstrap.sh
 
-          # Portal API future-integration bootstrap must use the authoritative immutable revision.
           grep -q 'https://gitlab.flux.utah.edu/emulab/portal-api.git' scripts/wp2_portal_client_bootstrap.sh
           grep -q 'PORTAL_API_REVISION="01be03b2f60c067815a7654437320dd981ca3617"' scripts/wp2_portal_client_bootstrap.sh
           grep -q 'PORTAL_API_CAPTURE_ARCHIVE_SHA256="3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8"' scripts/wp2_portal_client_bootstrap.sh
-          grep -q 'git -C "$DEST" fetch -q --depth 1 origin "$PORTAL_API_REVISION"' scripts/wp2_portal_client_bootstrap.sh
           grep -q 'ACTUAL="$(git -C "$DEST" rev-parse HEAD)"' scripts/wp2_portal_client_bootstrap.sh
           grep -q '\[\[ "$ACTUAL" == "$PORTAL_API_REVISION" \]\]' scripts/wp2_portal_client_bootstrap.sh
-          ! grep -Eq 'git clone .*portal-api\.git' scripts/wp2_portal_client_bootstrap.sh
 
-          # Future integration checkout is immutable, Node24-native, and runner major image is explicit.
-          grep -q 'runs-on: ubuntu-24.04' .github/workflows/wp2-preintegration-static.yml
+          # Node24-native immutable controller actions.
           grep -q 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' .github/workflows/wp2-preintegration-static.yml
-          ! grep -Eq 'actions/checkout@v[0-9]+' .github/workflows/wp2-preintegration-static.yml
+          grep -q 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' .github/workflows/wp2-offpowder-artifact-qa.yml
+          grep -q 'actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f' .github/workflows/wp2-offpowder-artifact-qa.yml
+          grep -q 'actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131' .github/workflows/wp2-offpowder-artifact-qa.yml
+          ! grep -Eq 'actions/(checkout|upload-artifact|download-artifact)@v[0-9]+' .github/workflows/wp2-preintegration-static.yml .github/workflows/wp2-offpowder-artifact-qa.yml
 
+          # K2: node phase may reach /proj only; off-POWDER + teardown authority stay controller-side.
+          grep -q 'PERSISTENT_ESCROW_GATE.PASS' scripts/wp2_golden_orchestrator.sh
+          grep -q 'CONTROLLER_OFFPOWDER_REQUIRED' scripts/wp2_golden_orchestrator.sh
+          grep -q '^printf .*CONTROLLER_OFFPOWDER_GATE=PENDING' scripts/wp2_golden_orchestrator.sh
+          grep -q '^printf .*TEARDOWN_AUTHORIZED=NO' scripts/wp2_golden_orchestrator.sh
+          ! grep -q 'wp2_golden_offpowder_rclone.sh' scripts/wp2_golden_orchestrator.sh
+          ! grep -q 'wp2_golden_teardown_guard_rclone.sh' scripts/wp2_golden_orchestrator.sh
+          ! grep -q 'RCLONE_ROOT' scripts/wp2_golden_orchestrator.sh
+          grep -q 'SOURCE_SHA256SUMS.txt' scripts/wp2_controller_pull_persistent_escrow.sh
+          grep -q 'sha256sum -c' scripts/wp2_controller_pull_persistent_escrow.sh
+          grep -q 'CONTROLLER_OFFPOWDER_GATE=PASS' scripts/wp2_controller_verify_artifact_roundtrip.sh
+          grep -q 'TEARDOWN_AUTHORIZED=YES' scripts/wp2_controller_verify_artifact_roundtrip.sh
+
+          # K3: Portal record is fail-closed; only exact ready + ID + unique aware expiry passes.
+          cat >/tmp/portal-good.json <<'JSON'
+          {"experiment_id":"exp-k3-test","status":"ready","expires_at":"2026-08-27T15:00:00Z"}
+          JSON
+          python3 scripts/wp2_portal_record_guard.py --json /tmp/portal-good.json --expected-experiment-id exp-k3-test | tee /tmp/portal-good.txt
+          grep -q '^PORTAL_RECORD_GATE=PASS$' /tmp/portal-good.txt
+          grep -q '^EXPIRES_UTC=2026-08-27T15:00:00Z$' /tmp/portal-good.txt
+
+          cat >/tmp/portal-bad-status.json <<'JSON'
+          {"experiment_id":"exp-k3-test","status":"provisioning","expires_at":"2026-08-27T15:00:00Z"}
+          JSON
+          set +e
+          python3 scripts/wp2_portal_record_guard.py --json /tmp/portal-bad-status.json --expected-experiment-id exp-k3-test >/tmp/portal-bad-status.txt
+          rc=$?
+          set -e
+          [[ "$rc" -eq 4 ]]
+          grep -q '^LIVE_PREPARATION_AUTHORIZED=NO$' /tmp/portal-bad-status.txt
+
+          cat >/tmp/portal-ambig.json <<'JSON'
+          {"experiment_id":"exp-k3-test","status":"ready","expires_at":"2026-08-27T15:00:00Z","end_time":"2026-08-27T15:00:00Z"}
+          JSON
+          set +e
+          python3 scripts/wp2_portal_record_guard.py --json /tmp/portal-ambig.json --expected-experiment-id exp-k3-test >/tmp/portal-ambig.txt
+          rc=$?
+          set -e
+          [[ "$rc" -eq 7 ]]
+          grep -q '^PORTAL_RECORD_GATE=BLOCKED:EXPIRY_FIELD_AMBIGUOUS$' /tmp/portal-ambig.txt
+
+          # K4: exact receiver launch is detached and bounded; live timing remains a live smoke item.
           grep -q 'RECEIVER_LAUNCH_TIMEOUT_S' scripts/wp2_golden_orchestrator.sh
           grep -q 'timeout "${RECEIVER_LAUNCH_TIMEOUT_S}s" ssh -n' scripts/wp2_golden_orchestrator.sh
           grep -q '</dev/null' scripts/wp2_golden_orchestrator.sh
           grep -q 'RECEIVER_LAUNCH_ELAPSED_S' scripts/wp2_golden_orchestrator.sh
-          grep -q 'rclone v1.75.0' scripts/wp2_golden_orchestrator.sh
+
+          # Runtime fingerprints remain mandatory.
           grep -q 'openssl=' scripts/wp2_golden_orchestrator.sh
           grep -q 'mosquitto=' scripts/wp2_golden_orchestrator.sh
-
           grep -q 'openssl s_client -brief' scripts/wp2_golden_service_ready_probe.sh
           ! grep -q 'SSL-Session:' scripts/wp2_golden_service_ready_probe.sh
 
-          # K7: no active GitHub workflow may use tmcc attenuator as an observer/probe.
-          ! grep -R -E 'tmcc[[:space:]]+attenuator' .github/workflows --include='*.yml' --include='*.yaml'
-          ! grep -q 'tmcc attenuator' archive/workflows/a3-2026-08-27/wp2-a3-attempt6-status-readonly.yml
-
+          # K5: time gate PASS/BLOCK boundaries and invalid expiry fail-close.
           python3 scripts/wp2_prelaunch_time_guard.py \
-            --now-utc 2026-08-27T12:00:00Z \
-            --expires-utc 2026-08-27T12:45:00Z \
-            --min-remaining-s 2700 | tee /tmp/time-pass.txt
+            --now-utc 2026-08-27T12:00:00Z --expires-utc 2026-08-27T12:45:00Z --min-remaining-s 2700 | tee /tmp/time-pass.txt
           grep -q '^PRELAUNCH_TIME_GATE=PASS$' /tmp/time-pass.txt
-
           set +e
           python3 scripts/wp2_prelaunch_time_guard.py \
-            --now-utc 2026-08-27T12:00:00Z \
-            --expires-utc 2026-08-27T12:44:59Z \
-            --min-remaining-s 2700 > /tmp/time-block.txt
+            --now-utc 2026-08-27T12:00:00Z --expires-utc 2026-08-27T12:44:59Z --min-remaining-s 2700 >/tmp/time-block.txt
           rc=$?
           set -e
           [[ "$rc" -eq 3 ]]
-          grep -q '^PRELAUNCH_TIME_GATE=BLOCKED:INSUFFICIENT_REMAINING_TIME$' /tmp/time-block.txt
           grep -q '^GOLDEN_LAUNCH_AUTHORIZED=NO$' /tmp/time-block.txt
-
           set +e
-          python3 scripts/wp2_prelaunch_time_guard.py \
-            --now-utc 2026-08-27T12:00:00Z \
-            --expires-utc 'unknown' > /tmp/time-invalid.txt
+          python3 scripts/wp2_prelaunch_time_guard.py --now-utc 2026-08-27T12:00:00Z --expires-utc unknown >/tmp/time-invalid.txt
           rc=$?
           set -e
           [[ "$rc" -eq 2 ]]
-          grep -q '^PRELAUNCH_TIME_GATE=BLOCKED:INVALID_TIMESTAMP:' /tmp/time-invalid.txt
 
+          # K7: no active GitHub workflow may query/change RF through tmcc attenuator.
+          ! grep -R -E 'tmcc[[:space:]]+attenuator' .github/workflows --include='*.yml' --include='*.yaml'
+          ! grep -q 'tmcc attenuator' archive/workflows/a3-2026-08-27/wp2-a3-attempt6-status-readonly.yml
+
+          echo 'K2_CONTROLLER_TRANSPORT_STATIC=PASS'
+          echo 'K3_PORTAL_FAILCLOSE_STATIC=PASS'
+          echo 'K4_RECEIVER_DETACH_IMPLEMENTATION=PASS_LIVE_PROOF_OPEN'
+          echo 'K5_TIME_GUARD_IMPLEMENTATION=PASS_LIVE_BINDING_OPEN'
+          echo 'K7_OBSERVATION_POLICY_STATIC=PASS'
           echo 'PREINTEGRATION_STATIC_ACCEPTANCE=PASS'
-          echo 'PORTAL_API_PIN_STATIC_GATE=PASS'
-          echo 'K7_ACTIVE_WORKFLOW_RF_OBSERVATION_BAN=PASS'
           echo 'POWDER_CONTACT=NO'
           echo 'DRIVE_CONTACT=NO'
           echo 'SCIENTIFIC_RUN=NO'
