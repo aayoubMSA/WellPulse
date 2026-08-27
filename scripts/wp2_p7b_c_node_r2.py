@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 import json
 from pathlib import Path, PurePosixPath
@@ -25,18 +26,27 @@ def _load(name: str, path: Path):
 r1 = _load("wp2_p7b_c_node_r1_layer", HERE / "wp2_p7b_c_node_r1.py")
 base = r1.base
 CONTRACT_PATH = ROOT / "experiments/WP-PWD01/p7b-executable-contract-v2.json"
-RUNTIME_CONTRACT_PATH = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json"
+RUNTIME_CONTRACT_PATH = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json"
 contract = load_contract(CONTRACT_PATH)
 runtime_contract = json.loads(RUNTIME_CONTRACT_PATH.read_text(encoding="utf-8"))
 
 
-def verify_target_interpreter() -> None:
+def verify_target_interpreter_and_python_dependencies() -> None:
     expected = runtime_contract["roles"]["ue"]["project_python_exact"]
     actual = ".".join(str(x) for x in sys.version_info[:3])
     if actual != expected:
         raise RuntimeError(f"TARGET_PROJECT_PYTHON_MISMATCH:{actual}!={expected}")
     if runtime_contract["roles"]["ue"]["system_python_project_code_allowed"] is not False:
         raise RuntimeError("SYSTEM_PYTHON_POLICY_DRIFT")
+    expected_paho = runtime_contract["roles"]["ue"]["paho_mqtt_exact"]
+    try:
+        actual_paho = importlib.metadata.version("paho-mqtt")
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise RuntimeError("TARGET_PAHO_MQTT_MISSING") from exc
+    if actual_paho != expected_paho:
+        raise RuntimeError(f"TARGET_PAHO_MQTT_MISMATCH:{actual_paho}!={expected_paho}")
+    if runtime_contract["node_project_python_policy"]["package_metadata_interface"] != "importlib.metadata":
+        raise RuntimeError("PYTHON_METADATA_INTERFACE_DRIFT")
 
 
 def inject_contract_authority() -> None:
@@ -86,8 +96,6 @@ def install_observed_attenuator_interface() -> None:
         )
         if ctrl["set_ack_pass"] is not True:
             return {}
-        # Compatibility return only: the readiness observation writer below
-        # removes this legacy field and replaces it with attenuation_control.
         return {str(x): float(contract.profile["q0_db"]) for x in contract.profile["attenuator_ids"]}
 
     base.attenuator_readback = no_false_readback
@@ -103,6 +111,7 @@ def install_contract_aware_writer() -> None:
             value["ue_evidence_root"] = str(base.EVDIR.resolve())
             value["executable_contract_schema"] = contract.raw["schema_version"]
             value["target_runtime_contract_schema"] = runtime_contract["schema_version"]
+            value["target_runtime_efcc_run_id"] = runtime_contract["efcc_evidence"]["github_run_id"]
             value["authoritative_node_entrypoint"] = contract.raw["execution"]["only_authoritative_node_entrypoint"]
         elif path.name == "readiness_observation.json" and isinstance(value, dict):
             value = dict(value)
@@ -157,14 +166,15 @@ def verify_injection() -> None:
 
 
 def main() -> int:
-    verify_target_interpreter()
+    verify_target_interpreter_and_python_dependencies()
     inject_contract_authority()
     verify_injection()
     install_observed_attenuator_interface()
     install_contract_aware_writer()
     install_contract_aware_run_router()
     print("P7B_EXECUTABLE_CONTRACT_V2=PASS", flush=True)
-    print("P7B_TARGET_RUNTIME_CONTRACT=PASS", flush=True)
+    print("P7B_TARGET_RUNTIME_CONTRACT_V2=PASS", flush=True)
+    print("P7B_EFCC_BINDING=PASS", flush=True)
     print("ATTENUATION_VERIFICATION=SET_ACK_PLUS_INDEPENDENT_Q0_PATH_NO_READBACK_CLAIM", flush=True)
     print("P7B_AUTHORITATIVE_ENTRYPOINT=scripts/wp2_p7b_c_node_r2.py", flush=True)
     print("LIVE_AUTHORIZATION=SEPARATE_REQUIRED", flush=True)
