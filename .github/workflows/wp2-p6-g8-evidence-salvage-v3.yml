@@ -1,0 +1,220 @@
+name: WP2 P6 — Same-Run G8 Evidence Salvage v3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-p6-g8-salvage-v3-trigger'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: wp2-p6-g8-evidence-salvage-v3
+  cancel-in-progress: false
+
+jobs:
+  salvage-v3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXPID: 5579cf25-dbb1-4d04-87e3-ff558e3be2af
+      RUN_ID: wp2-p6r-33099648133-20260827T174149Z
+      CORE_HOST: nuc1.emulab.net
+      UE_HOST: nuc2.emulab.net
+      SCIENTIFIC_SOURCE_SHA: bd1b5e12f3d2eca27ec81ccadbeec5afaa2f2159
+      RECONSTRUCTION_FIX_COMMIT: b7389f5e38276673333a44ba2f5cf013cb60cc2f
+
+    steps:
+      - name: Checkout corrected reconstruction control state
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Install controller dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync jq >/dev/null
+
+      - name: Freeze immutable-run salvage contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(awk -F= '$1=="salvage" {print $2}' .wp2-p6-g8-salvage-v3-trigger | tail -1)" == WP2_P6_G8_CLOCK_FIX_EVIDENCE_ONLY_V3 ]]
+          [[ "$(awk -F= '$1=="run_id" {print $2}' .wp2-p6-g8-salvage-v3-trigger | tail -1)" == "$RUN_ID" ]]
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]]
+          python3 -m py_compile scripts/reconstruct_wp2_golden.py
+          grep -q 'rf_restore.ready' scripts/reconstruct_wp2_golden.py
+          grep -q 'FAIL_RF_RESTORE_TIMELINE_MATCH' scripts/reconstruct_wp2_golden.py
+          echo 'P6_G8_V3_CONTRACT=PASS'
+          echo 'SCIENTIFIC_RERUN=NO'
+          echo 'RAW_EDIT=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'SECOND_RESERVATION=NO'
+          echo 'SCIENTIFIC_SOURCE_SHA='"$SCIENTIFIC_SOURCE_SHA"
+          echo 'RECONSTRUCTION_FIX_COMMIT='"$RECONSTRUCTION_FIX_COMMIT"
+          echo 'TEARDOWN_AUTHORIZED=NO'
+
+      - name: Reconstruct immutable run, persist, and pull
+        id: recover
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP=/tmp/wp2-p6-g8-v3
+          rm -rf "$TMP"; mkdir -p "$TMP" "$HOME/.ssh"
+          umask 077
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path('/tmp/wp2-p6-g8-v3/private.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$TMP/private.key"
+          cat > "$TMP/askpass" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f "$TMP/private.key" > "$TMP/public.key" </dev/null
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          USER="${POWDER_USERNAME:-aayoub}"; [[ -n "$USER" ]] || USER=aayoub
+          SSH=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${SSH[@]}" "$USER@$CORE_HOST" true
+          ssh "${SSH[@]}" "$USER@$UE_HOST" true
+
+          # Prove the exact protected run and already-salvaged receiver evidence.
+          ssh "${SSH[@]}" "$USER@$UE_HOST" "set -eu
+            ROOT=\"\$HOME/wellpulse-powder-evidence/golden/$RUN_ID\"
+            [[ \$(git -C \"\$HOME/WellPulse\" rev-parse HEAD) == '$SCIENTIFIC_SOURCE_SHA' ]]
+            test -s \"\$ROOT/sender/sender_summary.json\"
+            grep -q 'GOLDEN_FIXED_HORIZON_COMPLETE' \"\$ROOT/sender/sender_summary.json\"
+            grep -q '\"gate\":\"G7\".*\"status\":\"PASS\"' \"\$ROOT/orchestration/gate_events.jsonl\"
+            test -s \"\$ROOT/sender/rf_restore.ready\"
+            test -s \"\$ROOT/receiver/telemetry_received.csv\"
+            test -s \"\$ROOT/receiver/receiver_events.jsonl\"
+            test -s \"\$ROOT/substrate/service_ready_probe.txt\"
+            echo P6_V3_IMMUTABLE_RUN_GATE=PASS"
+
+          # Use corrected analysis code without modifying the frozen scientific checkout.
+          scp "${SSH[@]}" scripts/reconstruct_wp2_golden.py "$USER@$UE_HOST:/tmp/reconstruct_wp2_golden_p6_clockfix.py" >/dev/null
+          FIX_SHA="$(sha256sum scripts/reconstruct_wp2_golden.py | awk '{print $1}')"
+          ssh "${SSH[@]}" "$USER@$UE_HOST" "set -eu
+            ROOT=\"\$HOME/wellpulse-powder-evidence/golden/$RUN_ID\"
+            mkdir -p \"\$ROOT/analysis\"
+            cat > \"\$ROOT/analysis/reconstruction_provenance.txt\" <<EOF
+          scientific_source_sha=$SCIENTIFIC_SOURCE_SHA
+          reconstruction_fix_commit=$RECONSTRUCTION_FIX_COMMIT
+          reconstruction_script_sha256=$FIX_SHA
+          raw_measurement_modified=NO
+          scientific_rerun=NO
+          reason=trailing_fail_safe_Q0_cleanup_must_not_replace_sender_rf_restore_ready_authority
+          EOF
+            \"\$HOME/.wp2-golden-venv/bin/python\" /tmp/reconstruct_wp2_golden_p6_clockfix.py --root \"\$ROOT\"
+            echo P6_V3_RECONSTRUCTION_JSON_BEGIN
+            cat \"\$ROOT/analysis/golden_reconstruction.json\"
+            echo P6_V3_RECONSTRUCTION_JSON_END
+            WP_EVIDENCE_SRC=\"\$ROOT\" WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$EXPID' WP_PERSIST_ROOT='/proj/WellPulse/evidence-escrow' WP_EVIDENCE_INVENTORY=\"\$HOME/WellPulse/experiments/WP-PWD01/evidence_inventory_golden_v1.txt\" bash scripts/wp2_golden_evidence_escrow.sh
+            test -s '/proj/WellPulse/evidence-escrow/$EXPID/$RUN_ID/escrow/PERSISTENT_ESCROW_GATE.PASS'
+            echo P6_V3_RECONSTRUCT_AND_PERSIST=PASS" | tee "$TMP/reconstruct-persist.txt"
+          grep -q '^P6_V3_RECONSTRUCT_AND_PERSIST=PASS$' "$TMP/reconstruct-persist.txt"
+
+          PDIR="/proj/WellPulse/evidence-escrow/$EXPID/$RUN_ID"
+          BUNDLE="$TMP/wp2-p6-g8-v3-$RUN_ID.tar"
+          WP_PERSIST_HOST="$UE_HOST" WP_REMOTE_USER="$USER" WP_SSH_PORT=22 WP_PERSIST_REMOTE_DIR="$PDIR" \
+          WP_CONTROLLER_LOCAL_DIR="$TMP/controller" WP_CONTROLLER_BUNDLE_OUT="$BUNDLE" WP_KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts" \
+            bash scripts/wp2_controller_pull_persistent_escrow.sh | tee "$TMP/controller-pull.txt"
+          grep -q '^CONTROLLER_PULL_GATE=PASS$' "$TMP/controller-pull.txt"
+          SHA="$(awk -F= '$1=="CONTROLLER_BUNDLE_SHA256" {print $2}' "$TMP/controller-pull.txt" | tail -1)"
+          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]]; test -s "$BUNDLE"
+          echo "bundle_path=$BUNDLE" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo 'P6_G8_V3_RECOVER=PASS'
+
+      - name: Upload verified same-run bundle
+        id: upload
+        if: steps.recover.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p6-g8-v3-${{ github.run_id }}
+          path: ${{ steps.recover.outputs.bundle_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Independent artifact read-back
+        id: download
+        if: steps.upload.outcome == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p6-g8-v3-${{ github.run_id }}
+          path: /tmp/wp2-p6-g8-v3-roundtrip
+
+      - name: Verify hashes then terminate exact experiment
+        id: finalize
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.recover.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          ROUNDTRIP="$(find /tmp/wp2-p6-g8-v3-roundtrip -maxdepth 2 -type f -name '*.tar' | head -1)"
+          test -s "$ROUNDTRIP"
+          WP_ROUNDTRIP_TAR="$ROUNDTRIP" WP_EXPECTED_BUNDLE_SHA256="$EXPECTED_SHA" WP_VERIFY_DIR=/tmp/wp2-p6-g8-v3-verified \
+            bash scripts/wp2_controller_verify_artifact_roundtrip.sh | tee /tmp/wp2-p6-g8-v3-final.txt
+          grep -q '^CONTROLLER_OFFPOWDER_GATE=PASS$' /tmp/wp2-p6-g8-v3-final.txt
+          grep -q '^EVIDENCE_ESCROW_GATE=PASS$' /tmp/wp2-p6-g8-v3-final.txt
+          grep -q '^TEARDOWN_AUTHORIZED=YES$' /tmp/wp2-p6-g8-v3-final.txt
+          echo P6_V3_VERIFIED_RECONSTRUCTION_BEGIN
+          cat /tmp/wp2-p6-g8-v3-verified/analysis/golden_reconstruction.json
+          echo P6_V3_VERIFIED_RECONSTRUCTION_END
+          cat /tmp/wp2-p6-g8-v3-verified/analysis/reconstruction_provenance.txt
+
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api-g8-v3-final >/tmp/wp2-p6-g8-v3-portal-pin.txt
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/wp2-p6-g8-v3-portal-pin.txt
+          portal-cli experiment terminate --experiment-id "$EXPID" >/tmp/wp2-p6-g8-v3-terminate.json 2>/tmp/wp2-p6-g8-v3-terminate.err || true
+          TERMINATED=0
+          for i in $(seq 1 60); do
+            set +e; portal-cli experiment get --experiment-id "$EXPID" >/tmp/wp2-p6-g8-v3-postterm.json 2>/dev/null; rc=$?; set -e
+            if [[ "$rc" -ne 0 ]]; then TERMINATED=1; break; fi
+            st="$(jq -r '.status // "unknown"' /tmp/wp2-p6-g8-v3-postterm.json)"
+            echo "TERMINATION_POLL_${i}=$st"
+            if [[ "$st" =~ ^(terminated|destroyed)$ ]]; then TERMINATED=1; break; fi
+            sleep 5
+          done
+          [[ "$TERMINATED" -eq 1 ]]
+          echo 'P6_G8_V3_FINALIZATION=PASS'
+          echo 'EVIDENCE_ESCROW_GATE=PASS'
+          echo 'TEARDOWN_AUTHORIZED=YES'
+          echo 'TEARDOWN_CONFIRMED=YES'
+
+      - name: Final fail-closed verdict
+        if: always()
+        shell: bash
+        env:
+          RECOVER_OUTCOME: ${{ steps.recover.outcome }}
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+        run: |
+          set -euo pipefail
+          echo "RECOVER_OUTCOME=$RECOVER_OUTCOME"
+          echo "FINALIZE_OUTCOME=$FINALIZE_OUTCOME"
+          if [[ "$FINALIZE_OUTCOME" != success ]]; then
+            echo 'WP2_P6_G8_SALVAGE_V3=FAIL_CLOSED'
+            echo 'SCIENTIFIC_RERUN=NO'
+            echo 'SCORED_RUN_AUTHORIZED=NO'
+            exit 1
+          fi
+          echo 'WP2_P6_G8_SALVAGE_V3=PASS'
+          echo 'SCIENTIFIC_RERUN=NO'
+          echo 'SCORED_RUN_AUTHORIZED=NO'
