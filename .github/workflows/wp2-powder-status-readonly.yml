@@ -1,0 +1,52 @@
+name: WP2 POWDER Status Read-Only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "powder/wp2-powder-status.trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query current WellPulse experiments read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api >/dev/null 2>&1
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          portal-cli experiment list >/tmp/list.json
+          python3 - <<'PY'
+          import json,datetime,pathlib
+          raw=json.load(open('/tmp/list.json'))
+          xs=raw if isinstance(raw,list) else raw.get('experiments',[])
+          keep=[]
+          for x in xs:
+              if not isinstance(x,dict) or x.get('project')!='WellPulse':
+                  continue
+              keep.append({k:x.get(k) for k in ['id','name','project','status','profile_name','profile_project','created_at','started_at','expires_at'] if k in x})
+          keep.sort(key=lambda x:(str(x.get('status','')),str(x.get('name',''))))
+          out=pathlib.Path('evidence/powder/wp2-powder-status-latest.json')
+          payload={'checked_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'mutation_executed':False,'experiments':keep}
+          out.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(payload,indent=2,sort_keys=True))
+          PY
+      - name: Commit sanitized status snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/wp2-powder-status-latest.json
+          git commit -m 'Record read-only POWDER status snapshot' || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
