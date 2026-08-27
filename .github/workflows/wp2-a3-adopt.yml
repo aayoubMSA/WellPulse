@@ -43,14 +43,16 @@ jobs:
           [[ "$MODE" == PRECHECK || "$MODE" == RUN ]]
           [[ "$(jq -r '.experiment_id // empty' powder/wp2-a3-adopt-request.json)" == '357f3275-403d-491a-906f-99677bdf454f' ]]
           [[ "$(jq -r '.experiment_name // empty' powder/wp2-a3-adopt-request.json)" == 'WP-GOLDEN-A3' ]]
+          [[ "$(jq -r '.scored // true' powder/wp2-a3-adopt-request.json)" == 'false' ]]
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "A3_REQUEST_GATE=PASS"
 
-      - name: Static no-create and syntax gate
+      - name: Static no-create no-scored and syntax gate
         shell: bash
         run: |
           set -euo pipefail
           bash -n powder/wp2_a3_adopt.sh
+          bash -n powder/wp2_a3_prepare_q0.sh
           bash -n scripts/wp2_a3_runtime_bootstrap.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_restore.sh
@@ -59,10 +61,12 @@ jobs:
           bash -n scripts/wp2_golden_offpowder_rclone.sh
           bash -n scripts/wp2_golden_teardown_guard_rclone.sh
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py scripts/wp_pwd01_h_receiver.py scripts/reconstruct_wp2_golden.py scripts/wp2_golden_rclone_verify.py
-          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh
+          ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
+          grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_prepare_q0.sh
           grep -q 'WP-GOLDEN-A3' powder/wp2_a3_adopt.sh
-          echo 'A3_STATIC_NO_CREATE_GATE=PASS'
+          echo 'A3_STATIC_NO_CREATE_NO_SCORED_GATE=PASS'
 
       - name: Verify encrypted Drive transport before any A3 mutation
         shell: bash
@@ -87,6 +91,14 @@ jobs:
           fi
           rm -f /tmp/wp2-a3-rclone.conf
           echo 'A3_DRIVE_PREMUTATION_GATE=PASS'
+
+      - name: Establish clean pre-science Q0 baseline
+        if: steps.request.outputs.mode == 'RUN'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x powder/wp2_a3_prepare_q0.sh
+          bash powder/wp2_a3_prepare_q0.sh
 
       - name: Execute A3-only adopter
         id: adopter
