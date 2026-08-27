@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after closure of H1-PSH local PowerShell/provenance salvage.
+Last updated: 2026-08-27 after K1 offline supply-chain/runtime pin closure attempt.
 
 ## Executive state
 
@@ -14,6 +14,7 @@ Last updated: 2026-08-27 after closure of H1-PSH local PowerShell/provenance sal
 - Repository workflow cleanup: **CLOSED / 100% — C0..C4 PASS**.
 - H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery from GitHub failed**.
 - H1-PSH local salvage: **CLOSED_NO_RECOVERY**.
+- K1 supply-chain/runtime pin closure: **BLOCKED_PORTAL_API_REVISION**.
 - `H=UNFROZEN`.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
@@ -22,7 +23,7 @@ Last updated: 2026-08-27 after closure of H1-PSH local PowerShell/provenance sal
 
 `execute exactly one declared patch -> PASS/BLOCKED -> update canonical handover/status -> STOP -> resume only on explicit user instruction`
 
-Never start the next patch before explicit user resume/continue.
+Never start the next patch before explicit user resume/continue. An umbrella request to continue the K-series does not override a fail-closed blocker inside an individual K patch.
 
 ## H1 experiment of record
 
@@ -70,14 +71,9 @@ Recovery characterization remains:
 
 This is operational recovery knowledge only and does not retroactively repair H1.
 
-## H1 GitHub salvage — CLOSED
+## H1 evidence salvage — CLOSED
 
-Canonical artifacts:
-
-- `evidence/powder/h1-github-salvage-2026-08-27.md`
-- `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
-
-Verdict:
+### GitHub salvage
 
 - `H1_GITHUB_SALVAGE=PASS`
 - `H1_FULL_RAW_FROM_GITHUB=NOT_RECOVERED`
@@ -85,13 +81,12 @@ Verdict:
 - `H1_RECORD_LEVEL_RECONSTRUCTION_FROM_GITHUB=BLOCKED`
 - `RS1_RAW_RECONSTRUCTION=BLOCKED_ON_RAW_BUNDLES`
 
-Historical H1 archive SHA-256 anchors remain preserved, but the archive bytes are unavailable from GitHub/current user-accessible POWDER storage.
+Canonical artifacts:
 
-## H1-PSH — Home-PC PowerShell/local provenance salvage — CLOSED
+- `evidence/powder/h1-github-salvage-2026-08-27.md`
+- `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
 
-Canonical specification:
-
-`docs/H1_POWERSHELL_HISTORY_SALVAGE_2026-08-27.md`
+### Home-PC PowerShell/local provenance salvage
 
 Canonical result records:
 
@@ -99,57 +94,74 @@ Canonical result records:
 - `evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
 - `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
 
-### PSH-0 — PASS / CLOSED
-
-- PowerShell Core `7.6.5`.
-- Current-host PSReadLine history preserved and hash-verified.
-- One history source found.
-- Source mutation: NO.
-- Network: NO.
-- High-specificity H1 hits: `0`.
-
-### PSH-1 — PASS / CLOSED
-
-- Eight bounded roots scanned.
-- Candidate files: `9`, all unrelated false positives.
-- Transcript files: `0`.
-- High-specificity content hits: `43`, all self-generated salvage-script references and excluded from evidence.
-- Exact known H1/recovery/reproducibility archive hash matches: `0`.
-- No source mutation or network use.
-
-### PSH-2 — PASS / CLOSED
-
-Final low-cost provenance attempt, bounded to Windows mechanisms and the H1 date window:
-
-- PowerShell event H1 hits: `0`.
-- Transcripts with H1 anchor: `0`.
-- Recent Items with H1 anchor: `0`.
-- Shell/SSH prefetch entries in the window: `8`, metadata only.
-- `MATERIAL_H1_PROVENANCE_LEAD=False`.
-- No network, system mutation, disk forensics, USN journal, undelete, or recovery tooling.
-
-### Final H1-PSH verdict
+Final verdict:
 
 - `H1_POWERSHELL_SALVAGE=CLOSED_NO_RECOVERY`
 - `H1_FULL_RAW_FROM_HOME_PC=NOT_RECOVERED`
 - `H1_MATERIAL_LOCAL_PROVENANCE_LEAD=NONE`
 - `RS1_RAW_RECONSTRUCTION=BLOCKED_ON_RAW_BUNDLES`
 
-Per the predeclared kill gate, do not expand into forensic recovery, registry carving, USN journal analysis, undelete utilities, or additional full-disk scans. This lane is closed unless a genuinely new external evidence source appears later.
+Do not expand into forensic recovery unless a genuinely new evidence source appears.
 
-H1 remains permanently `VALID_W1_RECOVERY_FAILURE`. No scientific completion credit is added.
+## K1 — Offline supply-chain/runtime pin closure — BLOCKED
 
-## Repository hygiene — CLOSED / 100%
+Canonical record:
 
-- C0 PASS.
-- C1 expired A3 workflow/trigger archival PASS.
-- C2 16 FIT-specific workflows archived after FINAL FIT PASS.
-- C3 22 historical/live POWDER workflows + 20 stale trigger/request files archived.
-- C4 Workflow Registry + final hygiene QA PASS.
-- 50 workflow files removed from active Actions path with provenance retained.
-- Exactly six local/offline/static workflows remain active; none contacts live POWDER.
+`docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
 
-## Golden / compatibility state
+Verdict:
+
+`K1=BLOCKED_PORTAL_API_REVISION`
+
+### K1 items closed
+
+1. **Immutable checkout action for pre-integration/future integration contract**
+   - `actions/checkout@11d5960a326750d5838078e36cf38b85af677262`
+   - active pre-integration runner label: `ubuntu-24.04`
+
+2. **uv pinned and hash-verified**
+   - version: `0.12.1`
+   - asset: `uv-x86_64-unknown-linux-gnu.tar.gz`
+   - SHA-256: `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`
+   - upstream release target commit: `329541a503de8a4d9bb021814f9c0875efe033c8`
+   - mutable `https://astral.sh/uv/install.sh` path removed from runtime bootstrap
+   - implementation commit: `353be59fa222150fbedf731ae45bbac9026ba543`
+
+3. **rclone exact binary contract retained**
+   - version: `1.75.0`
+   - Linux amd64 ZIP SHA-256: `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`
+   - moving current/latest download path prohibited
+
+4. **Static acceptance extended**
+   - verifies uv version/hash and rejects mutable installer
+   - verifies rclone version/hash and rejects moving download
+   - verifies immutable checkout SHA and explicit `ubuntu-24.04`
+   - fixes archived Attempt-6 workflow path used by the static check
+   - retains receiver-launch/TLS/time-budget fail-close checks
+   - implementation commit: `421eb314b7210c646dfc19405b2fd6a867a5bfd6`
+
+5. **Compatibility matrix reconciled**
+   - update commit: `3f3fefc3584f0eea91e620867ff873dd4d5a91f8`
+
+### K1 blocker
+
+Authoritative POWDER/Emulab documentation identifies the supported current Portal API client repository as:
+
+`https://gitlab.flux.utah.edu/emulab/portal-api`
+
+and states that the Portal API is under active development. Therefore mutable HEAD cannot be accepted for a reproducibility-critical Golden path.
+
+The current execution environment could verify the repository identity but could not resolve an authoritative immutable Git revision for the client. No canonical WellPulse artifact contains a previously frozen Portal API revision.
+
+Therefore:
+
+`PORTAL_API_REVISION=UNRESOLVED`
+
+No guessed SHA, placeholder revision, moving branch, or tag-as-commit substitute is permitted.
+
+K1 cannot PASS until this is resolved or the Portal interaction mechanism is replaced by a fully versioned alternative.
+
+## Compatibility / Golden state
 
 Experiment `WP-GOLDEN-A3` is expired/removed and must not be reused.
 
@@ -163,6 +175,16 @@ Before any future GitHub Actions <-> POWDER live integration both remain mandato
 `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
 Current compatibility status: **BLOCKED**.
+
+Material remaining compatibility blockers include:
+
+- Portal API immutable revision and lifecycle/error semantics;
+- dedicated Google Drive OAuth + write/read/hash verification;
+- exact live OpenSSL/Mosquitto/runtime fingerprints;
+- fresh receiver detach/launch-time proof;
+- authoritative reservation-expiry semantics feeding the time guard;
+- `/proj/WellPulse` live write/read/hash validation;
+- observation semantics closure for any live RF-status mechanism.
 
 No live reservation, Golden run, H requalification, or scored work is authorized.
 
@@ -182,6 +204,12 @@ Required evidence path:
 
 `freeze writers -> inventory mandatory raw -> hash -> /proj/WellPulse/evidence-escrow/... -> verify -> off-POWDER copy -> read-back/hash verify -> provenance record -> teardown`
 
+## Repository hygiene — CLOSED / 100%
+
+- C0..C4 PASS.
+- 50 workflow files removed from active Actions path with provenance retained.
+- Exactly six local/offline/static workflows remain active; none contacts live POWDER.
+
 ## Frozen scientific state
 
 - H1: `VALID_W1_RECOVERY_FAILURE`.
@@ -197,44 +225,41 @@ Required evidence path:
 ## Mandatory current read order
 
 1. `HANDOVER_CURRENT.md`
-2. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
-3. `evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
-4. `evidence/powder/h1-psh0-history-freeze-result-2026-08-27.md`
-5. `docs/H1_POWERSHELL_HISTORY_SALVAGE_2026-08-27.md`
+2. `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
+3. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
+4. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+5. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
 6. `evidence/powder/h1-github-salvage-2026-08-27.md`
 7. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
 8. `docs/NEXT_GATE.md`
 9. `docs/WORKFLOW_REGISTRY.md`
 10. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
 11. `AGENTS.md`
-12. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-13. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
-14. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-15. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-16. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
-17. `experiments/WP-PWD01/protocol.md`
-18. `experiments/WP-PWD01/evidence-schema.md`
+12. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+13. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
+14. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+15. `experiments/WP-PWD01/protocol.md`
+16. `experiments/WP-PWD01/evidence-schema.md`
 
 ## Exact next action
 
-**STOP after H1-PSH closure.**
+**STOP after K1.**
 
-On the next explicit user resume, return to the main mission and execute exactly one bounded patch:
+K1 did not pass, so do **not** advance to K2 yet.
 
-### K1 — Offline supply-chain/runtime pin closure
+On the next explicit user resume, execute exactly one bounded patch:
 
-K1 was deferred only while H1-PSH was active and is now the next offline main-path patch.
+### K1-P — Resolve Portal API immutable revision
 
-K1 scope remains strictly offline:
+Goal:
 
-1. inventory moving references in the future Golden/integration path;
-2. freeze GitHub Actions to immutable SHAs where applicable;
-3. freeze exact Portal API client upstream revision;
-4. freeze `uv` and bootstrap tool versions/checksums;
-5. verify rclone exact-version/checksum contract;
-6. extend static acceptance so moving/unpinned references fail closed;
-7. update the compatibility matrix only for evidence actually closed offline.
+Resolve and freeze the exact upstream Git revision of `emulab/portal-api` from an authoritative source, update the bootstrap/integration pin record and static acceptance, then re-evaluate K1.
 
-K1 must NOT contact POWDER, reserve, probe live, or claim the whole compatibility gate PASS.
+Constraints:
 
-After K1: update the handover/status and STOP again.
+- no POWDER experiment contact or reservation;
+- no live scientific work;
+- no guessed/mutable revision;
+- fail closed if authoritative immutable revision cannot be established.
+
+Only after `K1=PASS` may the K-series advance to K2.
