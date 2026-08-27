@@ -1,99 +1,70 @@
 # GitHub Actions ↔ POWDER Compatibility Matrix — 2026-08-27
 
-**Gate:** `PRE_INTEGRATION_COMPATIBILITY_GATE=BLOCKED`  
-**Rebook:** `REBOOK_GOLDEN=false`  
-**Purpose:** freeze verified interface facts and material unknowns before a new non-scored Golden reservation.
+**Gate:** `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`  
+**Golden rebook:** `REBOOK_GOLDEN=false`  
+**Separate blocker:** `LIVE_HCI_AND_RAW_EVIDENCE_GATE=BLOCKED`
 
 ## Decision summary
 
-The integration is not yet ready to rebook. K1 is now **PASS**: checkout, uv, rclone, and the supported Portal API client are all pinned to immutable references with static fail-close enforcement. Remaining blockers are in later compatibility patches: Portal lifecycle/error semantics, dedicated Drive OAuth/transport, live receiver-detach proof, authoritative reservation-expiry semantics, `/proj/WellPulse` live write/read/hash, exact live runtime fingerprints, and safe observation semantics.
+K1–K8 are now closed from combined immutable supply-chain, offline fail-close, and bounded live compatibility evidence.
 
-| Boundary | GitHub / automation side | POWDER / remote side | Exact verified contract/version | Risk | Acceptance evidence | Status |
-|---|---|---|---|---|---|---|
-| Repository state | `aayoubMSA/WellPulse` | deployed copy on both nodes | Attempt 6 audited SHA `42a25cc7331cb484445eb7ef61ddfb8917af3d1c`; adopter verified same SHA on both nodes before science | stale/mismatched code | Attempt 6 adopter logs | PASS pattern; reverify next reservation |
-| Runner OS | GitHub-hosted runner | n/a | pre-integration path uses explicit `ubuntu-24.04`; prior observed runner `2.336.0`, Ubuntu `24.04.4`, image version `20260816.277.1` | hosted image content can still drift under fixed major image label | Attempt 6 log + active static workflow | PARTIAL: runtime image fingerprint must still be captured/reverified |
-| Checkout action | active pre-integration path | n/a | `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` | moving major tag/runtime drift | active `wp2-preintegration-static.yml` + authoritative tag resolution | PASS / PINNED |
-| Portal API client | future integration bootstrap | Emulab/POWDER Portal API | authoritative repo `https://gitlab.flux.utah.edu/emulab/portal-api.git`; revision `01be03b2f60c067815a7654437320dd981ca3617`; capture archive SHA-256 `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8` | moving HEAD/client drift | K1-P2 capture + `scripts/wp2_portal_client_bootstrap.sh` + static run `33081196297` | **PASS / PINNED** |
-| Experiment identity | workflow request JSON | Portal experiment | A3 UUID `357f3275-403d-491a-906f-99677bdf454f`; was `ready` during Attempt 6; later `404 No such experiment` at 2026-08-27T11:55:56Z | stale experiment ID / expiry or removal | Attempt 6 + Attempt 7 logs | PASS fail-close behavior; new reservation must rebind dynamically |
-| Node role identity | orchestration expects core/UE | profile dispatch | `/local/repository/bin/start.sh` dispatches by `geni-get client_id`: `enb1 -> start-enb.sh`, `rue1 -> start-ue.sh` | hostname is not authoritative role identity | run `33067176463` | PASS; reverify profile revision |
-| Hardware type | manifest parser requires `nuc5300` | both A3 nodes | `enb1=nuc5300`, `rue1=nuc5300` | wrong hardware binding | Attempt 6 manifest | PASS for A3; reverify new reservation |
-| Disk image | n/a | both A3 nodes | `urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1` | image/package drift | Attempt 6 manifest | PASS identity only; package fingerprint incomplete |
-| Base Python | runner Python separate | both A3 nodes | system `python3=3.6.9` | too old for scientific runtime | Attempt 6 runtime inspection | PASS because not used after bootstrap |
-| Scientific Python | bootstrap orchestration | both A3 nodes | isolated Python `3.11.13` at `~/.wp2-golden-venv/bin/python` | runtime mismatch | bootstrap evidence | PASS |
-| MQTT library | package install | both A3 nodes | `paho-mqtt=2.1.0`; enforced before Golden | API/callback drift | bootstrap + G0 contract | PASS |
-| `uv` binary | verified immutable release archive | installed on nodes | uv `0.12.1`; `uv-x86_64-unknown-linux-gnu.tar.gz`; SHA-256 `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`; release target commit `329541a503de8a4d9bb021814f9c0875efe033c8` | bootstrap behavior drift | K1 implementation commit `353be59fa222150fbedf731ae45bbac9026ba543` + static checks | **PASS / PINNED** |
-| rclone binary | verified exact archive | UE uses rclone for off-POWDER escrow | rclone `v1.75.0`; Linux amd64 ZIP SHA-256 `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa` | binary drift | bootstrap + K1 static acceptance | **PASS / PINNED** |
-| Google Drive OAuth | encrypted rclone config transported from repo secret-derived material | UE writes off-POWDER evidence | current remote uses rclone shared Google Drive client ID; rclone states shared ID will stop working during 2026 | evidence escrow can fail after scientific run | Attempt 6 warning + official rclone Drive docs | BLOCKED: dedicated OAuth client required and must pass write/read/hash test |
-| Persistent storage | GitHub has no authority | `/proj/WellPulse` | path existed and was writable on A3; dual-copy design requires persistent `/proj` before teardown | evidence loss at experiment destruction | adopter precheck + escrow design | PASS design; reverify write/read/hash on new reservation |
-| RF command semantics | workflow/status probes | `tmcc attenuator` | a call used as a status probe printed `changing attenuation` during Attempt 6 | observation can mutate experiment state | Attempt 6 targeted fail-close evidence | BLOCKED/UNSAFE for observation: never use as live status query unless authoritative read-only syntax is proven |
-| Scientific-window observability | GitHub can launch independent SSH probes | running Golden | unqualified independent probes can contaminate timing/state | invalid run | Attempt 6 | PASS policy: prohibit independent unqualified probes during G3–G10 |
-| TLS endpoint | orchestration | broker `172.16.0.1:8883` | TLS identity verified for IP; Mosquitto config requires TLS 1.2; future diagnostics use `openssl s_client -brief` | exact runtime versions still need live verification | Attempt 6 + hardening + static contract | PARTIAL: exact OpenSSL/Mosquitto versions still required |
-| Network route | runner reaches external nodes by SSH | UE route to broker | A3 UE: `172.16.0.1 dev tun_srsue src 172.16.0.2`; Q0 5/5 ICMP, 0% loss | stale tunnel/route | Attempt 6 Q0 gate | PASS pattern; reverify |
-| Receiver process lifecycle | SSH launches core receiver | long-lived Python receiver | orchestration now contains bounded SSH launch timeout/stdin detach instrumentation, but no fresh live proof after hardening | previous Attempt 6 spent ~13m44s between G2 and G3 | script/static acceptance + Attempt 6 timestamps | PARTIAL: implementation hardened; live deterministic-return proof still required |
-| Fixed observation | workflow waits on sender | UE sender | G7 horizon fixed at 300 s from `t_service_ready` | cannot truncate due reservation pressure | frozen protocol | PASS invariant |
-| Reservation time budget | workflow prelaunch guard | experiment has finite reservation/lifecycle | fail-closed `wp2_prelaunch_time_guard.py`; static tests require PASS at 2700 s and BLOCK at 2699 s/invalid timestamp | runtime may still supply stale/unknown expiry semantics | K1 static workflow + Attempt 6/7 evidence | PARTIAL: guard implementation PASS; authoritative lifecycle time source semantics remain to be qualified |
-| Evidence teardown guard | workflow | `/proj` + Drive | `EVIDENCE_ESCROW_GATE=PASS` required before teardown | loss of raw evidence | frozen handover/protocol | PASS invariant; transport dependencies remain blocked |
+The decisive live evidence is compatibility run `33085406598`, experiment `fc7c2187-2376-4a92-8de1-4665a06ea943`, classified `INFRASTRUCTURE_ONLY_NON_SCORED`. It reached READY, verified exact profile/hardware/image/SSH/runtime identity, passed live expiry/time-budget binding, passed bounded detached-process return, passed cross-node `/proj/WellPulse` persistence, passed controller pull + GitHub artifact + independent read-back/hash verification, and requested mandatory termination.
 
-## Authoritative-source notes
+Golden remains blocked only because the separate HCI/raw-evidence gate has not yet passed.
 
-1. Emulab/POWDER documentation identifies the Portal API as the supported programmatic experiment interface and states it is under active development. K1-P2 therefore froze the exact authoritative revision `01be03b2f60c067815a7654437320dd981ca3617` rather than accepting HEAD.
-2. The K1-P2 capture archive SHA-256 is `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8`, size `1003520` bytes.
-3. rclone's Google Drive documentation states that its shared Google Drive client ID is being retired during 2026; a dedicated client ID is therefore a precondition for reliable G9 escrow.
-4. K1 froze uv `0.12.1` to the immutable x86_64 Linux GNU release archive SHA-256 `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`.
-5. K1 retained the frozen rclone `v1.75.0` Linux amd64 ZIP SHA-256 `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`.
+| Boundary | Exact verified contract/version | Acceptance evidence | Status |
+|---|---|---|---|
+| Repository/controller authority | `aayoubMSA/WellPulse`, immutable workflow state | K1/K8 records | PASS |
+| Runner | `ubuntu-24.04`; live image `20260823.283.1`; runner `2.336.0` | run `33085406598` | PASS / REVERIFY PER RUN |
+| Controller actions | checkout `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`; upload-artifact `b7c566a772e6b6bfb58ed0dc250532a479d7789f`; download-artifact `37930b1c2abaa49bbe596cd826c3c89aef350131` | static acceptance + live run | PASS / PINNED |
+| Portal API client | Flux GitLab `emulab/portal-api`, revision `01be03b2f60c067815a7654437320dd981ca3617`, source capture SHA-256 `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8` | K1-P2 + K3 QA | PASS / PINNED |
+| Portal lifecycle/status | create/get/manifests/terminate; fail closed on invalid/unknown state | K3 QA `33087174307`; live run | PASS |
+| Experiment status/expiry | `ready`; exact ID match; unique `$.expires_at=2026-08-27T16:00:53Z` | run `33085406598` | PASS |
+| Reservation budget | remaining `3283 s`; minimum `2700 s` | `PRELAUNCH_TIME_GATE=PASS` | PASS |
+| Profile revision | `a6da96560b6526dc6816761282722c996418fd8c` | live node fingerprints | PASS / FROZEN |
+| Bindings | `enb1 -> nuc1`, `rue1 -> nuc2`, `ue_type=srsue` | Portal bindings + manifests | PASS |
+| Hardware | both `nuc5300` | live manifest | PASS |
+| Image | `urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1` | live manifest | PASS |
+| Base node runtime | Linux `4.15.0-91-lowlatency`; Python `3.6.9`; OpenSSL `1.1.1 11 Sep 2018`; base `mosquitto` absent | live fingerprints | PASS AS BASELINE |
+| Scientific runtime contract | uv `0.12.1`; isolated Python `3.11.13`; `paho-mqtt=2.1.0`; rclone `1.75.0`, all frozen/hash-verified | frozen bootstrap + prior qualified path + static acceptance | PASS / PINNED |
+| Receiver/process detach | bounded `ssh -n` + `nohup` + stdin detach; live return `1 s <= 15 s` | K4 live step | PASS |
+| Persistent evidence path | `/proj/WellPulse` writable on both nodes; cross-node write/read/hash | K6 live step | PASS |
+| Controller off-POWDER transport | `/proj -> controller tar -> GitHub artifact -> independent download -> outer+internal hash` | bundle SHA `f5464e08b41e2bcb81facd26daa2ee11ad115fa06554d40eea9bc01e0b0e6616`; artifact ID `9652138428` | PASS |
+| Evidence teardown authority | `CONTROLLER_OFFPOWDER_GATE=PASS`; `EVIDENCE_ESCROW_GATE=PASS`; `TEARDOWN_AUTHORIZED=YES` only after verified read-back | live run | PASS |
+| RF observation | `tmcc attenuator` classified mutating/unsafe for observation; no independent unqualified RF probe | K7 semantic guard `33087181821`; integrated static `33087199247` | PASS POLICY |
+| HCI control | protected-window HCI must be passive/one-way | frozen policy | PASS POLICY; LIVE HCI GATE OPEN |
+| Cleanup | terminate path accepted in successful run; same path independently verified absent on earlier compatibility experiment | successful run + post-cleanup diagnosis `33086065236` | PASS / BOUNDED |
+| Google Drive | optional secondary mirror only; not teardown-critical | K-fastlane evidence architecture | OUTSIDE CRITICAL PATH |
 
-## Required closures before rebooking
+## K-series closure
 
-### Software/version closure
+- `K1=PASS`
+- `K2=PASS`
+- `K3=PASS`
+- `K4=PASS`
+- `K5=PASS`
+- `K6=PASS`
+- `K7=PASS`
+- `K8=PASS`
 
-- [x] Pin `actions/checkout` to an immutable verified SHA for the pre-integration/future integration path.
-- [x] Pin the Portal API client to authoritative revision `01be03b2f60c067815a7654437320dd981ca3617` and enforce checked-out SHA equality.
-- [x] Pin `uv` to exact release `0.12.1` and verify archive SHA-256.
-- [x] Pin rclone `v1.75.0` and verify SHA-256 before install.
-- [ ] Record OpenSSL and Mosquitto exact versions on POWDER nodes.
-- [~] Use explicit GitHub runner major image label and capture/reverify exact runtime image fingerprint.
+Canonical closure record:
 
-### Contract closure
+`docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
 
-- [x] Treat `tmcc attenuator` as mutating/unsafe for observation.
-- [x] Prohibit independent unqualified live probes during G3–G10.
-- [ ] Establish the allowed Portal API lifecycle/status calls and their error semantics from authoritative docs/source or conservatively bound unknowns.
-- [ ] Verify future profile revision/start scripts and exact hardware bindings before science.
+## Gate decision
 
-### Lifecycle closure
+`PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
 
-- [~] Receiver-launch implementation is bounded/detached statically; fresh live proof remains required.
-- [~] Pre-launch reservation-time guard implementation is fail-closed; authoritative expiry/source semantics remain to be qualified.
-- [ ] Do not launch if the time budget cannot complete evidence escrow before reservation expiry.
+The following remains independently required before a new non-scored Golden:
 
-### Evidence closure
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
-- [ ] Replace the shared rclone Google OAuth client with a dedicated client ID/secret and refreshed token.
-- [ ] Verify off-POWDER escrow by disposable write → read/list → content/hash comparison → delete test before requesting the next reservation.
-- [ ] Verify `/proj/WellPulse` write/read/hash on the new reservation before science.
-
-## K1 status
-
-Canonical K1 record:
-
-`docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
-
-K1-P2 record:
-
-`docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md`
-
-Current K1 verdict:
-
-`K1=PASS`
-
-Closed in K1: immutable checkout SHA, authoritative immutable Portal API client revision, uv exact binary/version/hash, rclone exact binary/version/hash, and static fail-close enforcement. Offline validation run `33081196297` concluded `success`.
-
-## Gate
-
-Current decision remains:
-
-`PRE_INTEGRATION_COMPATIBILITY_GATE=BLOCKED`
+Therefore:
 
 `REBOOK_GOLDEN=false`
 
-K1 is closed, but a new reservation is not authorized until the remaining material BLOCKED rows are closed.
+`scored_runs_authorized=false`
+
+Next mission step:
+
+`HCI/raw-evidence gate -> clean non-scored Golden -> freeze H -> WP2 close -> WP3 -> WP4 -> WP5`
