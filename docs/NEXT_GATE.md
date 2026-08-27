@@ -1,10 +1,11 @@
-# Next Gate — AUDIT-R1 Pre-Golden Reconciliation
+# Next Gate — LIVE HCI & Raw-Evidence Closure
 
-**Current frontier:** comprehensive project audit complete  
+**Current frontier:** AUDIT-R1 complete / closed  
 **Scientific completion:** 20%  
 **K1–K8 compatibility:** `PASS / CLOSED`  
 **Pre-integration compatibility:** `PASS`  
-**Live HCI/raw-evidence gate:** `BLOCKED`  
+**AUDIT-R1:** `PASS`  
+**Live HCI/raw-evidence gate:** `BLOCKED / NOT STARTED`  
 **Golden rebook authorization:** `false`  
 **Scored authorization:** `false`
 
@@ -12,72 +13,65 @@ Canonical audit:
 
 `docs/PROJECT_AUDIT_HANDOVER_2026-08-27.md`
 
-Audit classification:
+Canonical supersession control:
 
-`PASS_WITH_MANDATORY_OFFLINE_RECONCILIATION_BEFORE_GOLDEN`
+`docs/AUDIT_R1_SUPERSESSION_MAP_2026-08-27.md`
 
-## Why the next patch changed
+## AUDIT-R1 closure
 
-The K-series is closed and its decisive live compatibility evidence is valid. However, the handover audit found several pre-amendment artifacts and governance records that were not reconciled after Recovery Semantics Amendment v1 and the K-fastlane evidence architecture.
+The offline pre-Golden reconciliation is complete. The following P0 drift is closed without reopening frozen science:
 
-This is documentation/execution-contract drift, not evidence that the frozen RF/scientific results are invalid.
-
-The highest-risk discrepancies are:
-
-1. `analysis-plan.md`, `evidence-schema.md`, `run-matrix.yaml`, the general POWDER analysis contract/tests, and `wp2-h-preflight.yml` still contain the former `cutoff + H` / W1-derived-H semantics, while the governing amendment freezes cohort cutoff at `t_rf_restore` and endpoint observation at `t_service_ready + 300 s`;
-2. `evidence_inventory_golden_v1.txt` still contains the old Drive/rclone generated marker even though controller/GitHub artifact read-back is now the qualified off-POWDER authority;
-3. workflow registry/hygiene documents predate the additional K-era workflows/triggers and no longer describe the actual active Actions surface;
-4. stale `STATUS`, RS7 readiness, old H-calibration and old decision text can still issue superseded instructions such as `RESERVE=true`, Drive-critical teardown, or W1-derived H calibration;
-5. protocol v0.6.1 added the advisory POWDER resource-availability preflight and this must remain in the canonical operational path.
-
-## Exact next bounded patch
-
-`AUDIT-R1 — PRE-GOLDEN SCIENTIFIC/EVIDENCE/GOVERNANCE RECONCILIATION`
-
-AUDIT-R1 is **offline only**. It must not contact POWDER, create a reservation, run Golden, calibrate H, or execute scored work.
-
-Required tasks:
-
-1. align the general/scored analysis plan, schema, run matrix, implementation contract and tests with Recovery Semantics Amendment v1:
-   - cohort cutoff = `t_rf_restore`;
-   - fixed endpoint horizon = `t_service_ready + 300 s`;
+1. analysis plan, evidence schema, run matrix, general analysis implementation and tests now use:
+   - primary cohort cutoff = `t_rf_restore`;
+   - application horizon = `t_service_ready + 300 s`;
    - primary endpoint = `completeness_300`;
-   - preserve `T_service`, `T_app`, `T_total`;
-2. explicitly supersede/retire the former W1-derived H-selection scheme; do not collect new W1 H-calibration trials and do not estimate a new horizon from outcomes;
-3. reconcile the Golden evidence inventory/finalization contract to the qualified path:
-   `raw -> /proj -> controller pull -> GitHub artifact -> independent read-back/hash -> teardown authority`;
-4. inventory and reconcile the actual `.github/workflows/` and root-trigger surface; completed K live/diagnostic execution paths must not remain accidentally runnable merely because the old registry is stale;
-5. retire or update the obsolete `wp2-h-preflight.yml` so a green result cannot validate superseded H semantics;
-6. preserve stale status/readiness/H-calibration/decision files as historical provenance but add explicit supersession control;
-7. preserve protocol v0.6.1 resource preflight:
-   `https://www.powderwireless.net/resinfo.php` as advisory `PASS|DEFER|UNKNOWN`, with Portal lifecycle/manifest authoritative;
-8. run the smallest offline/static QA necessary to prove consistency;
-9. update canonical audit/handover/status and STOP.
+   - distinct `T_service`, `T_app`, `T_total`;
+2. the former W1/outcome-derived H-selection procedure is explicitly superseded and fail-closed; current `H_app=300 s` is already prospectively frozen;
+3. Golden evidence inventory/finalization now uses the qualified controller/GitHub artifact path rather than Drive/rclone as teardown authority;
+4. active workflow/trigger governance is reconciled to exactly 6 offline/static workflows and 4 root sentinels; completed K live/diagnostic and obsolete H-preflight workflows are no longer active;
+5. stale STATUS/RS7/H-calibration/decision instructions are controlled by an explicit supersession map;
+6. protocol v0.6.1 advisory resource-availability preflight remains in the future booking path only;
+7. offline QA evidence includes successful current unit tests and successful off-POWDER GitHub artifact upload/download/hash round-trip with `POWDER_CONTACT=NO`, `DRIVE_CONTACT=NO`, `SCIENTIFIC_RUN=NO`.
 
-## After AUDIT-R1 PASS
+No POWDER contact/reservation/SSH, Golden execution, H calibration, scored B1/W1/B2 work, RF recalibration, K-series reopening, or H1 salvage occurred during AUDIT-R1.
 
-Only after explicit user resume:
+## Exact next bounded patch — only after explicit user continuation
 
-1. execute one bounded `LIVE_HCI_AND_RAW_EVIDENCE_GATE` closure patch;
-2. use a passive, one-way HCI only with `HCI_CONTROL_ACTIONS_ENABLED=false`;
-3. enrich orchestrator-emitted status/events only; do not add independent POWDER probes;
-4. freeze exact mandatory raw filenames and controller finalization evidence;
-5. choose **no in-run/background `/proj` checkpoint** during protected science unless separately benchmarked non-perturbing;
-6. close `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS` only from actual offline/bounded evidence;
-7. STOP before Golden.
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE — CLOSURE PATCH`
 
-Only after a separate explicit authorization should the project perform the resource-availability advisory preflight and book one clean non-scored Golden.
+This patch remains **not started**. When explicitly authorized, it must stay bounded to:
+
+1. minimal passive one-way HCI with `HCI_CONTROL_ACTIONS_ENABLED=false`;
+2. orchestrator-emitted status/events only; no independent POWDER probe;
+3. exact mandatory raw-evidence/finalization contract;
+4. no in-run/background `/proj` checkpoint during protected science unless separately proven non-perturbing;
+5. offline/bounded QA sufficient to close `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`;
+6. canonical handover update and STOP before Golden.
+
+## Golden remains prohibited
+
+Do **not** book or run Golden after this file update.
+
+Only after the HCI/raw-evidence gate passes **and** a separate explicit user authorization should the project:
+
+1. immediately before booking, perform protocol v0.6.1 advisory resource-availability preflight at `https://www.powderwireless.net/resinfo.php`;
+2. record `PASS|DEFER|UNKNOWN` without automatically changing frozen hardware/profile;
+3. use Portal lifecycle/READY/manifest as authoritative;
+4. book and execute one clean non-scored G0–G10 Golden rehearsal;
+5. verify complete raw evidence and controller artifact round-trip before teardown;
+6. then decide formal WP2 scientific closure/scored authorization.
 
 ## Frozen controls
 
-- H1 remains `VALID_W1_RECOVERY_FAILURE`.
-- H1 original raw bundles were not recovered.
-- Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`, IDs `1 33 2 34` coupled.
-- Recovery Semantics Amendment v1 governs the 300 s `t_service_ready` horizon.
+- H1 remains `VALID_W1_RECOVERY_FAILURE`; original H1 raw bundles were not recovered.
+- Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; IDs `1 33 2 34` remain coupled.
+- K1–K8 remain PASS/CLOSED absent a material interface change.
+- `H_app=300 s from t_service_ready` is frozen.
+- outcome-derived/W1-derived H recalibration is prohibited.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
-- no WP3 B1/W1/B2 scored execution.
+- no WP3 B1/W1/B2 scored execution is authorized.
 
 Shortest path:
 
-`AUDIT-R1 -> HCI/raw gate -> resinfo advisory preflight -> clean non-scored Golden -> WP2 closure/scored authorization -> WP3 -> WP4 -> WP5`
+`AUDIT-R1 PASS -> explicit resume -> HCI/raw gate PASS -> STOP -> separate explicit resume -> resinfo advisory preflight -> clean non-scored Golden -> WP2 closure/scored authorization -> WP3 -> WP4 -> WP5`
