@@ -38,12 +38,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f powder/wp2-a3-adopt-request.json
-          MODE="$(jq -r '.mode // empty' powder/wp2-a3-adopt-request.json)"
-          [[ "$MODE" == PRECHECK || "$MODE" == RUN ]]
-          [[ "$(jq -r '.experiment_id // empty' powder/wp2-a3-adopt-request.json)" == '357f3275-403d-491a-906f-99677bdf454f' ]]
-          [[ "$(jq -r '.experiment_name // empty' powder/wp2-a3-adopt-request.json)" == 'WP-GOLDEN-A3' ]]
-          [[ "$(jq -r '.scored // true' powder/wp2-a3-adopt-request.json)" == 'false' ]]
+          REQUEST='powder/wp2-a3-adopt-request.json'
+          test -f "$REQUEST"
+          jq -e '
+            ((.mode == "PRECHECK") or (.mode == "RUN")) and
+            (.experiment_id == "357f3275-403d-491a-906f-99677bdf454f") and
+            (.experiment_name == "WP-GOLDEN-A3") and
+            (.scored == false)
+          ' "$REQUEST" >/dev/null
+          MODE="$(jq -r '.mode' "$REQUEST")"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "A3_REQUEST_GATE=PASS"
 
@@ -66,6 +69,12 @@ jobs:
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_prepare_q0.sh
           grep -q 'WP-GOLDEN-A3' powder/wp2_a3_adopt.sh
+          printf '{"scored":false}\n' | jq -e '.scored == false' >/dev/null
+          if printf '{"scored":true}\n' | jq -e '.scored == false' >/dev/null; then
+            echo 'BOOLEAN_REGRESSION_GATE=FAIL'
+            exit 91
+          fi
+          echo 'BOOLEAN_REGRESSION_GATE=PASS'
           echo 'A3_STATIC_NO_CREATE_NO_SCORED_GATE=PASS'
 
       - name: Verify encrypted Drive transport before any A3 mutation
