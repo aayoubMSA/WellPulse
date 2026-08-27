@@ -1,5 +1,5 @@
-triggered_utc=2026-08-27T14:32:00Z
-scope=k2_offpowder_artifact_roundtrip_node24_native
+triggered_utc=2026-08-27T16:00:00Z
+scope=audit_r1_offpowder_artifact_roundtrip_revalidation
 powder_contact=false
 drive_contact=false
 scientific_run=false
