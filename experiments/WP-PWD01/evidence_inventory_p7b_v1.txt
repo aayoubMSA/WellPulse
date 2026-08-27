@@ -1,0 +1,63 @@
+# WP2-P7B non-scored physical qualification evidence inventory v1
+# Format: CLASS|RELATIVE_PATH_OR_SIGNAL|NONEMPTY|DESCRIPTION
+# No outcome file may authorize scoring. All three cells are qualification only.
+
+REQUIRED|reservation/portal_manifest.json|yes|Authoritative reservation/profile/binding identity
+REQUIRED|reservation/source_state.json|yes|Exact implementation commit and clean execution state
+REQUIRED|reservation/controller_preflight.json|yes|Controller and manifested management endpoint proof
+REQUIRED|reservation/cell_sequence.json|yes|Fixed B1-S3 then W1-S3 then B2-S3 ordering and prior PASS state
+REQUIRED|reservation/gate_events.jsonl|yes|Fail-closed reservation/cell transition ledger
+
+REQUIRED|cells/P7B-B1-S3/readiness.json|yes|B1 fail-closed Q0 washout/readiness evidence
+REQUIRED|cells/P7B-B1-S3/runtime_manifest.json|yes|B1 pinned runtime and transport
+REQUIRED|cells/P7B-B1-S3/generator/telemetry_generated.csv|yes|Generator ledger outside restart domain
+REQUIRED|cells/P7B-B1-S3/generator/generator_events.jsonl|yes|Generator PID/timing/sequence evidence
+REQUIRED|cells/P7B-B1-S3/gateway/gateway_process_events.jsonl|yes|Old/new gateway PID and restart timestamps
+REQUIRED|cells/P7B-B1-S3/gateway/mqtt_events.jsonl|yes|Publish rc/MID/PUBACK event authority
+REQUIRED|cells/P7B-B1-S3/gateway/pre_restart_transport_snapshot.json|yes|Accepted-unacknowledged MID snapshot
+REQUIRED|cells/P7B-B1-S3/restart_proof.json|yes|S3 restart-domain proof
+REQUIRED|cells/P7B-B1-S3/receiver/telemetry_received.csv|yes|All receiver attempts retained
+REQUIRED|cells/P7B-B1-S3/substrate/attenuation_timeline.csv|yes|Q0/Q3 timeline and t_rf_restore
+REQUIRED|cells/P7B-B1-S3/substrate/service_ready_probe.txt|yes|Architecture-blind t_service_ready proof
+
+REQUIRED|cells/P7B-W1-S3/readiness.json|yes|W1 fail-closed Q0 washout/readiness evidence
+REQUIRED|cells/P7B-W1-S3/runtime_manifest.json|yes|W1 pinned runtime and transport
+REQUIRED|cells/P7B-W1-S3/generator/telemetry_generated.csv|yes|Generator ledger outside restart domain
+REQUIRED|cells/P7B-W1-S3/generator/generator_events.jsonl|yes|Generator continuity evidence
+REQUIRED|cells/P7B-W1-S3/gateway/gateway_process_events.jsonl|yes|Old/new gateway PID and restart timestamps
+REQUIRED|cells/P7B-W1-S3/gateway/mqtt_events.jsonl|yes|Matched low-level MQTT event ledger
+REQUIRED|cells/P7B-W1-S3/gateway/w1_queue.sqlite|yes|Durable application queue
+CONDITIONAL|cells/P7B-W1-S3/gateway/w1_queue.sqlite-wal|yes|SQLite WAL when present at evidence freeze
+REQUIRED|cells/P7B-W1-S3/gateway/queue_timeline.csv|yes|Pending/inflight/PUBACK trajectory
+REQUIRED|cells/P7B-W1-S3/restart_proof.json|yes|S3 restart-domain proof
+REQUIRED|cells/P7B-W1-S3/w1_durability_proof.json|yes|Pre/post restart durable record-set proof
+REQUIRED|cells/P7B-W1-S3/receiver/telemetry_received.csv|yes|All receiver attempts retained
+REQUIRED|cells/P7B-W1-S3/substrate/attenuation_timeline.csv|yes|Q0/Q3 timeline and t_rf_restore
+REQUIRED|cells/P7B-W1-S3/substrate/service_ready_probe.txt|yes|Architecture-blind t_service_ready proof
+
+REQUIRED|cells/P7B-B2-S3/readiness.json|yes|B2 fail-closed Q0 washout/readiness evidence
+REQUIRED|cells/P7B-B2-S3/runtime_manifest.json|yes|Java/JAR/config/TLS/path lock
+REQUIRED|cells/P7B-B2-S3/generator/telemetry_generated.csv|yes|Generator ledger outside restart domain
+REQUIRED|cells/P7B-B2-S3/generator/generator_events.jsonl|yes|Generator continuity evidence
+REQUIRED|cells/P7B-B2-S3/gateway/b2_events.jsonl|yes|Java connect/publish/delivery/process ledger
+REQUIRED|cells/P7B-B2-S3/gateway/persistence_inventory_before.json|yes|Persisted disconnected-buffer state before destruction
+REQUIRED|cells/P7B-B2-S3/gateway/persistence_inventory_after.json|yes|Same persistence state reopened after restart
+REQUIRED|cells/P7B-B2-S3/restart_proof.json|yes|S3 restart-domain proof
+REQUIRED|cells/P7B-B2-S3/b2_durability_proof.json|yes|Exact JAR/config/persisted-record/drain proof
+REQUIRED|cells/P7B-B2-S3/receiver/telemetry_received.csv|yes|All receiver attempts retained
+REQUIRED|cells/P7B-B2-S3/substrate/attenuation_timeline.csv|yes|Q0/Q3 timeline and t_rf_restore
+REQUIRED|cells/P7B-B2-S3/substrate/service_ready_probe.txt|yes|Architecture-blind t_service_ready proof
+
+REQUIRED|analysis/b1_w1_manifest_comparison.json|yes|Exact matched-field verdict
+REQUIRED|analysis/p7b_reconstruction.json|yes|Machine-readable qualification reconstruction
+REQUIRED|analysis/p7b_reconstruction.md|yes|Human-readable qualification report
+GENERATED|escrow/SOURCE_SHA256SUMS.txt|yes|Internal raw evidence SHA-256 authority
+GENERATED|escrow/PERSISTENT_SHA256SUMS.txt|yes|Verified /proj copy hashes
+GENERATED|escrow/escrow_provenance.json|yes|Reservation/run/source/destination provenance
+GENERATED|escrow/PERSISTENT_ESCROW_GATE.PASS|yes|Persistent copy verified
+GENERATED|escrow/CONTROLLER_OFFPOWDER_REQUIRED|yes|Independent controller round-trip still required
+CONTROLLER_SIGNAL|CONTROLLER_PULL_GATE=PASS|yes|Persistent bundle pulled and internal hashes verified
+CONTROLLER_SIGNAL|CONTROLLER_BUNDLE_SHA256=<64hex>|yes|Deterministic TAR outer hash
+CONTROLLER_SIGNAL|CONTROLLER_OFFPOWDER_GATE=PASS|yes|Independent artifact read-back verified
+CONTROLLER_SIGNAL|EVIDENCE_ESCROW_GATE=PASS|yes|Only teardown-critical evidence authority
+CONTROLLER_SIGNAL|TEARDOWN_AUTHORIZED=YES|yes|May exist only after outer/internal round-trip PASS

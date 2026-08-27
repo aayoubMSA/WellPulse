@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - ".wp2-b2-semantics-trigger"
+      - "experiments/WP-PWD01/b2-semantics/P7BRemoteB2Gateway.java"
+      - "scripts/wp2_p7b_b2_manifest.py"
+      - ".github/workflows/wp2-b2-semantics.yml"
   workflow_dispatch:
 
 permissions:
@@ -31,7 +34,9 @@ jobs:
             https://repo.maven.apache.org/maven2/org/eclipse/paho/org.eclipse.paho.client.mqttv3/1.2.5/org.eclipse.paho.client.mqttv3-1.2.5.jar \
             -o /tmp/b2/lib/paho.jar
           javac -cp /tmp/b2/lib/paho.jar -d /tmp/b2/classes \
-            experiments/WP-PWD01/b2-semantics/B2PersistentClientProbe.java
+            experiments/WP-PWD01/b2-semantics/B2PersistentClientProbe.java \
+            experiments/WP-PWD01/b2-semantics/P7BRemoteB2Gateway.java
+          echo 'P7B_B2_REMOTE_ADAPTER_COMPILE=PASS'
 
       - name: Execute three independent process-restart semantics trials
         shell: bash
