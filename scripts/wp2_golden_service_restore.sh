@@ -35,7 +35,7 @@ ssh_do "$CORE_HOST" "sudo pkill -TERM -x srsenb 2>/dev/null || true; sudo pkill 
 printf 'T_CORE_RAN_STOPPED=%s\n' "$(utc)"
 
 bar 40 'Starting profile-authoritative EPC/eNB path'; echo
-ssh_do "$CORE_HOST" "/local/repository/bin/start.sh >/tmp/wp2-golden-core-start.console 2>&1"
+ssh_do "$CORE_HOST" "set +e; /local/repository/bin/start.sh >/tmp/wp2-golden-core-start.console 2>&1; rc=\$?; printf '%s\\n' \"\$rc\" >/tmp/wp2-golden-core-start.rc; exit 0"
 printf 'T_CORE_START_COMMAND_DONE=%s\n' "$(utc)"
 
 bar 55 'Requiring stable EPC/eNB processes for 10 s'; echo
@@ -43,7 +43,7 @@ ssh_do "$CORE_HOST" "deadline=\$((\$(date +%s)+40)); stable=0; while [ \$(date +
 printf 'T_CORE_RAN_READY=%s\n' "$(utc)"
 
 bar 70 'Starting fresh UE only after core/RAN readiness'; echo
-ssh_do "$UE_HOST" "/local/repository/bin/start.sh >/tmp/wp2-golden-ue-start.console 2>&1"
+ssh_do "$UE_HOST" "set +e; /local/repository/bin/start.sh >/tmp/wp2-golden-ue-start.console 2>&1; rc=\$?; printf '%s\\n' \"\$rc\" >/tmp/wp2-golden-ue-start.rc; exit 0"
 printf 'T_UE_START_COMMAND_DONE=%s\n' "$(utc)"
 
 bar 85 'Verifying a fresh UE process exists'; echo
