@@ -108,7 +108,7 @@ class WP2P7BContractTests(unittest.TestCase):
         self.assertIn("EXPLICIT", authority["p7b_b"])
         self.assertIn("SEPARATE_EXPLICIT_LIVE_AUTHORIZATION", authority["p7b_c"])
         for term in (
-            "Live authority created by this document: NONE",
+            "**Live authority created by this document:** NONE",
             "P7B-A contacts no POWDER system",
             "P7B-C authorization",
             "scored_runs_authorized=true",
