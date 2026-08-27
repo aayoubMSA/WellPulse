@@ -41,7 +41,7 @@ class P7BR3LiveSurfaceTests(unittest.TestCase):
         self.assertIn("SECOND_REPLACEMENT=NO", text)
         self.assertNotIn("scored_runs_authorized=true", text)
 
-    def test_r1_entrypoint_and_absolute_path_preservation_are_mandatory(self):
+    def test_r1_entrypoint_and_absolute_path_preservation_are_mandatory_in_historical_controller(self):
         text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
         self.assertIn("scripts/wp2_p7b_c_node_r1.py", text)
         self.assertNotIn("scripts/wp2_p7b_c_node.py\"", text)
@@ -80,20 +80,11 @@ class P7BR3LiveSurfaceTests(unittest.TestCase):
         for marker in ("EVIDENCE_ESCROW_GATE=PASS", "CONTROLLER_OFFPOWDER_GATE=PASS", "TEARDOWN_AUTHORIZED=YES"):
             self.assertLess(text.index(marker), term)
 
-    def test_workflow_is_one_shot_trigger_and_surfaces_progress(self):
-        path = ROOT / ".github" / "workflows" / "wp2-p7b-r3-live.yml"
-        text = path.read_text(encoding="utf-8")
-        self.assertIn(".wp2-p7b-r3-live-trigger", text)
-        self.assertIn("execute=WP2_P7B_R3_LIVE_ONCE", text)
-        self.assertIn("authority_id=P7B-RQ1", text)
-        self.assertIn("reservation_limit=1", text)
-        self.assertIn("automatic_retry=NO", text)
-        self.assertIn("second_replacement=NO", text)
-        self.assertIn("actions/upload-artifact", text)
-        self.assertIn("actions/download-artifact", text)
-        self.assertIn("Publish colorful progress and first-cause status", text)
-        self.assertIn("FIRST-CAUSE CONTROLLER TAIL", text)
-        self.assertNotIn("workflow_dispatch", text)
+    def test_retired_r3_live_workflow_and_trigger_remain_absent(self):
+        workflow = ROOT / ".github" / "workflows" / "wp2-p7b-r3-live.yml"
+        trigger = ROOT / ".wp2-p7b-r3-live-trigger"
+        self.assertFalse(workflow.exists())
+        self.assertFalse(trigger.exists())
 
     def test_contract_remains_non_scored_and_replacement_only(self):
         c = json.loads((ROOT / "experiments" / "WP-PWD01" / "p7b-requalification-r2-contract.json").read_text())
