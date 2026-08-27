@@ -1,15 +1,15 @@
 # WP2-P7B-C Live Qualification — latest
 
-- Checked UTC: 2026-08-27T20:32:08Z
-- Source SHA: `a582b95ceef5705c7c1204df2c9dd637717dcef1`
-- GitHub run: `33113016138`
-- Experiment UUID: `26b6f315-459d-4a56-9167-69228e339f24`
-- Experiment name: `wp7b3016138`
-- Node run ID: `wp2-p7b-c-33113016138-20260827T203140Z`
+- Checked UTC: 2026-08-27T20:48:14Z
+- Source SHA: `1b1762cd41d1f1c2359c86252e2618385119a48d`
+- GitHub run: `33115086371`
+- Experiment UUID: `UNAVAILABLE`
+- Experiment name: `UNAVAILABLE`
+- Node run ID: `UNAVAILABLE`
 - Evidence class: **NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION**
 - P7B-C gate: **CONTROLLER_BLOCKED**
 - Completed cells: `NONE`
-- Controller RC: `70`
+- Controller RC: `not-run`
 - Experiment teardown: **NOT AUTHORIZED / LEFT LIVE IF CREATED**
 - P7B-D: **NOT STARTED**
 - Scored authorization: **BLOCKED**
