@@ -1,3 +1,0 @@
-triggered_utc=2026-08-27
-attempt=2
-purpose=verify_github_owned_powder_and_encrypted_drive_transport_without_mutation
