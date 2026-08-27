@@ -1,6 +1,6 @@
 # WellPulse GitHub Actions Workflow Registry
 
-Canonical status date: 2026-08-27 — **AUDIT-R1 reconciled / WP2-P5 PASS**
+Canonical status date: 2026-08-27 — **WP2-P6 ACTIVE after short QA PASS**
 
 This registry is the authoritative classification of GitHub Actions workflow files on `main`.
 
@@ -8,69 +8,44 @@ This registry is the authoritative classification of GitHub Actions workflow fil
 
 A workflow is runnable by normal GitHub Actions triggers only when its YAML file exists under `.github/workflows/` on the active branch. Historical workflow runs and deleted/archived YAML are provenance only and must not be restored or re-run as live testbed automation without a new compatibility review and explicit authorization.
 
-## Active workflows — verified bounded surface
+## Active workflows — bounded surface during P6
 
-Exactly **6** workflows remain active:
+Exactly **7** workflows are active during the one-shot P6 execution window:
 
-| Workflow | Class | Trigger | External/live-system contact | Allowed while `REBOOK_GOLDEN=false` | Notes |
+| Workflow | Class | Trigger | External/live-system contact | Current authority | Notes |
 |---|---|---|---|---|---|
 | `local-gate-once.yml` | `ACTIVE_LOCAL_QA` | `.local-gate-trigger`, manual dispatch | None | YES | Local unit/pre-score QA only. |
-| `local-unit-tests.yml` | `ACTIVE_LOCAL_QA` | changes to `src/wellpulse/**`, `tests/**`, `pyproject.toml`; PR equivalent | None | YES | Deterministic local tests. |
-| `wp2-b2-semantics.yml` | `ACTIVE_LOCAL_SEMANTICS` | `.wp2-b2-semantics-trigger`, manual dispatch | Localhost test services only; POWDER NONE | YES | Non-scored local comparator semantics QA; no remote experiment. |
-| `wp2-golden-offline-qa.yml` | `ACTIVE_OFFLINE_GOLDEN_QA` | selected Golden/A3 implementation paths, manual dispatch | POWDER NONE; Drive NONE | YES | Offline syntax, passive-HCI contract, reconstruction and fail-closed escrow/interlock QA only; **not a launcher**. |
-| `wp2-offpowder-artifact-qa.yml` | `ACTIVE_OFFLINE_ARTIFACT_QA` | `.wp2-offpowder-artifact-qa-trigger` | POWDER NONE; Drive NONE | YES | Synthetic GitHub artifact upload/download/hash round-trip QA only. |
-| `wp2-preintegration-static.yml` | `ACTIVE_STATIC_COMPATIBILITY_QA` | `.wp2-preintegration-static-trigger` on `main` | POWDER NONE; Drive NONE | YES | Static integration-contract checks only. |
+| `local-unit-tests.yml` | `ACTIVE_LOCAL_QA` | code/test paths; PR equivalent | None | YES | Deterministic local tests. |
+| `wp2-b2-semantics.yml` | `ACTIVE_LOCAL_SEMANTICS` | `.wp2-b2-semantics-trigger`, manual dispatch | Localhost only | YES | Non-scored local comparator semantics QA. |
+| `wp2-golden-offline-qa.yml` | `ACTIVE_OFFLINE_GOLDEN_QA` | selected Golden implementation paths, manual dispatch | POWDER NONE; Drive NONE | YES | Offline syntax, passive-HCI, reconstruction, escrow/interlock QA. |
+| `wp2-offpowder-artifact-qa.yml` | `ACTIVE_OFFLINE_ARTIFACT_QA` | `.wp2-offpowder-artifact-qa-trigger` | POWDER NONE; Drive NONE | YES | Synthetic artifact upload/download/hash QA. |
+| `wp2-preintegration-static.yml` | `ACTIVE_STATIC_COMPATIBILITY_QA` | `.wp2-preintegration-static-trigger` | POWDER NONE; Drive NONE | YES | Static integration-contract checks. |
+| `wp2-p6-golden.yml` | `ACTIVE_ONE_SHOT_LIVE_P6` | `.wp2-p6-golden-trigger` | **POWDER + GitHub artifact transport** | **AUTHORIZED FOR EXACTLY ONE NON-SCORED P6 RUN** | Performs short premutation offline QA, advisory `resinfo.php` check, exact Portal/profile identity gates, one Golden G0-G10 node phase, `/proj` escrow, controller pull, GitHub artifact round-trip, and teardown only after verified evidence closure. |
 
-No workflow was added for WP2-P5. The passive HCI implementation is exercised by the existing offline Golden QA surface.
+The P6 workflow is a new bounded launcher derived from the accepted K8/AUDIT-R1/P5 contracts. It does **not** reactivate historical K/A3 workflows and does not use Google Drive/rclone as teardown authority.
 
-No K-series live/diagnostic workflow and no H-calibration/preflight workflow exists under `.github/workflows/`.
+## Root trigger sentinels
 
-## Active root trigger sentinels — verified bounded surface
+The four standing offline/static sentinels remain:
 
-Exactly **4** root sentinel files remain:
+- `.local-gate-trigger`
+- `.wp2-b2-semantics-trigger`
+- `.wp2-offpowder-artifact-qa-trigger`
+- `.wp2-preintegration-static-trigger`
 
-- `.local-gate-trigger` -> `local-gate-once.yml`
-- `.wp2-b2-semantics-trigger` -> `wp2-b2-semantics.yml`
-- `.wp2-offpowder-artifact-qa-trigger` -> `wp2-offpowder-artifact-qa.yml`
-- `.wp2-preintegration-static-trigger` -> `wp2-preintegration-static.yml`
+During the P6 one-shot window, one additional sentinel is authorized:
 
-`local-unit-tests.yml` and `wp2-golden-offline-qa.yml` use path filters rather than dedicated root sentinels.
+- `.wp2-p6-golden-trigger` -> `wp2-p6-golden.yml`
 
-## AUDIT-R1 retired active surface
+This P6 sentinel must not be reused for a second Golden run. After P6 reaches a terminal verdict, retire the P6 live workflow/sentinel or otherwise remove its live authority during canonical closure.
 
-The following workflows remain retired from the active Actions path:
+## P6 live authority boundary
 
-- `wp2-h-preflight.yml` — superseded old W1-derived H procedure;
-- `wp2-k3-portal-cli-contract-qa.yml` — K3 closed;
-- `wp2-k7-observation-guard.yml` — K7 closed;
-- `wp2-kfastlane-failed-create-diagnostic.yml` — completed diagnostic;
-- `wp2-kfastlane-live-compat.yml` — completed live compatibility path;
-- `wp2-kfastlane-live-compat-v2.yml` — decisive completed K-fastlane path;
-- `wp2-kfastlane-provision-failure-diagnose.yml` — completed diagnostic;
-- `wp2-profile-metadata-readonly.yml` — K-era profile metadata probe.
+User continuation on 2026-08-27 explicitly authorizes WP2-P6 after the recorded short QA PASS.
 
-Their historical content/runs remain provenance only.
+Current controls:
 
-## Earlier archived workflow classes
-
-| Archive | Count | Status | Authority |
-|---|---:|---|---|
-| `archive/workflows/a3-2026-08-27/` | 12 | `ARCHIVED_EXPIRED_A3` | Provenance only; A3 expired/removed. |
-| `archive/workflows/fit-final-2026-08-23/` | 16 | `ARCHIVED_CLOSED_FIT` | FIT science is FINAL PASS; audit only. |
-| `archive/workflows/powder-legacy-2026-08/` | 22 | `ARCHIVED_LEGACY_POWDER` | Historical live/probe/diagnostic/allocation workflows. |
-
-## Live POWDER prohibition at current STOP
-
-No active workflow is currently authorized to:
-
-- create, schedule, start, terminate, extend, or otherwise mutate a POWDER experiment;
-- SSH into a POWDER node;
-- invoke `tmcc` against a live experiment;
-- poll or probe a live scientific window independently;
-- execute Golden, H calibration, or B1/W1/B2 scored work;
-- reopen K1-K8 or RF calibration.
-
-Current mandatory state:
+`P6_SHORT_QA=PASS`
 
 `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
 
@@ -78,20 +53,39 @@ Current mandatory state:
 
 `HCI_CONTROL_ACTIONS_ENABLED=false`
 
-`H_app=300 s from t_service_ready (FROZEN)`
-
-`outcome_derived_H_calibration=PROHIBITED`
+`REBOOK_GOLDEN=true` — **one P6 non-scored reservation/run only**
 
 `scored_runs_authorized=false`
 
-`REBOOK_GOLDEN=false`
+The P6 workflow may:
 
-The P5 gate passing does not activate a Golden launcher. A separate explicit user continuation remains required before the advisory resource preflight and any reservation attempt.
+1. perform the read-only advisory resource-information check immediately before booking;
+2. create exactly one reservation using the frozen profile/bindings;
+3. use authoritative Portal READY/manifest/time guards;
+4. SSH to the exact manifested nodes for pre-science setup and the single Golden run;
+5. execute the frozen RF treatment inside the Golden orchestrator;
+6. preserve raw evidence to `/proj/WellPulse` after protected observation/reconstruction;
+7. controller-pull the verified persistent bundle;
+8. upload/download the exact TAR through the already-qualified GitHub artifact actions;
+9. emit teardown authority only after outer/internal SHA-256 verification;
+10. terminate the experiment only after `EVIDENCE_ESCROW_GATE=PASS` and `TEARDOWN_AUTHORIZED=YES`.
 
-## Historical Actions UI rule
+It may **not** execute H calibration, B1/W1/B2 scored work, reopen RF calibration/K1-K8/H1 salvage, add independent HCI probes, silently substitute hardware/profile/bindings, or use Drive as mandatory evidence authority.
 
-GitHub may continue to show deleted/archived workflow names and historical runs in the Actions UI. Those entries are audit history, not current authorization. Do not use **Re-run jobs** or historical manual controls to bypass the current gates.
+If execution fails **before protected science starts**, bounded reservation cleanup is allowed. If it fails **after protected science starts** without verified final evidence closure, automatic teardown is prohibited and the experiment is left live to protect evidence.
 
-## Supply-chain note
+## Historical retired surface
 
-Local/offline workflows are not automatically qualified for live integration. Any future GitHub Actions <-> POWDER execution path must preserve the frozen compatibility contract and current evidence/finalization rules before it gains live authority.
+The following remain retired and provenance-only:
+
+- `wp2-h-preflight.yml`;
+- `wp2-k3-portal-cli-contract-qa.yml`;
+- `wp2-k7-observation-guard.yml`;
+- `wp2-kfastlane-failed-create-diagnostic.yml`;
+- `wp2-kfastlane-live-compat.yml`;
+- `wp2-kfastlane-live-compat-v2.yml`;
+- `wp2-kfastlane-provision-failure-diagnose.yml`;
+- `wp2-profile-metadata-readonly.yml`;
+- archived A3/legacy Golden owner workflows.
+
+Historical Actions UI entries are not current authority and must not be re-run to bypass P6 control.
