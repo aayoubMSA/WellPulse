@@ -1,5 +1,4 @@
 # WP-PWD01 Golden E2E mandatory evidence inventory v1.4
-# AUDIT-R1 final offline QA trigger stamp: 2026-08-27 (no semantic change)
 # Format: CLASS|RELATIVE_PATH_OR_SIGNAL|NONEMPTY|DESCRIPTION
 # CLASS:
 #   REQUIRED          = must exist before persistent Evidence Escrow starts
