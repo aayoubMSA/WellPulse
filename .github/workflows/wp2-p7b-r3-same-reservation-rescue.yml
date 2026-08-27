@@ -1,0 +1,252 @@
+name: WP2 P7B-R3 Same Reservation Rescue
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-p7b-r3-same-reservation-rescue-trigger'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: wp2-p7b-r3-same-reservation-rescue
+  cancel-in-progress: false
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      TARGET_EXPID: 12b39276-af0f-4e34-8dfd-685b006dd6bd
+      TARGET_NAME: wp7brq19810043
+      AUTHORIZED_SOURCE_SHA: b174ca46fe3af2dae4e50b68bd489ce09a271ea9
+      CONSERVATIVE_EXPIRY_UTC: 2026-08-27T23:47:00Z
+
+    steps:
+      - name: Checkout full provenance history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - name: Freeze same-reservation rescue authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-r3-same-reservation-rescue-trigger)" = $'execute=WP2_P7B_R3_SAME_RESERVATION_RESCUE_ONCE\nexperiment_id=12b39276-af0f-4e34-8dfd-685b006dd6bd\nexperiment_name=wp7brq19810043\nnew_reservation=NO\nautomatic_retry=NO\nteardown=NO\nscored=NO'
+          ! grep -Eq '^[[:space:]]*portal-cli experiment create' .github/workflows/wp2-p7b-r3-same-reservation-rescue.yml
+          ! grep -Eq '^[[:space:]]*portal-cli experiment terminate' .github/workflows/wp2-p7b-r3-same-reservation-rescue.yml
+          git cat-file -e "$AUTHORIZED_SOURCE_SHA^{commit}"
+          echo 'SAME_RESERVATION_RESCUE_AUTHORITY=PASS'
+          echo 'NEW_RESERVATION=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
+
+      - name: Install controller dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq openssh-client rsync curl >/dev/null
+
+      - name: Build fail-closed same-reservation controller
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('powder/wp2_p7b_r3_execute.sh').read_text(encoding='utf-8')
+          src = src.replace(
+              'SOURCE_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"',
+              "SOURCE_SHA='b174ca46fe3af2dae4e50b68bd489ce09a271ea9'",
+              1,
+          )
+          start = "  bar 5 'Authority guards + no-active-P7B check'; echo\n"
+          end = '  portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json" || fail MANIFEST_FETCH 8\n'
+          assert src.count(start) == 1, 'RESCUE_PATCH_START_MARKER'
+          assert src.count(end) == 1, 'RESCUE_PATCH_END_MARKER'
+          i = src.index(start)
+          j = src.index(end, i) + len(end)
+          replacement = r'''  bar 5 'Same-reservation identity + degraded-control-plane corroboration'; echo
+  EXPID='12b39276-af0f-4e34-8dfd-685b006dd6bd'
+  EXP_NAME='wp7brq19810043'
+  set_output experiment_id "$EXPID"
+  set_output experiment_name "$EXP_NAME"
+  printf 'EXPID=%q\nEXP_NAME=%q\nPREPARE_GATE=SAME_RESERVATION_RESCUE\n' "$EXPID" "$EXP_NAME" > "$STATE"
+
+  LIST_OK=0
+  for i in 1 2 3; do
+    set +e
+    portal-cli experiment list > "$TMP/list-existing.json" 2>"$TMP/list-existing.err"
+    lrc=$?
+    set -e
+    if [[ "$lrc" -eq 0 ]]; then LIST_OK=1; break; fi
+    echo "RESCUE_LIST_${i}=ERROR:rc=$lrc"
+    sleep 2
+  done
+  EXPIRES=''
+  if [[ "$LIST_OK" -eq 1 ]]; then
+    python3 - "$TMP/list-existing.json" "$EXPID" "$EXP_NAME" > "$TMP/existing.env" <<'PY2'
+import json,shlex,sys
+obj=json.load(open(sys.argv[1])); expid=sys.argv[2]; name=sys.argv[3]
+xs=obj if isinstance(obj,list) else obj.get('experiments',[])
+rows=[x for x in xs if isinstance(x,dict) and str(x.get('id',''))==expid and str(x.get('name',''))==name and x.get('project')=='WellPulse']
+if len(rows)!=1:
+    raise SystemExit(f'EXACT_RESERVATION_MATCH_COUNT={len(rows)}')
+x=rows[0]; status=str(x.get('status','unknown')).lower()
+if status in {'terminated','destroyed','failed','error'}:
+    raise SystemExit('RESERVATION_TERMINAL:'+status)
+expires=str(x.get('expires_at') or x.get('expires') or x.get('expiration') or '')
+print('LIST_STATUS='+shlex.quote(status))
+print('LIST_EXPIRES='+shlex.quote(expires))
+PY2
+    source "$TMP/existing.env"
+    EXPIRES="${LIST_EXPIRES:-}"
+    echo "SAME_RESERVATION_LIST_GATE=PASS:$LIST_STATUS"
+  else
+    echo 'SAME_RESERVATION_LIST_GATE=DEGRADED_UNAVAILABLE'
+  fi
+  if [[ -z "$EXPIRES" ]]; then
+    EXPIRES='2026-08-27T23:47:00Z'
+    echo "EXPIRY_SOURCE=CONSERVATIVE_UI_DERIVED:$EXPIRES"
+  else
+    echo "EXPIRY_SOURCE=PORTAL_LIST:$EXPIRES"
+  fi
+  python3 scripts/wp2_prelaunch_time_guard.py --now-utc "$(utc)" --expires-utc "$EXPIRES" --min-remaining-s 3000 | tee "$TMP/time-gate.txt"
+  grep -q '^PRELAUNCH_TIME_GATE=PASS$' "$TMP/time-gate.txt" || fail PRELAUNCH_TIME 7
+
+  MOK=0
+  for i in 1 2 3 4; do
+    set +e
+    portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json" 2>"$TMP/manifests.err"
+    mrc=$?
+    set -e
+    if [[ "$mrc" -eq 0 ]]; then MOK=1; echo "RESCUE_MANIFEST_${i}=PASS"; break; fi
+    echo "RESCUE_MANIFEST_${i}=ERROR:rc=$mrc"
+    tail -c 400 "$TMP/manifests.err" 2>/dev/null || true; echo
+    sleep 3
+  done
+  [[ "$MOK" -eq 1 ]] || fail MANIFEST_FETCH_DEGRADED_CONTROL_PLANE 8
+'''
+          out = src[:i] + replacement + src[j:]
+          assert 'portal-cli experiment create' not in out, 'NEW_RESERVATION_PATH_SURVIVED'
+          Path('/tmp/wp2_p7b_r3_same_reservation.sh').write_text(out, encoding='utf-8')
+          PY
+          chmod 700 /tmp/wp2_p7b_r3_same_reservation.sh
+          bash -n /tmp/wp2_p7b_r3_same_reservation.sh
+          test "$(grep -c --fixed-strings 'portal-cli experiment create' /tmp/wp2_p7b_r3_same_reservation.sh || true)" = 0
+          echo 'RESCUE_CONTROLLER_STATIC_GATE=PASS'
+
+      - name: Execute same-reservation qualification and escrow
+        id: prepare
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          /tmp/wp2_p7b_r3_same_reservation.sh prepare 2>&1 | tee /tmp/wp2-p7b-r3-rescue-controller.log
+
+      - name: Upload immutable evidence bundle
+        id: upload
+        if: always() && steps.prepare.outputs.bundle_path != ''
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p7b-r3-same-reservation-${{ github.run_id }}
+          path: ${{ steps.prepare.outputs.bundle_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Independent artifact read-back
+        id: download
+        if: steps.upload.outcome == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p7b-r3-same-reservation-${{ github.run_id }}
+          path: /tmp/wp2-p7b-r3-rescue-roundtrip
+
+      - name: Verify outer and internal hashes without teardown
+        id: verify
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.prepare.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          TAR="$(find /tmp/wp2-p7b-r3-rescue-roundtrip -type f -name '*.tar' | head -1)"
+          test -s "$TAR"
+          test "$(sha256sum "$TAR" | awk '{print $1}')" = "$EXPECTED_SHA"
+          rm -rf /tmp/wp2-p7b-r3-rescue-verified; mkdir -p /tmp/wp2-p7b-r3-rescue-verified
+          tar -C /tmp/wp2-p7b-r3-rescue-verified -xf "$TAR"
+          (cd /tmp/wp2-p7b-r3-rescue-verified/ue/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
+          (cd /tmp/wp2-p7b-r3-rescue-verified/core/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
+          echo 'CONTROLLER_OFFPOWDER_GATE=PASS'
+          echo 'TEARDOWN_AUTHORIZED=DEFERRED_BY_RESCUE_CONTRACT'
+          echo 'TEARDOWN_EXECUTED=NO'
+          jq '{gate,completed_cells,scored,scored_runs_authorized}' /tmp/wp2-p7b-r3-rescue-verified/ue/raw/p7b_c_status.json 2>/dev/null || true
+
+      - name: Publish colorful rescue status and first cause
+        if: always()
+        shell: bash
+        env:
+          PREPARE: ${{ steps.prepare.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+          DOWNLOAD: ${{ steps.download.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+          NODE_RC: ${{ steps.prepare.outputs.node_rc }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          BUNDLE_SHA: ${{ steps.prepare.outputs.bundle_sha256 }}
+        run: |
+          set -u
+          {
+            echo '# P7B-R3 same-reservation rescue'
+            echo
+            echo '- Existing reservation: `12b39276-af0f-4e34-8dfd-685b006dd6bd` / `wp7brq19810043`'
+            echo '- New reservation: **NO**'
+            echo '- Authorized scientific source SHA: `b174ca46fe3af2dae4e50b68bd489ce09a271ea9`'
+            echo '- Teardown in this rescue: **NO**'
+            echo '- Scored authorization: **BLOCKED**'
+            echo
+            if [[ "$PREPARE" == success && "${NODE_RC:-1}" == 0 && "$VERIFY" == success ]]; then
+              echo '🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ **90% — physical cells + escrow + independent read-back PASS; contract QA/teardown remain**'
+            elif [[ "$VERIFY" == success ]]; then
+              echo '🟧🟧🟧🟧🟧🟧🟧⬜⬜⬜ **70% — attempt blocked but off-POWDER evidence bundle verified**'
+            elif [[ -n "${BUNDLE_SHA:-}" ]]; then
+              echo '🟨🟨🟨🟨🟨⬜⬜⬜⬜⬜ **50% — evidence bundle prepared; independent read-back incomplete**'
+            else
+              echo '🟥🟥🟥⬜⬜⬜⬜⬜⬜⬜ **30% — rescue blocked before durable off-POWDER bundle**'
+            fi
+            echo
+            echo '| Gate | Outcome |'
+            echo '|---|---|'
+            echo "| physical + /proj escrow | ${PREPARE:-skipped} |"
+            echo "| artifact upload | ${UPLOAD:-skipped} |"
+            echo "| independent download | ${DOWNLOAD:-skipped} |"
+            echo "| outer/internal SHA verification | ${VERIFY:-skipped} |"
+            echo "| node RC | ${NODE_RC:-unknown} |"
+            echo "| node run ID | ${RUN_ID:-not-started} |"
+            echo "| bundle SHA-256 | ${BUNDLE_SHA:-unavailable} |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '===== FIRST-CAUSE RESCUE CONTROLLER TAIL ====='
+          tail -n 220 /tmp/wp2-p7b-r3-rescue-controller.log 2>/dev/null || true
+
+      - name: Enforce provisional rescue verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ steps.prepare.outcome }}' = success
+          test '${{ steps.prepare.outputs.node_rc }}' = 0
+          test '${{ steps.upload.outcome }}' = success
+          test '${{ steps.download.outcome }}' = success
+          test '${{ steps.verify.outcome }}' = success
+          echo 'WP2_P7B_R3_RESCUE=PASS_PROVISIONAL_PENDING_CONTRACT_QA_AND_TEARDOWN'
+          echo 'SCORED_AUTHORIZATION=BLOCKED'
