@@ -1,6 +1,6 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-27 after **P7B-C live qualification BLOCKED, P7B-D strict completeness BLOCKED, P7B-E canonical closure PASS**.
+Last updated: 2026-08-27 after **P7B-R1 receiver-path repair + observability regression QA PASS**.
 
 ## Scientific work packages
 
@@ -29,7 +29,7 @@ Under gate-based scientific credit, weighted completion remains **20%** until WP
 
 `WP2_MANAGEMENT_READINESS_PROGRESS=95/100`
 
-The remaining 5/100 is still gated by successful pre-score physical qualification plus an immutable authorization snapshot. No partial scientific credit is created by the failed qualification attempt.
+The remaining 5/100 is still gated by successful pre-score physical qualification plus an immutable authorization snapshot. R1 is a repair patch and creates no additional management/scientific credit.
 
 ## Frozen scientific state
 
@@ -46,7 +46,7 @@ The remaining 5/100 is still gated by successful pre-score physical qualificatio
 - H1 remains valid adverse non-scored evidence.
 - K1-K8 remain PASS / CLOSED absent material interface change.
 
-## P6 and P7 baseline
+## P6/P7 baseline
 
 - `WP2_P6=PASS_RECOVERED_SINGLE_RUN`.
 - P6 valid run `wp2-p6r-33099648133-20260827T174149Z`, primary cohort 181, valid by 300 s 181/181, `completeness_300=1.0`.
@@ -54,7 +54,7 @@ The remaining 5/100 is still gated by successful pre-score physical qualificatio
 - `WP2_P7_HARDENING_QA=PASS`.
 - scored authorization remained blocked on mandatory physical qualification.
 
-## P7B status
+## P7B qualification history
 
 Canonical blocked closure:
 
@@ -68,7 +68,7 @@ Canonical blocked closure:
 | D | **BLOCKED STRICT COMPLETENESS** | declared roots preserved/read back and teardown complete; receiver event ledger unrecovered |
 | E | **PASS CANONICAL BLOCKED CLOSURE** | failed/partial result frozen without relabelling |
 
-Successful P7B qualification credit remains **40/100** from A+B only.
+Successful P7B physical-qualification credit remains **40/100** from A+B only.
 
 ### P7B-C live reservation
 
@@ -107,24 +107,57 @@ Root-cause classification: **orchestration/evidence-path quoting defect**, not d
 - expected `receiver_events.jsonl` was not recovered before teardown;
 - strict retained verdict: `WP2_P7B_D=BLOCKED_STRICT_COMPLETENESS_RECEIVER_EVENT_LEDGER_NOT_RECOVERED`.
 
-## Current blockers
+## P7B-R1 — operational repair QA
 
-The following must still close before scored authorization:
+Canonical closure:
 
-1. repair and regression-test the receiver output-path/watcher path mismatch;
-2. harden failure observability so the first root cause and bounded raw diagnostics appear directly in GitHub Actions;
-3. decide, after offline QA, whether a future one-reservation physical requalification is justified;
-4. if separately authorized later, successfully complete B1/W1/B2 physical qualification and strict evidence survival;
-5. freeze the immutable pre-score reproducibility snapshot;
-6. make a separate scored-authorization decision.
+`docs/WP2_P7B_R1_RECEIVER_PATH_OBSERVABILITY_CLOSURE_2026-08-27.md`
+
+Verdict:
+
+`WP2_P7B_R1=PASS_OFFLINE_RECEIVER_PATH_OBSERVABILITY_QA`
+
+Implemented offline:
+
+- `scripts/wp2_p7b_path_contract.py` — absolute remote-path contract, rejects literal `$HOME`/`~`, proves receiver writer/watcher equality;
+- `scripts/wp2_p7b_c_node_r1.py` — repaired receiver launcher on absolute path, PID fail-fast, bounded GitHub-compatible diagnostics;
+- `scripts/wp2_p7b_preservation_helpers.sh` — fail-closed absolute-path/hash-copy helpers;
+- updated executable regressions in `tests/test_wp2_p7b_c_premutation.py`.
+
+Accepted Local Unit Tests:
+
+- run `33116073295`;
+- job `98670934415`;
+- SHA `695b31cba6c0256b3637223abdfef4f4b11bf6ca`;
+- Python `3.12.14`;
+- `paho-mqtt==2.1.0`;
+- **65/65 PASS**.
+
+R1 changed no RF/timing/horizon/scientific rules, contacted no POWDER system, created no reservation and created no live workflow.
+
+The historical retired controller still points to the old runner. Therefore any future authority contract must explicitly bind the controller to `scripts/wp2_p7b_c_node_r1.py`; direct reuse of the historical controller is prohibited.
+
+R1 recommendation:
+
+`FUTURE_PHYSICAL_REQUALIFICATION_RECOMMENDATION=GO_CONDITIONAL`
+
+This recommendation does not override the consumed original `reservation_limit=1` or the prohibition on automatic replacement.
+
+## Current blockers before scored authorization
+
+1. freeze an explicit requalification authority contract if one replacement reservation is judged justified;
+2. require the repaired R1 entrypoint and absolute-path preservation contract in that authority surface;
+3. if later separately live-authorized, successfully complete B1/W1/B2 physical qualification and strict evidence survival;
+4. freeze the immutable pre-score reproducibility snapshot;
+5. make a separate scored-authorization decision.
 
 ## Current frontier
 
-`WP2-P7B-R1 — RECEIVER-PATH REPAIR + OBSERVABILITY REGRESSION QA`
+`WP2-P7B-R2 — REQUALIFICATION AUTHORITY + CONTRACT FREEZE`
 
-Status: **OFFLINE NEXT PATCH**.
+Status: **OFFLINE ONLY / NOT STARTED**.
 
-R1 itself carries no POWDER authority and no replacement-reservation authority.
+R2 itself carries no POWDER authority. It must stop again before any possible live replacement reservation.
 
 ## Remaining scientific path
 
@@ -145,11 +178,16 @@ P7B-D strict completeness BLOCKED / teardown complete
         ↓
 P7B-E canonical blocked closure PASS
         ↓
-P7B-R1 offline repair + regression QA
+P7B-R1 offline receiver-path/observability repair PASS
         ↓
-STOP / separate decision on any future live requalification
+P7B-R2 offline requalification authority/contract freeze
         ↓
-(successful physical qualification required before)
+STOP / separate explicit live authorization required
+        ↓
+(if authorized) one bounded replacement physical qualification
+        ↓
+(successful physical qualification + strict evidence survival required)
+        ↓
 immutable pre-score snapshot + scored-authorization decision
         ↓
 WP3 -> WP4 -> WP5
