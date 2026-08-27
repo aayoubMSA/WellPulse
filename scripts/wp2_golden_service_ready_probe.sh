@@ -54,9 +54,10 @@ printf 'ICMP_READY_UTC=%s\n' "$(utc)"
 bar 70 'Verifying TLS broker identity and CA'; echo
 LEFT=$(remaining)
 [[ "$LEFT" -gt 0 ]] || { echo 'SERVICE_READY=FAIL_TIMEOUT_BEFORE_TLS'; exit 24; }
-TLS_OUT=$(timeout "${LEFT}s" openssl s_client -connect "${HOST}:${PORT}" -CAfile "$CA_FILE" -verify_return_error -verify_ip "$HOST" </dev/null 2>&1 || true)
-echo "$TLS_OUT"
-grep -q 'Verification: OK' <<<"$TLS_OUT" || grep -q 'Verify return code: 0 (ok)' <<<"$TLS_OUT" || { echo 'SERVICE_READY=FAIL_TLS_VERIFY'; exit 25; }
+# Use -brief so verification evidence is retained without persisting TLS session secrets.
+TLS_OUT=$(timeout "${LEFT}s" openssl s_client -brief -connect "${HOST}:${PORT}" -CAfile "$CA_FILE" -verify_return_error -verify_ip "$HOST" </dev/null 2>&1 || true)
+printf '%s\n' "$TLS_OUT"
+grep -q 'Verification: OK' <<<"$TLS_OUT" || { echo 'SERVICE_READY=FAIL_TLS_VERIFY'; exit 25; }
 
 NOW=$(date +%s)
 ELAPSED=$((NOW-START_EPOCH))
