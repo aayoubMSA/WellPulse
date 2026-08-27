@@ -104,7 +104,7 @@ jobs:
           echo "ue_port=$(jq -r '.rue1.port' "$TMP/nodes.json")" >> "$GITHUB_OUTPUT"
           echo 'SALVAGE_MANIFEST_IDENTITY=PASS'
 
-      - name: Initialize SSH
+      - name: Prepare SSH key material
         shell: bash
         run: |
           set -euo pipefail
@@ -119,9 +119,6 @@ jobs:
           chmod 600 /tmp/wp2-p7b-r3-salvage/private.key
           printf '%s\n' '#!/usr/bin/env bash' 'printf '\''%s\\n'\'' "$POWDER_SSH_KEY_PASSPHRASE"' > /tmp/wp2-p7b-r3-salvage/askpass
           chmod 700 /tmp/wp2-p7b-r3-salvage/askpass
-          export SSH_ASKPASS=/tmp/wp2-p7b-r3-salvage/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
-          eval "$(ssh-agent -s)" >/dev/null
-          setsid -w ssh-add /tmp/wp2-p7b-r3-salvage/private.key </dev/null >/dev/null
           : > "$HOME/.ssh/known_hosts"
 
       - name: Shell-only copy raw trees to persistent project escrow
@@ -136,7 +133,10 @@ jobs:
           UE_PORT: ${{ steps.nodes.outputs.ue_port }}
         run: |
           set -euo pipefail
-          SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          export SSH_ASKPASS=/tmp/wp2-p7b-r3-salvage/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add /tmp/wp2-p7b-r3-salvage/private.key </dev/null >/dev/null
+          SSH_OPTS=(-o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ESCROW="/proj/WellPulse/evidence-escrow/p7b-r3/${NODE_RUN_ID}"
           UE_SRC="/users/${POWDER_USERNAME}/wellpulse-powder-evidence/p7b/${NODE_RUN_ID}"
           CORE_SRC="/users/${POWDER_USERNAME}/wellpulse-powder-evidence/p7b/${NODE_RUN_ID}-core"
