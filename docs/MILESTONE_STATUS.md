@@ -1,6 +1,6 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-27 after **AUDIT-R1 pre-Golden reconciliation**.
+Last updated: 2026-08-27 after **WP2-P5 HCI/raw-evidence closure PASS**.
 
 ## Scientific work packages
 
@@ -8,12 +8,30 @@ Last updated: 2026-08-27 after **AUDIT-R1 pre-Golden reconciliation**.
 |---|---|---:|---:|---|
 | WP0 | Novelty & Venue Lock | 8% | 8/8 | PASS |
 | WP1 | Confirmatory Protocol & Statistics Freeze | 12% | 12/12 | PASS / FROZEN |
-| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — compatibility PASS; AUDIT-R1 reconciled; HCI/raw gate + Golden remain** |
+| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — compatibility PASS; AUDIT-R1 PASS; HCI/raw PASS; Golden remains** |
 | WP3 | Conducted-RF Confirmatory Campaign | 30% | 0/30 | BLOCKED ON WP2 |
 | WP4 | OTA External Replication | 15% | 0/15 | BLOCKED |
 | WP5 | Analysis + Artifact + Paper Closure | 20% | 0/20 scientific closure | PREPARED, NOT EXECUTED |
 
-Under gate-based credit, scientific weighted completion remains **20%** until WP2 closes. AUDIT-R1 is governance/analysis-contract reconciliation and earns no additional scientific WP credit.
+Under gate-based scientific credit, weighted completion remains **20%** until WP2 closes.
+
+## Revised WP2 management/readiness decomposition
+
+This internal tracking does not create partial scientific credit.
+
+| Patch | Scope | Internal share | Status |
+|---|---|---:|---|
+| WP2-P1 | RF Foundation | 20% | PASS / FROZEN |
+| WP2-P2 | Recovery Semantics | 15% | PASS / FROZEN |
+| WP2-P3 | Platform Compatibility | 20% | PASS / CLOSED |
+| WP2-P4 | Pre-Golden Reconciliation / AUDIT-R1 | 15% | PASS / CLOSED |
+| WP2-P5 | HCI & Raw-Evidence Closure | 10% | **PASS / CLOSED** |
+| WP2-P6 | One clean non-scored Golden | 15% | BLOCKED / NOT STARTED |
+| WP2-P7 | Formal WP2 scientific closure + scored authorization decision | 5% | BLOCKED / NOT STARTED |
+
+`WP2_MANAGEMENT_READINESS_PROGRESS=80/100`
+
+Scientific weighted completion remains **20%**.
 
 ## Frozen RF/scientific state
 
@@ -37,28 +55,7 @@ Run: `wp2h1-a1-20260826-001`
 Classification: **`VALID_W1_RECOVERY_FAILURE`**  
 Scored: **NO**
 
-Key preserved derived observations:
-
-- Q3 full-state duration: `120.000117905 s`;
-- RF restoration cutoff: `2026-08-26T18:16:00.428045+00:00`;
-- 361 generated records; 211 in primary cohort;
-- final pending: 270; app inflight: 20;
-- publish calls: 111; PUBACK callbacks: 91;
-- Q0 pre-readiness: 5/5 ping PASS;
-- post-restoration: 0/3 ping.
-
-The old H-selection scheme associated with H1 is superseded. H1 remains valid adverse non-scored evidence and must not be rerun/replaced/relabelled to select a horizon.
-
-The dominant H1 non-recovery was localized below the WellPulse application layer in LTE core/session/IP continuity. Clean ordered recovery `stop UE -> EPC -> eNB -> fresh UE` passed; the full LTE/TLS/MQTT v3.1.1/QoS1 application path then passed 3/3 fresh sessions with payload hash equality.
-
-## H1 evidence boundary
-
-The original H1 node-local raw bundles were **not recovered after teardown**. GitHub/local salvage is derived/provenance only. Do not claim record-level H1 raw recovery.
-
-Historical expected archive SHA-256 anchors remain provenance:
-
-- nuc1: `3e3d4c44847bfb7e6304de89d8c1cc05ff9722b6a54d93dd08ce0acfa7418210`;
-- nuc2: `c5d3b212af015061c092c79025258a7f3378e3351051eef48318f12964af2593`.
+The original H1 node-local raw bundles were **not recovered after teardown**. GitHub/local salvage is derived/provenance only. H1 remains valid adverse non-scored evidence and must not be rerun/replaced/relabelled to select a horizon.
 
 ## K-series / compatibility state
 
@@ -70,40 +67,55 @@ Decisive live compatibility run: `33085406598`
 Experiment: `fc7c2187-2376-4a92-8de1-4665a06ea943`  
 Classification: `INFRASTRUCTURE_ONLY_NON_SCORED`
 
-It verified READY/expiry binding, exact profile/hardware/image, controller SSH, runtime/profile fingerprint, detached launch, cross-node `/proj/WellPulse`, controller artifact round-trip, hashes, and teardown authorization.
-
 Canonical record: `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`.
 
-AUDIT-R1 removed stale runnable K-era workflow/trigger surfaces from the active GitHub Actions tree; this does not reopen or alter K evidence.
+## AUDIT-R1 state
 
-## AUDIT-R1 reconciliation state
+`AUDIT_R1=PASS`
 
-Reconciled offline:
+Analysis semantics, H-selection supersession, controller/GitHub evidence authority, workflow governance and stale-status supersession remain reconciled and frozen.
 
-- analysis plan/schema/run matrix/general analysis/tests -> `t_rf_restore` cohort + `t_service_ready+300 s` endpoint;
-- old W1-derived H selection -> superseded/fail-closed;
-- Golden evidence inventory -> `/proj -> controller -> GitHub artifact -> independent read-back/hash` authority;
-- workflow/trigger surface -> 6 active offline/static workflows, 4 root sentinels, zero active K/H-calibration workflow;
-- stale STATUS/RS7/H-calibration/decision instructions -> controlled by canonical supersession map;
-- protocol v0.6.1 advisory resource preflight preserved for later use only.
+## WP2-P5 HCI/raw-evidence closure
+
+Canonical record:
+
+`docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
+
+Frozen implementation consequences:
+
+- `HCI_CONTROL_ACTIONS_ENABLED=false`;
+- HCI is passive and consumes orchestrator-owned state only;
+- observer failure is non-authoritative and non-fatal;
+- `orchestration/hci_events.jsonl` is conditional/non-scientific observer evidence;
+- mandatory scientific evidence remains independent of the HCI;
+- no background/in-run `/proj` checkpoint is enabled during protected G3-G7 science;
+- G9 persistent escrow occurs after G8 reconstruction;
+- persistent/node side cannot authorize teardown;
+- only independent controller artifact round-trip verification may emit `TEARDOWN_AUTHORIZED=YES`.
+
+No POWDER contact, reservation, SSH, Golden or scored work occurred in WP2-P5.
 
 ## Current WP2 frontier
 
-Still open, in order:
+P5 is closed. The project is **STOPPED before P6**.
 
-1. `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS` — bounded passive HCI + exact independent raw-evidence closure;
-2. explicit user authorization to continue;
-3. advisory POWDER resource-availability preflight (`resinfo.php`, record `PASS|DEFER|UNKNOWN`) immediately before booking; it never changes frozen hardware/profile automatically;
-4. one clean non-scored G0–G10 Golden rehearsal;
-5. verified complete raw evidence and controller round-trip before teardown;
-6. close WP2 scientifically and issue explicit scored authorization.
+Only after a separate explicit user continuation:
+
+1. perform protocol v0.6.1 advisory resource-availability preflight (`resinfo.php`, record `PASS|DEFER|UNKNOWN`) immediately before booking;
+2. never change frozen hardware/profile merely to chase capacity;
+3. book and execute one clean non-scored G0-G10 Golden rehearsal;
+4. verify complete raw evidence and controller round-trip before teardown;
+5. then decide WP2-P7 formal scientific closure and explicit scored authorization.
 
 There is **no future H-calibration/freeze step**. `H_app=300 s from t_service_ready` is already prospectively frozen.
 
 Current controls:
 
-- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=BLOCKED`;
+- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`;
 - `REBOOK_GOLDEN=false`;
+- `HCI_CONTROL_ACTIONS_ENABLED=false`;
 - `H_app=300 s from t_service_ready`;
 - `outcome_derived_H_calibration=PROHIBITED`;
 - `scored_runs_authorized=false`;
@@ -116,15 +128,17 @@ WP0 PASS + WP1 PASS
         ↓
 WP2 compatibility K1–K8 PASS
         ↓
-AUDIT-R1 offline reconciliation PASS
+AUDIT-R1 PASS
         ↓
-LIVE_HCI_AND_RAW_EVIDENCE_GATE
+WP2-P5 HCI/raw-evidence PASS
         ↓
-explicit user resume + advisory resinfo preflight
+STOP / separate explicit user resume
+        ↓
+advisory resinfo preflight
         ↓
 one clean non-scored Golden G0–G10
         ↓
-WP2 scientific closure + scored authorization
+WP2-P7 scientific closure + scored authorization decision
         ↓
 WP3 conducted-RF B1/W1 + fixed B2 sensitivity
         ↓
