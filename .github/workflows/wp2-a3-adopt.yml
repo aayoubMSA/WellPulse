@@ -1,0 +1,128 @@
+name: WP2 A3 Existing Experiment Adopter
+
+on:
+  push:
+    branches:
+      - main
+      - wp2-a3-adoption-hardening-20260827
+    paths:
+      - 'powder/wp2-a3-adopt-request.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp2-a3-existing-experiment-adopter
+  cancel-in-progress: false
+
+jobs:
+  adopt-a3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: aayoub
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+
+    steps:
+      - name: Checkout exact audited state
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Parse bounded A3 request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f powder/wp2-a3-adopt-request.json
+          MODE="$(jq -r '.mode // empty' powder/wp2-a3-adopt-request.json)"
+          [[ "$MODE" == PRECHECK || "$MODE" == RUN ]]
+          [[ "$(jq -r '.experiment_id // empty' powder/wp2-a3-adopt-request.json)" == '357f3275-403d-491a-906f-99677bdf454f' ]]
+          [[ "$(jq -r '.experiment_name // empty' powder/wp2-a3-adopt-request.json)" == 'WP-GOLDEN-A3' ]]
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "A3_REQUEST_GATE=PASS"
+
+      - name: Static no-create and syntax gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n powder/wp2_a3_adopt.sh
+          bash -n scripts/wp2_a3_runtime_bootstrap.sh
+          bash -n scripts/wp2_golden_orchestrator.sh
+          bash -n scripts/wp2_golden_service_restore.sh
+          bash -n scripts/wp2_golden_service_ready_probe.sh
+          bash -n scripts/wp2_golden_evidence_escrow.sh
+          bash -n scripts/wp2_golden_offpowder_rclone.sh
+          bash -n scripts/wp2_golden_teardown_guard_rclone.sh
+          python3 -m py_compile scripts/wp_pwd01_golden_sender.py scripts/wp_pwd01_h_receiver.py scripts/reconstruct_wp2_golden.py scripts/wp2_golden_rclone_verify.py
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh
+          grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
+          grep -q 'WP-GOLDEN-A3' powder/wp2_a3_adopt.sh
+          echo 'A3_STATIC_NO_CREATE_GATE=PASS'
+
+      - name: Verify encrypted Drive transport before any A3 mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]]
+          test -s powder/secure/wp_rclone_config.enc
+          umask 077
+          ENC_PASS="$(printf '%s' "$POWDER_SSH_PRIVATE_KEY" | sha256sum | awk '{print $1}')"
+          export ENC_PASS
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in powder/secure/wp_rclone_config.enc \
+            -out /tmp/wp2-a3-rclone.conf \
+            -pass env:ENC_PASS
+          unset ENC_PASS
+          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null
+          rclone --config /tmp/wp2-a3-rclone.conf lsf gdrive: >/dev/null
+          if [[ "${{ steps.request.outputs.mode }}" == RUN ]]; then
+            B64="$(base64 -w0 /tmp/wp2-a3-rclone.conf)"
+            echo "::add-mask::$B64"
+            echo "RCLONE_CONFIG_B64=$B64" >> "$GITHUB_ENV"
+          fi
+          rm -f /tmp/wp2-a3-rclone.conf
+          echo 'A3_DRIVE_PREMUTATION_GATE=PASS'
+
+      - name: Execute A3-only adopter
+        id: adopter
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x powder/wp2_a3_adopt.sh scripts/wp2_a3_runtime_bootstrap.sh
+          bash powder/wp2_a3_adopt.sh '${{ steps.request.outputs.mode }}'
+
+      - name: Commit sanitized A3 checkpoint when produced
+        if: always()
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f evidence/powder/wp2-a3-adoption-latest.md ]]; then
+            echo 'NO_A3_CHECKPOINT_TO_COMMIT=1'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/wp2-a3-adoption-latest.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'Record A3 Golden adoption checkpoint'
+          git pull --rebase "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${GITHUB_REF_NAME}"
+          git push "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:"${GITHUB_REF_NAME}"
+
+      - name: Final workflow verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.adopter.outcome }}" != success ]]; then
+            echo 'WP2_A3_ADOPTER_WORKFLOW=FAIL_CLOSED'
+            exit 1
+          fi
+          echo 'WP2_A3_ADOPTER_WORKFLOW=PASS'
