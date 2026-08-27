@@ -55,12 +55,15 @@ jobs:
           trap cleanup EXIT
 
           run_variant(){
-            local name="$1" port="$2" body="$3" conf="$D/$name.conf" log="$D/$name.log"
+            local name port body conf log pid ready rc verdict
+            name="$1"; port="$2"; body="$3"
+            conf="$D/$name.conf"; log="$D/$name.log"
             printf '%s\n' "$body" > "$conf"
             chmod 600 "$conf"
-            mosquitto -c "$conf" -v >"$log" 2>&1 & local pid=$!
+            mosquitto -c "$conf" -v >"$log" 2>&1 &
+            pid=$!
             pids+=("$pid")
-            local ready=0
+            ready=0
             for _ in $(seq 1 20); do
               if kill -0 "$pid" 2>/dev/null && ss -ltnp 2>/dev/null | grep -q ":$port "; then ready=1; break; fi
               sleep 0.2
@@ -71,7 +74,7 @@ jobs:
               timeout 5 openssl s_client -connect "127.0.0.1:$port" -tls1_2 -CAfile "$W/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null >"$D/$name.client" 2>&1
               rc=$?
               set -e
-              if grep -q 'Verify return code: 0 (ok)' "$D/$name.client" && grep -q 'BEGIN CERTIFICATE\|Server certificate' "$D/$name.client"; then verdict=PASS; else verdict=FAIL; fi
+              if grep -q 'Verify return code: 0 (ok)' "$D/$name.client" && grep -q 'Server certificate' "$D/$name.client"; then verdict=PASS; else verdict=FAIL; fi
               echo "TLS_RC=$rc TLS_VERDICT=$verdict"
               grep -E '^(CONNECTED|Protocol *:|Cipher *:|New,|Verification:|Verify return code:|no peer certificate|SSL handshake|write:|[0-9A-F]+:error:)' "$D/$name.client" | head -25 || true
             else
