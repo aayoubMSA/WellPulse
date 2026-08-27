@@ -1,6 +1,6 @@
 # WP2-P7B Physical Qualification Plan — v1
 
-**Status:** P7B-A OFFLINE CONTRACT FREEZE — PASS candidate  
+**Status:** P7B-A OFFLINE CONTRACT FREEZE — PASS / FROZEN  
 **Date:** 2026-08-27  
 **Evidence class:** NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION  
 **Scored authorization:** BLOCKED  
