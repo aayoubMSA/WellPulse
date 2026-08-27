@@ -1,0 +1,176 @@
+name: WP2 P7B-R3F One-Shot Existing Reservation Qualification v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-p7b-r3f-one-shot-live-v2-trigger'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: wp2-p7b-r3f-one-shot-live-v2
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      TARGET_EXPID: 12b39276-af0f-4e34-8dfd-685b006dd6bd
+      TARGET_NAME: wp7brq19810043
+      AUTHORIZED_SOURCE_SHA: 13b34c8dc4b515c010a5b531eaaaf40cfcd00c49
+
+    steps:
+      - name: Checkout full provenance history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - name: Freeze exact one-shot live authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-r3f-one-shot-live-v2-trigger)" = $'AUTHORITY=R3F_ONE_NON_SCORED_B1_W1_B2_ON_EXISTING_RESERVATION_V2\nEXPERIMENT_ID=12b39276-af0f-4e34-8dfd-685b006dd6bd\nEXPERIMENT_NAME=wp7brq19810043\nAUTHORIZED_SOURCE_SHA=13b34c8dc4b515c010a5b531eaaaf40cfcd00c49\nNEW_RESERVATION=NO\nAUTOMATIC_RETRY=NO\nSCORED=NO\nTEARDOWN=ONLY_AFTER_EVIDENCE_GATES'
+          git cat-file -e "$AUTHORIZED_SOURCE_SHA^{commit}"
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create' .github/workflows/wp2-p7b-r3f-one-shot-live-v2.yml
+          echo 'R3F_LIVE_AUTHORITY=PASS'
+
+      - name: Install controller-only dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq openssh-client rsync curl >/dev/null
+
+      - name: Build corrected fail-closed same-reservation R2 controller
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/wp2_p7b_r3f_build_existing_live_controller_v2.py \
+            --output /tmp/wp2-p7b-r3f-live.sh \
+            --experiment-id "$TARGET_EXPID" \
+            --experiment-name "$TARGET_NAME" \
+            --source-sha "$AUTHORIZED_SOURCE_SHA"
+          chmod 700 /tmp/wp2-p7b-r3f-live.sh
+          bash -n /tmp/wp2-p7b-r3f-live.sh
+          test "$(grep -c --fixed-strings 'portal-cli experiment create' /tmp/wp2-p7b-r3f-live.sh || true)" = 0
+          test "$(grep -c --fixed-strings 'portal-cli experiment terminate' /tmp/wp2-p7b-r3f-live.sh || true)" = 1
+          grep -q 'scripts/wp2_p7b_c_node_r2.py' /tmp/wp2-p7b-r3f-live.sh
+          echo 'R3F_GENERATED_CONTROLLER_STATIC_GATE=PASS'
+
+      - name: Execute exactly one non-scored B1-W1-B2 attempt and preserve evidence
+        id: prepare
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          /tmp/wp2-p7b-r3f-live.sh prepare 2>&1 | tee /tmp/wp2-p7b-r3f-controller.log
+
+      - name: Upload immutable R3F evidence bundle
+        id: upload
+        if: always() && steps.prepare.outputs.bundle_path != ''
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p7b-r3f-v2-${{ github.run_id }}
+          path: ${{ steps.prepare.outputs.bundle_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Independent artifact download
+        id: download
+        if: steps.upload.outcome == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p7b-r3f-v2-${{ github.run_id }}
+          path: /tmp/wp2-p7b-r3f-roundtrip
+
+      - name: Independent outer and internal hash read-back
+        id: verify
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.prepare.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          TAR="$(find /tmp/wp2-p7b-r3f-roundtrip -type f -name '*.tar' | head -1)"
+          test -s "$TAR"
+          test "$(sha256sum "$TAR" | awk '{print $1}')" = "$EXPECTED_SHA"
+          rm -rf /tmp/wp2-p7b-r3f-readback; mkdir -p /tmp/wp2-p7b-r3f-readback
+          tar -C /tmp/wp2-p7b-r3f-readback -xf "$TAR"
+          (cd /tmp/wp2-p7b-r3f-readback/ue/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
+          (cd /tmp/wp2-p7b-r3f-readback/core/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
+          test -s /tmp/wp2-p7b-r3f-readback/PERSISTENT_ESCROW_GATE.PASS
+          echo 'CONTROLLER_OFFPOWDER_GATE=PASS'
+          jq '{gate,completed_cells,failure,scored,scored_runs_authorized,authoritative_node_entrypoint,target_runtime_contract_schema}' /tmp/wp2-p7b-r3f-readback/ue/raw/p7b_c_status.json 2>/dev/null || true
+
+      - name: Teardown only after physical PASS and off-POWDER evidence PASS
+        id: finalize
+        if: steps.prepare.outputs.node_rc == '0' && steps.verify.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.prepare.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          TAR="$(find /tmp/wp2-p7b-r3f-roundtrip -type f -name '*.tar' | head -1)"
+          /tmp/wp2-p7b-r3f-live.sh finalize "$TAR" "$EXPECTED_SHA" 2>&1 | tee /tmp/wp2-p7b-r3f-finalize.log
+
+      - name: Publish bounded live status
+        if: always()
+        shell: bash
+        env:
+          PREPARE: ${{ steps.prepare.outcome }}
+          NODE_RC: ${{ steps.prepare.outputs.node_rc }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          UPLOAD: ${{ steps.upload.outcome }}
+          DOWNLOAD: ${{ steps.download.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+          FINALIZE: ${{ steps.finalize.outcome }}
+          BUNDLE_SHA: ${{ steps.prepare.outputs.bundle_sha256 }}
+        run: |
+          set -u
+          {
+            echo '# WP2 P7B-R3F bounded live qualification v2'
+            echo
+            echo "| Gate | Outcome |"
+            echo "|---|---|"
+            echo "| prepare + origin-node escrow | ${PREPARE:-skipped} |"
+            echo "| node RC | ${NODE_RC:-unknown} |"
+            echo "| node run ID | ${RUN_ID:-not-started} |"
+            echo "| artifact upload | ${UPLOAD:-skipped} |"
+            echo "| independent download | ${DOWNLOAD:-skipped} |"
+            echo "| independent SHA read-back | ${VERIFY:-skipped} |"
+            echo "| teardown after evidence gates | ${FINALIZE:-skipped} |"
+            echo "| bundle SHA-256 | ${BUNDLE_SHA:-unavailable} |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '===== CONTROLLER TAIL ====='; tail -n 300 /tmp/wp2-p7b-r3f-controller.log 2>/dev/null || true
+          echo '===== FINALIZE TAIL ====='; tail -n 120 /tmp/wp2-p7b-r3f-finalize.log 2>/dev/null || true
+
+      - name: Enforce one-shot verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ steps.upload.outcome }}' = success
+          test '${{ steps.download.outcome }}' = success
+          test '${{ steps.verify.outcome }}' = success
+          if test '${{ steps.prepare.outputs.node_rc }}' = 0; then
+            test '${{ steps.finalize.outcome }}' = success
+            echo 'WP2_P7B_R3F=PASS_PHYSICAL_QUALIFICATION_EVIDENCE_SURVIVAL_TEARDOWN'
+          else
+            echo 'WP2_P7B_R3F=BLOCKED_PHYSICAL_ATTEMPT_EVIDENCE_PRESERVED_NO_RETRY'
+            exit 1
+          fi
+          echo 'SCORED_AUTHORIZATION=BLOCKED'
