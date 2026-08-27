@@ -1,0 +1,128 @@
+{
+  "schema_version": "wp2-p7b-r2-requalification-contract-v1",
+  "status": "R2_OFFLINE_REQUALIFICATION_CONTRACT_FREEZE",
+  "decision": "GO_ONE_REPLACEMENT_NON_SCORED_QUALIFICATION",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_REQUALIFICATION",
+  "scored": false,
+  "scored_runs_authorized": false,
+  "live_authorized": false,
+  "powder_contact_authorized": false,
+  "original_contract": {
+    "path": "experiments/WP-PWD01/p7b-qualification-contract.json",
+    "git_blob_sha": "22022695b8785943878e7ec167a4b0e7e2442fa2",
+    "reservation_limit": 1,
+    "reservation_consumed": true,
+    "automatic_retry": false,
+    "automatic_new_reservation": false
+  },
+  "original_attempt": {
+    "experiment_uuid": "26b6f315-459d-4a56-9167-69228e339f24",
+    "experiment_name": "wp7b3016138",
+    "github_run": 33113016138,
+    "verdict": "BLOCKED:RECEIVER_CONNECT_TIMEOUT",
+    "completed_cells": [],
+    "scientific_measurement_started": false,
+    "root_cause_classification": "ORCHESTRATION_EVIDENCE_PATH_QUOTING_DEFECT",
+    "retained_evidence_must_remain_unchanged": true
+  },
+  "replacement_reservation": {
+    "authority_id": "P7B-RQ1",
+    "experiment_name_prefix": "wp7brq1",
+    "maximum_new_reservations": 1,
+    "second_replacement_authorized": false,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "requires_separate_explicit_live_authorization": true,
+    "current_live_authorized": false
+  },
+  "execution_lock": {
+    "tested_implementation_commit": "695b31cba6c0256b3637223abdfef4f4b11bf6ca",
+    "node_entrypoint": "scripts/wp2_p7b_c_node_r1.py",
+    "node_entrypoint_git_blob_sha": "6d28468c93742046d952668b9df1cad8e6ea78c0",
+    "path_contract": "scripts/wp2_p7b_path_contract.py",
+    "path_contract_git_blob_sha": "2e77e7e355e25c6e3f747956e2f2b0ac5ad46161",
+    "preservation_helper": "scripts/wp2_p7b_preservation_helpers.sh",
+    "preservation_helper_git_blob_sha": "9063ec2e97e9cbf7a9f76d6ea10920236d8370ef",
+    "controller_static_validator": "scripts/wp2_p7b_r2_validate_controller.py",
+    "legacy_node_entrypoint_prohibited": "scripts/wp2_p7b_c_node.py"
+  },
+  "scientific_controls": {
+    "profile": "PowderProfiles/srslte-controlled-rf",
+    "profile_revision": "a6da96560b6526dc6816761282722c996418fd8c",
+    "attenuator_ids": [1, 33, 2, 34],
+    "q0_db": 0,
+    "q1_db": 40,
+    "q2_db": 52,
+    "q3_db": 55,
+    "pre_impairment_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "primary_cohort_cutoff": "t_rf_restore",
+    "cell_sequence": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
+    "scientific_change_from_original_p7b": false
+  },
+  "observability_required": [
+    "first_actionable_failure_before_generic_exit_code",
+    "receiver_process_state",
+    "receiver_console_tail",
+    "receiver_event_ledger_tail",
+    "broker_log_tail",
+    "experimental_route",
+    "q0_user_plane_probes",
+    "tls_mqtt_probe",
+    "q0_radio_capture",
+    "runtime_version_locks",
+    "receiver_writer_watcher_absolute_path_contract"
+  ],
+  "evidence_survival": {
+    "required": true,
+    "resolved_absolute_paths_only": true,
+    "literal_home_or_tilde_tokens_prohibited": true,
+    "chain": [
+      "node_raw",
+      "proj_persistent_escrow",
+      "controller_pull",
+      "github_actions_artifact",
+      "independent_controller_readback",
+      "outer_and_internal_sha256"
+    ],
+    "teardown_authority": "EVIDENCE_ESCROW_GATE=PASS_AND_CONTROLLER_OFFPOWDER_GATE=PASS",
+    "on_evidence_gate_failure": "LEAVE_EXPERIMENT_LIVE_AND_STOP",
+    "complete_raw_evidence_required": true
+  },
+  "future_controller_acceptance": {
+    "exact_reservation_create_count": 1,
+    "required_authority_marker": "P7B-RQ1",
+    "required_node_entrypoint": "scripts/wp2_p7b_c_node_r1.py",
+    "required_preservation_helper": "scripts/wp2_p7b_preservation_helpers.sh",
+    "legacy_node_entrypoint_forbidden": true,
+    "scored_authority_forbidden": true,
+    "automatic_retry_forbidden": true,
+    "second_replacement_forbidden": true,
+    "evidence_gate_before_teardown_required": true,
+    "bounded_failure_diagnostics_required": true
+  },
+  "recommended_next_live_patch": {
+    "id": "WP2-P7B-R3",
+    "title": "ONE REPLACEMENT NON-SCORED PHYSICAL REQUALIFICATION + EVIDENCE SURVIVAL",
+    "current_status": "NOT_AUTHORIZED",
+    "requires_separate_explicit_live_authorization": true,
+    "maximum_reservations": 1,
+    "authority_id": "P7B-RQ1",
+    "cell_sequence": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
+    "must_preserve_and_verify_evidence_before_teardown": true,
+    "automatic_retry": false
+  },
+  "stop_boundary": {
+    "r2_powder_contact": false,
+    "r2_reservation": false,
+    "r2_ssh": false,
+    "r2_testbed_mutation": false,
+    "r2_scientific_run": false,
+    "r2_scored_run": false,
+    "r2_live_workflow_creation": false,
+    "stop_before_r3_live_contact": true
+  }
+}
