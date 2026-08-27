@@ -10,6 +10,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 from wellpulse.p7b_contract_v2 import load_contract
+from wellpulse.p7b_runtime_compat import parse_attenuator_set_evidence
 
 
 def _load(name: str, path: Path):
@@ -24,7 +25,18 @@ def _load(name: str, path: Path):
 r1 = _load("wp2_p7b_c_node_r1_layer", HERE / "wp2_p7b_c_node_r1.py")
 base = r1.base
 CONTRACT_PATH = ROOT / "experiments/WP-PWD01/p7b-executable-contract-v2.json"
+RUNTIME_CONTRACT_PATH = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json"
 contract = load_contract(CONTRACT_PATH)
+runtime_contract = json.loads(RUNTIME_CONTRACT_PATH.read_text(encoding="utf-8"))
+
+
+def verify_target_interpreter() -> None:
+    expected = runtime_contract["roles"]["ue"]["project_python_exact"]
+    actual = ".".join(str(x) for x in sys.version_info[:3])
+    if actual != expected:
+        raise RuntimeError(f"TARGET_PROJECT_PYTHON_MISMATCH:{actual}!={expected}")
+    if runtime_contract["roles"]["ue"]["system_python_project_code_allowed"] is not False:
+        raise RuntimeError("SYSTEM_PYTHON_POLICY_DRIFT")
 
 
 def inject_contract_authority() -> None:
@@ -52,7 +64,36 @@ def resolved_core_root() -> str:
     return str(PurePosixPath(r1.resolve_core_home()) / "wellpulse-powder-evidence" / "p7b" / f"{base.RUN_ID}-core")
 
 
-def install_contract_aware_status_writer() -> None:
+def attenuation_control_for_cell(cell_dir: Path) -> dict:
+    set_path = cell_dir / "attenuator_q0_set.txt"
+    text = set_path.read_text(encoding="utf-8", errors="replace") if set_path.exists() else ""
+    return parse_attenuator_set_evidence(text, [int(x) for x in contract.profile["attenuator_ids"]], int(contract.profile["q0_db"]))
+
+
+def install_observed_attenuator_interface() -> None:
+    def no_false_readback(raw_path: Path) -> dict[str, float]:
+        ctrl = attenuation_control_for_cell(raw_path.parent)
+        raw_path.write_text(
+            "READBACK_CAPABILITY=UNSUPPORTED_BY_OBSERVED_TMCC_INTERFACE\n"
+            "VERIFICATION_MODE=SET_COMMAND_ACK_PLUS_INDEPENDENT_Q0_PATH_EVIDENCE\n"
+            "PHYSICAL_DB_READBACK_CLAIM=NO\n"
+            + "\n".join(
+                f"SET_ACK id={row['id']} db={row['db']:g} rc={row['rc']} output={row['output']}"
+                for row in ctrl["set_ack_rows"]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        if ctrl["set_ack_pass"] is not True:
+            return {}
+        # Compatibility return only: the readiness observation writer below
+        # removes this legacy field and replaces it with attenuation_control.
+        return {str(x): float(contract.profile["q0_db"]) for x in contract.profile["attenuator_ids"]}
+
+    base.attenuator_readback = no_false_readback
+
+
+def install_contract_aware_writer() -> None:
     original = base.write_json
 
     def write_json(path: Path, value) -> None:
@@ -61,25 +102,36 @@ def install_contract_aware_status_writer() -> None:
             value["core_evidence_root"] = resolved_core_root()
             value["ue_evidence_root"] = str(base.EVDIR.resolve())
             value["executable_contract_schema"] = contract.raw["schema_version"]
+            value["target_runtime_contract_schema"] = runtime_contract["schema_version"]
             value["authoritative_node_entrypoint"] = contract.raw["execution"]["only_authoritative_node_entrypoint"]
+        elif path.name == "readiness_observation.json" and isinstance(value, dict):
+            value = dict(value)
+            value.pop("attenuation_readback_db", None)
+            value["attenuation_control"] = attenuation_control_for_cell(path.parent)
         original(path, value)
 
     base.write_json = write_json
 
 
-def install_contract_aware_reconstruction() -> None:
+def install_contract_aware_run_router() -> None:
     original_run = base.run
 
     def run(cmd, **kwargs):
-        if isinstance(cmd, list) and len(cmd) >= 2 and str(cmd[1]).endswith("scripts/reconstruct_wp2_p7b.py"):
-            new_cmd = [
-                cmd[0],
-                str(ROOT / "scripts/reconstruct_wp2_p7b_v2.py"),
-                "--root", str(base.EVDIR),
-                "--core-root", resolved_core_root(),
-                "--contract", str(CONTRACT_PATH),
-            ]
-            return original_run(new_cmd, **kwargs)
+        if isinstance(cmd, list) and len(cmd) >= 2:
+            target = str(cmd[1])
+            if target.endswith("scripts/wp2_p7b_validate_readiness.py"):
+                new_cmd = list(cmd)
+                new_cmd[1] = str(ROOT / "scripts/wp2_p7b_validate_readiness_v2.py")
+                return original_run(new_cmd, **kwargs)
+            if target.endswith("scripts/reconstruct_wp2_p7b.py"):
+                new_cmd = [
+                    cmd[0],
+                    str(ROOT / "scripts/reconstruct_wp2_p7b_v2.py"),
+                    "--root", str(base.EVDIR),
+                    "--core-root", resolved_core_root(),
+                    "--contract", str(CONTRACT_PATH),
+                ]
+                return original_run(new_cmd, **kwargs)
         return original_run(cmd, **kwargs)
 
     base.run = run
@@ -105,11 +157,15 @@ def verify_injection() -> None:
 
 
 def main() -> int:
+    verify_target_interpreter()
     inject_contract_authority()
     verify_injection()
-    install_contract_aware_status_writer()
-    install_contract_aware_reconstruction()
+    install_observed_attenuator_interface()
+    install_contract_aware_writer()
+    install_contract_aware_run_router()
     print("P7B_EXECUTABLE_CONTRACT_V2=PASS", flush=True)
+    print("P7B_TARGET_RUNTIME_CONTRACT=PASS", flush=True)
+    print("ATTENUATION_VERIFICATION=SET_ACK_PLUS_INDEPENDENT_Q0_PATH_NO_READBACK_CLAIM", flush=True)
     print("P7B_AUTHORITATIVE_ENTRYPOINT=scripts/wp2_p7b_c_node_r2.py", flush=True)
     print("LIVE_AUTHORIZATION=SEPARATE_REQUIRED", flush=True)
     print("SCORED_AUTHORIZATION=BLOCKED", flush=True)
