@@ -1,0 +1,166 @@
+{
+  "schema_version": "wp2-p7b-contract-v1",
+  "status": "P7B_A_OFFLINE_CONTRACT_FREEZE",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "scored": false,
+  "scored_runs_authorized": false,
+  "reservation_limit": 1,
+  "replacement_reservation_automatic": false,
+  "profile": {
+    "name": "PowderProfiles/srslte-controlled-rf",
+    "revision": "a6da96560b6526dc6816761282722c996418fd8c",
+    "attenuator_ids": [
+      1,
+      33,
+      2,
+      34
+    ],
+    "q0_db": 0,
+    "q3_db": 55
+  },
+  "schedule": {
+    "pre_impairment_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "cohort_cutoff": "t_rf_restore"
+  },
+  "cells": [
+    {
+      "order": 1,
+      "id": "P7B-B1-S3",
+      "architecture": "B1_MQTT_QOS1",
+      "scenario": "S3_OUTAGE_RESTART"
+    },
+    {
+      "order": 2,
+      "id": "P7B-W1-S3",
+      "architecture": "W1_OFFLINE_FIRST",
+      "scenario": "S3_OUTAGE_RESTART"
+    },
+    {
+      "order": 3,
+      "id": "P7B-B2-S3",
+      "architecture": "B2_MQTT_DURABLE_CLIENT",
+      "scenario": "S3_OUTAGE_RESTART"
+    }
+  ],
+  "restart_domain": {
+    "telemetry_generator_outside_restart_domain": true,
+    "generation_rate_hz": 1,
+    "gateway_client_process_only": true,
+    "node_reboot_prohibited": true,
+    "generator_pid_unchanged_required": true,
+    "gateway_pid_change_required": true,
+    "same_intra_run_client_identity_required": true,
+    "source_sequence_continuity_required": true,
+    "utc_and_monotonic_timestamps_required": true
+  },
+  "b1_w1_matched_transport": {
+    "package": "paho-mqtt==2.1.0",
+    "protocol": "MQTTv311",
+    "qos": 1,
+    "tls": true,
+    "clean_session": false,
+    "keepalive_s": 60,
+    "reconnect_min_delay_s": 1,
+    "reconnect_max_delay_s": 8,
+    "max_queued_messages": 4096,
+    "max_inflight_messages": 20,
+    "only_intended_difference": "W1 application-level SQLite durability and reconciliation"
+  },
+  "b2_runtime": {
+    "implementation": "Eclipse Paho Java 1.2.5",
+    "jar_sha256": "59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185",
+    "protocol": "MQTTv311",
+    "qos": 1,
+    "tls": true,
+    "clean_session": false,
+    "keepalive_s": 60,
+    "automatic_reconnect": false,
+    "connection_timeout_s": 5,
+    "persistence": "MqttDefaultFilePersistence",
+    "disconnected_buffer": {
+      "enabled": true,
+      "size": 4096,
+      "persist": true,
+      "delete_oldest": false
+    }
+  },
+  "readiness_required": [
+    "four_attenuators_q0_readback",
+    "tun_srsue_route",
+    "five_probes_zero_packet_loss",
+    "tls_mqtt_experimental_endpoint",
+    "cell_unique_namespace",
+    "initial_session_present_false",
+    "fresh_architecture_state",
+    "no_prior_process_or_session_residue",
+    "runtime_config_ca_broker_lock",
+    "healthy_utc_monotonic_clocks",
+    "q0_radio_envelope",
+    "evidence_path_armed"
+  ],
+  "q0_radio_envelope_when_exposed": {
+    "rsrp_dbm_min": -75,
+    "rsrp_dbm_max": -45,
+    "dl_snr_db_min": 25,
+    "dl_snr_db_max": 60
+  },
+  "acceptance": {
+    "b1": [
+      "real_path_publish_rc_mid_puback_events",
+      "accepted_unacknowledged_nonempty_before_restart",
+      "event_set_equals_snapshot_count",
+      "no_internal_queue_occupancy_claim",
+      "fresh_volatile_process_same_intra_run_identity"
+    ],
+    "w1": [
+      "exact_low_level_match_to_b1",
+      "generator_alive_and_continuous_during_restart",
+      "sqlite_wal_synchronous_full_survives",
+      "pending_pre_restart_record_reconstructible_after_restart",
+      "same_queue_reopened"
+    ],
+    "b2": [
+      "exact_remote_java_jar_config",
+      "tun_srsue_tls_same_payload_evidence_path",
+      "persisted_buffer_record_before_process_destruction",
+      "same_persistence_and_client_identity_reopened",
+      "pre_restart_record_set_present_and_buffer_drains_by_horizon"
+    ]
+  },
+  "evidence_chain": [
+    "node_raw",
+    "proj_persistent_escrow",
+    "controller_pull",
+    "github_actions_artifact",
+    "independent_controller_readback",
+    "outer_and_internal_sha256"
+  ],
+  "teardown_authority": "EVIDENCE_ESCROW_GATE=PASS",
+  "fail_policy": {
+    "stop_later_cells": true,
+    "preserve_failure": true,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "protocol_relaxation": false
+  },
+  "patch_authority": {
+    "p7b_a": "OFFLINE_CONTRACT_ONLY",
+    "p7b_b": "REQUIRES_EXPLICIT_CONTINUATION_OFFLINE_ONLY",
+    "p7b_c": "REQUIRES_SEPARATE_EXPLICIT_LIVE_AUTHORIZATION",
+    "p7b_d": "AUTHORIZED_ONLY_AFTER_P7B_C_EVIDENCE_EXISTS",
+    "p7b_e": "OFFLINE_CLOSURE_STOP"
+  },
+  "prohibited_during_p7b_a": [
+    "powder_contact",
+    "reservation",
+    "ssh",
+    "testbed_mutation",
+    "scientific_run",
+    "scored_run",
+    "scored_authorization"
+  ]
+}
