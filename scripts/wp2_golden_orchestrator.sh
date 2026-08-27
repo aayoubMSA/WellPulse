@@ -15,6 +15,8 @@ EVDIR="${WP_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID}"
 CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core}"
 PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
 RCLONE_ROOT="${WP_RCLONE_REMOTE_ROOT:-gdrive:}"
+RCLONE_EXPECTED="${WP_RCLONE_EXPECTED:-rclone v1.75.0}"
+RECEIVER_LAUNCH_TIMEOUT_S="${WP_RECEIVER_LAUNCH_TIMEOUT_S:-15}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 RUN_DIGEST="$(printf '%s' "$RUN_ID" | sha256sum | awk '{print substr($1,1,16)}')"
 MQTT_TOPIC="wellpulse/wp-pwd01/gold/${RUN_DIGEST}/records"
@@ -69,11 +71,13 @@ PY_VERSION="$("$PY" --version 2>&1)" || fail G0 PYTHON_RUNTIME
 PAHO_VERSION="$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')" || fail G0 PAHO_RUNTIME
 [[ "$PAHO_VERSION" == 2.1.0 ]] || fail G0 "PAHO_VERSION_$PAHO_VERSION"
 RCLONE_VERSION="$(rclone version 2>/dev/null | head -1 || true)"
+[[ "$RCLONE_VERSION" == "$RCLONE_EXPECTED" ]] || fail G0 "RCLONE_VERSION_${RCLONE_VERSION:-missing}"
+OPENSSL_VERSION="$(openssl version 2>/dev/null || true)"
 {
   printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA"
-  printf 'python=%s\npaho_mqtt=%s\nrclone=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$RCLONE_VERSION" "$(utc)"
+  printf 'python=%s\npaho_mqtt=%s\nrclone=%s\nopenssl=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$RCLONE_VERSION" "$OPENSSL_VERSION" "$(utc)"
 } > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
-ssh_core "cd '$REPO' && echo host=\$(hostname) && echo git_sha=\$(git rev-parse HEAD) && '$PY' --version 2>&1 && '$PY' -c 'import importlib.metadata; print(\"paho_mqtt=\"+importlib.metadata.version(\"paho-mqtt\"))' && echo utc=\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
+ssh_core "cd '$REPO' && echo host=\$(hostname) && echo git_sha=\$(git rev-parse HEAD) && '$PY' --version 2>&1 && '$PY' -c 'import importlib.metadata; print(\"paho_mqtt=\"+importlib.metadata.version(\"paho-mqtt\"))' && openssl version 2>&1 | sed 's/^/openssl=/' && mosquitto -h 2>&1 | head -1 | sed 's/^/mosquitto=/' && echo utc=\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
 [[ -s "$EVDIR/runtime/ue_runtime_fingerprint.txt" && -s "$EVDIR/runtime/core_runtime_fingerprint.txt" ]] || fail G0 EMPTY_FINGERPRINT
 grep -q '^paho_mqtt=2.1.0$' "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_PAHO_VERSION
 gate G0 PASS "$GIT_SHA"
@@ -93,11 +97,19 @@ openssl s_client -brief -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.cr
 grep -q 'Verification: OK' "$EVDIR/substrate/q0_pre_tls.txt" || fail G2 Q0_TLS_VERIFY
 gate G2 PASS READY
 
-bar 22 'G2 launching receiver on core node'; echo
-ssh_core "cd '$REPO' && nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --topic '$MQTT_TOPIC' --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & echo \$! > '$CORE_EVDIR/receiver/receiver.pid'" || fail G2 RECEIVER_START
+bar 22 'G2 launching detached receiver on core node'; echo
+command -v timeout >/dev/null 2>&1 || fail G2 TIMEOUT_COMMAND_MISSING
+RECEIVER_LAUNCH_T0=$(date +%s)
+if ! timeout "${RECEIVER_LAUNCH_TIMEOUT_S}s" ssh -n "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST" "set -eu; cd '$REPO'; nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --topic '$MQTT_TOPIC' --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' </dev/null > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & pid=\$!; echo \$pid > '$CORE_EVDIR/receiver/receiver.pid'; printf 'receiver_pid=%s\\n' \"\$pid\""; then
+  fail G2 RECEIVER_START_TIMEOUT
+fi
+RECEIVER_LAUNCH_ELAPSED=$(( $(date +%s) - RECEIVER_LAUNCH_T0 ))
+[[ "$RECEIVER_LAUNCH_ELAPSED" -le "$RECEIVER_LAUNCH_TIMEOUT_S" ]] || fail G2 RECEIVER_START_BOUND
 RECEIVER_STARTED=1
 sleep 3
-ssh_core "test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'" || fail G2 RECEIVER_NOT_READY
+ssh_core "pid=\$(cat '$CORE_EVDIR/receiver/receiver.pid'); kill -0 \"\$pid\"; test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'" || fail G2 RECEIVER_NOT_READY
+echo "RECEIVER_LAUNCH_ELAPSED_S=$RECEIVER_LAUNCH_ELAPSED"
+gate G2 PASS "RECEIVER_READY launch_s=$RECEIVER_LAUNCH_ELAPSED"
 
 bar 28 'G3 launching fixed Golden workload/RF runner'; echo
 SERVICE_MARKER="$EVDIR/substrate/service_ready.marker"
