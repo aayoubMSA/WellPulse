@@ -37,6 +37,40 @@ If any material interface behavior, side effect, version, persistence rule, or l
 
 Do not discover material contract behavior during a scientifically material or time-limited live run when it can be established beforehand.
 
+## Mandatory Experimental Observability and Raw-Evidence Rule
+
+For any scientifically material or time-limited experiment, the human-facing HCI and the scientific raw-data plane must be separated.
+
+### HCI / display plane
+
+- The PI must be able to follow experiment progress through a simple live HCI.
+- During the protected scientific window, the HCI may consume only status/events already emitted by the orchestrator or experiment processes.
+- The HCI must not issue independent SSH/API/CLI/testbed commands, polling probes, attenuation queries, restarts, reconfiguration, or teardown actions.
+- Unknown observability semantics are treated as mutating/unsafe.
+- HCI failure must not alter or invalidate the scientific run.
+- HCI logs must not contain credentials, private key material, tokens, certificate private material, or TLS session secrets.
+
+Required design state:
+
+`HCI_CONTROL_ACTIONS_ENABLED=false`
+
+### Scientific raw-data plane
+
+- Raw scientific data remains authoritative and must be saved independently of the HCI.
+- Derived dashboards, counters, summaries, screenshots, or plots never substitute for raw record-level evidence.
+- Raw artifacts must be inventoried, frozen, SHA-256 hashed, copied to qualified persistent storage, copied off-platform, and read-back verified before teardown.
+- Any proposed in-run checkpoint/background-copy mechanism must first be shown not to materially perturb experiment timing or load.
+
+Required completion states before teardown:
+
+`RAW_EVIDENCE_COMPLETE=PASS`
+
+`EVIDENCE_ESCROW_GATE=PASS`
+
+`TEARDOWN_AUTHORIZED=YES`
+
+Canonical WellPulse design: `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`.
+
 ## Design principle
 
 Prefer:
@@ -47,6 +81,14 @@ not:
 
 `connect first -> debug mismatches during live execution`.
 
-The objective is minimum total effort, fewer invalid runs, lower evidence risk, and reproducible integration by design.
+For experiments, also prefer:
+
+`experiment emits status -> passive HCI displays status`
+
+not:
+
+`HCI probes experiment to discover status`.
+
+The objective is minimum total effort, fewer invalid runs, lower evidence risk, reproducible integration by design, clear human oversight, and complete raw scientific provenance.
 
 Canonical detailed checklist: `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`.
