@@ -1,4 +1,5 @@
-triggered_utc=2026-08-27T12:15:00Z
-scope=offline_static_plus_time_guard
+triggered_utc=2026-08-27T14:00:00Z
+scope=K1-P2_portal_pin_offline_static_acceptance
 powder_contact=false
 drive_contact=false
+portal_revision=01be03b2f60c067815a7654437320dd981ca3617
