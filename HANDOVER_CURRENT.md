@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after repository Cleanup Patch C2.
+Last updated: 2026-08-27 after repository Cleanup Patch C3.
 
 ## Executive state
 
@@ -10,36 +10,27 @@ Last updated: 2026-08-27 after repository Cleanup Patch C2.
 - RF calibration: **PASS / FROZEN**.
 - Recovery-semantics RS-2..RS-7: **PASS / frozen**.
 - WP2: **ACTIVE — GOLDEN REHEARSAL NOT YET PASSED**.
+- Scientific weighted completion: **20%**.
 - `H = UNFROZEN`.
 - `scored_runs_authorized = false`.
-- Scientific weighted completion remains **20%**; infrastructure/recovery work does not earn scientific completion.
 - `REBOOK_GOLDEN=false`.
 
-## Current frontier
+## Current scientific frontier
 
 Experiment `WP-GOLDEN-A3`, UUID `357f3275-403d-491a-906f-99677bdf454f`, is expired/removed and must not be reused.
 
-### Attempt 6
+- Attempt 6: G0..G6 PASS; G7 became `DIAGNOSTIC_NONCANONICAL` because a supposedly read-only attenuator status action had mutation semantics. G8/G9/G10 were not reached. Scored: NO.
+- Attempt 7: request/static and encrypted Drive pre-mutation gates passed, then stopped before science because A3 no longer existed. Scored: NO.
 
-- Workflow run: `33067316888`.
-- G0..G6: **PASS**.
-- G7: **FAIL-CLOSED / diagnostic noncanonical**.
-- Root contamination: a workflow labelled read-only invoked `tmcc attenuator <id>` during G7; POWDER reported `changing attenuation`.
-- G8/G9/G10 were not reached.
-- Scored: **NO**.
+No new POWDER reservation or live experiment is authorized until the Pre-Integration Compatibility Gate and Live-HCI/Raw-Evidence Gate both PASS.
 
-### Attempt 7
+## Mandatory patch discipline
 
-- Workflow run: `33069500256`.
-- Static/no-scored and encrypted Drive pre-mutation gates passed.
-- Stopped before science because Portal API returned `404 No such experiment` for A3.
-- Scored: **NO**.
-
-## Repository hygiene program
-
-Patch discipline is mandatory:
+All work remains bounded:
 
 `execute one patch -> PASS/BLOCKED -> update handover/status -> STOP -> resume only on explicit user instruction`
+
+## Repository hygiene program
 
 ### C0 — Inventory / contamination classification
 
@@ -50,46 +41,68 @@ Patch discipline is mandatory:
 **PASS**.
 
 - Commit: `169b5632d2db20a9cda0ac7cc2633f68b2316024`.
-- 12 A3-specific workflows archived from `.github/workflows/`.
-- 12 A3 request/trigger files archived from active locations.
-- Provenance retained; no scientific evidence deleted.
+- 12 A3-specific workflows archived.
+- 12 A3-specific request/trigger files archived.
+- No scientific provenance deleted.
 
 ### C2 — Consolidate legacy FIT workflows
 
 **PASS**.
 
-Evidence basis: the FIT scientific layer is formally closed with `FINAL FIT GATE: PASS`, final run `32628193889`, 18/18 reconciliation PASS, and canonical results in `experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md`.
+- FIT scientific evidence remains frozen at `FINAL FIT GATE: PASS`, 18/18 final reconciliation PASS.
+- All 16 FIT-specific workflows archived under `archive/workflows/fit-final-2026-08-23/`.
+- Canonical final workflow preserved as `fit-wp-rt01-final.yml` in that archive.
+- No FIT workflow remains active.
+- Key archive commit: `4d10df3bc6de3492d661d34dee51599452d6eed1`.
+
+### C3 — Archive obsolete POWDER diagnostics/probes and stale triggers
+
+**PASS**.
+
+Evidence basis: current science requires `REBOOK_GOLDEN=false`, verified platform compatibility before live integration, and no unqualified live probes. Historical names such as `readonly`, `observer`, `status`, or `probe` are not proof of non-mutating semantics.
 
 Actions completed:
 
-- Created archive registry: `archive/workflows/fit-final-2026-08-23/README.md`.
-- Archived all 16 FIT-specific GitHub Actions workflows from `.github/workflows/` into `archive/workflows/fit-final-2026-08-23/`.
-- The canonical final workflow is preserved as `archive/workflows/fit-final-2026-08-23/fit-wp-rt01-final.yml`.
-- Smoke, diagnostic, pre-final, portability, and dry-run variants are preserved byte-for-byte for audit/reproducibility only.
-- No FIT workflow remains in the active `.github/workflows/` directory.
-- No FIT scientific evidence, scripts, artifacts, or Git history were deleted.
+- Archived **22 live/historical POWDER workflows** from `.github/workflows/` into `archive/workflows/powder-legacy-2026-08/`.
+- Archived **20 stale POWDER/live-allocation trigger/request files** into `archive/triggers/powder-legacy-2026-08/`.
+- Removed old API probe/smoke, cleanup, observer, G3 attach/simstack, handover, H-calibration scheduling/status/release, lifecycle, live-discovery, live-SSH, plumbing, profile-probe, SSH-secret/key checks, early-window allocation, and POWDER-status workflows from the active workflow path.
+- Preserved all archived blobs and Git history; nothing scientific was deleted.
+- C3 execution commit: `1cde375d07504567afe78383db3f3eb6a69e46b5`.
+- Archive provenance documents are under:
+  - `archive/workflows/powder-legacy-2026-08/`
+  - `archive/triggers/powder-legacy-2026-08/`
 
-Key commits:
+### Active workflow set after C3
 
-- `809409c292feb586d9f23b99a0803d7e6c924ce8` — document FIT archive provenance.
-- `4d10df3bc6de3492d661d34dee51599452d6eed1` — archive closed FIT workflows after final PASS.
+Exactly six workflows remain active in `.github/workflows/`:
 
-Cleanup program progress: **3/5 patches closed = 60%**.
+1. `local-gate-once.yml`
+2. `local-unit-tests.yml`
+3. `wp2-b2-semantics.yml` — local broker semantics; POWDER interaction NONE
+4. `wp2-golden-offline-qa.yml` — offline Golden QA
+5. `wp2-h-preflight.yml` — local preflight; POWDER resource interaction NONE
+6. `wp2-preintegration-static.yml` — static compatibility checks
 
-Exact next cleanup patch: **C3 — classify/archive obsolete POWDER diagnostics/probes and stale trigger paths**.
+Therefore no currently active GitHub Actions workflow allocates, probes, mutates, controls, or observes a live POWDER experiment.
 
-Do not start C3 until the user explicitly resumes.
+Repository cleanup progress: **4/5 patches closed = 80%**.
+
+Exact next cleanup patch: **C4 — Canonical Workflow Registry + final repository-hygiene QA**.
+
+C4 must verify that every active workflow has an explicit purpose/authority classification, every trigger maps to an active workflow, archived workflows are non-runnable from `.github/workflows`, and no stale live POWDER trigger/path remains. C4 may create the canonical workflow registry but must not re-enable live POWDER execution.
+
+Do not start C4 until the user explicitly resumes.
 
 ## H1 GitHub salvage state
 
-The H1 raw record-level bundles were **not recovered from GitHub Actions**.
+The H1 full raw record-level bundles were **not recovered from GitHub Actions**.
 
 Verified state:
 
 - H1 result commit had no associated Actions workflow run.
 - H1 archive-hash commit had no associated Actions workflow run.
 - Relevant pre-H1 SSH workflow inspected had zero uploaded Actions artifacts.
-- GitHub does preserve valuable derived/live-captured evidence: sender summary, timing, generated/cohort/pending/inflight counts, network checks, failure chronology, recovery observations, archive paths, and hashes.
+- GitHub preserves useful derived/live-captured H1 evidence: sender summary, timestamps, generated/cohort/pending/inflight counts, network checks, failure chronology, recovery observations, archive paths, and SHA-256 hashes.
 
 Therefore:
 
@@ -98,17 +111,19 @@ Therefore:
 
 A bounded H1-GitHub Salvage Patch remains planned after repository cleanup unless explicitly reprioritized.
 
-## Dominant integration rule
+## Dominant integration and evidence rules
 
-Before any future GitHub Actions ↔ POWDER live integration, the Pre-Integration Compatibility Gate must PASS. Unknown command side effects are treated as mutating/unsafe.
+Before any future GitHub Actions ↔ POWDER live integration:
 
-The additional live-experiment HCI/raw-evidence gate is also mandatory. The HCI must remain passive and non-authoritative; raw data remain authoritative and must be frozen, hashed, copied to persistent `/proj/WellPulse`, copied off POWDER, read-back verified, and recorded before teardown.
-
-Required before teardown:
-
-- `RAW_EVIDENCE_COMPLETE=PASS`
-- `EVIDENCE_ESCROW_GATE=PASS`
-- `TEARDOWN_AUTHORIZED=YES`
+- `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS` is mandatory.
+- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS` is mandatory.
+- Unknown side effects are treated as mutating/unsafe.
+- HCI must be passive, one-way, and non-authoritative.
+- Raw scientific data remain authoritative.
+- Before teardown require:
+  - `RAW_EVIDENCE_COMPLETE=PASS`
+  - `EVIDENCE_ESCROW_GATE=PASS`
+  - `TEARDOWN_AUTHORIZED=YES`
 
 ## Frozen scientific state
 
@@ -136,12 +151,12 @@ Required before teardown:
 
 ## Exact next action
 
-**STOP after C2 handover closure.**
+**STOP after C3 handover closure.**
 
 On the next explicit user resume:
 
-1. Execute **C3 only** — classify/archive obsolete POWDER diagnostics/probes and stale trigger paths.
-2. Close C3 with PASS/BLOCKED.
+1. Execute **C4 only — Canonical Workflow Registry + final repository-hygiene QA**.
+2. Close C4 with PASS/BLOCKED.
 3. Update this handover/status.
 4. STOP again.
 
@@ -155,8 +170,10 @@ A replacement agent is ready only if it can state:
 - Attempt 6 is diagnostic noncanonical; Attempt 7 never reached science.
 - No scored run occurred.
 - C1 archived A3-specific workflows/triggers.
-- C2 archived all 16 FIT-specific workflows because FIT is scientifically FINAL PASS; no FIT workflow remains active.
-- Repository cleanup is 60% complete and C3 is next.
+- C2 archived all FIT workflows after FIT FINAL PASS.
+- C3 archived 22 legacy/live POWDER workflows and 20 stale POWDER trigger/request files.
+- Exactly six local/offline/static workflows remain active and none interacts with live POWDER.
+- Repository cleanup is 80% complete and C4 is next.
 - H1 full raw data were not recovered from Actions, while derived/log evidence remains available.
 - Every patch must end in a handover update and STOP.
 - Pre-Integration and Live-HCI/Raw-Evidence gates remain mandatory before any new POWDER booking.
