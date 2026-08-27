@@ -1,0 +1,56 @@
+name: WP2 A3 FQDN Readonly Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-fqdn-readonly.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3fqdn
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3fqdn/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3fqdn/askpass
+          export SSH_ASKPASS=/tmp/a3fqdn/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+      - name: Probe manifest FQDNs from UE node
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc2.emulab.net 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          getent hosts nuc1.emulab.net
+          getent hosts nuc2.emulab.net
+          ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null aayoub@nuc1.emulab.net true
+          ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null aayoub@nuc2.emulab.net true
+          echo A3_FQDN_INTERNAL_SSH=PASS
+          echo POWDER_MUTATION_EXECUTED=NO
+          echo GOLDEN_EXECUTED=NO
+          REMOTE
