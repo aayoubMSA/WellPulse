@@ -32,6 +32,7 @@ mkdir -p "$SRC/escrow"
     ! -path './escrow/SOURCE_SHA256SUMS.txt' \
     ! -path './escrow/PERSISTENT_SHA256SUMS.txt' \
     ! -path './escrow/PERSISTENT_ESCROW_GATE.PASS' \
+    ! -path './escrow/CONTROLLER_OFFPOWDER_REQUIRED' \
     ! -path './escrow/escrow_provenance.json' \
     -print0 | sort -z | xargs -0 sha256sum > escrow/SOURCE_SHA256SUMS.txt
 )
@@ -48,7 +49,7 @@ bar 75 'Verifying persistent copy against source hashes'; echo
   cp escrow/SOURCE_SHA256SUMS.txt escrow/PERSISTENT_SHA256SUMS.txt
 ) || fail PERSISTENT_VERIFY_FAILED
 
-bar 90 'Writing persistent provenance'; echo
+bar 90 'Writing persistent provenance and controller handoff'; echo
 python3 - "$SRC" "$DEST_PERSIST" "$RUN_ID" "$EXPERIMENT_ID" <<'PY'
 import json,sys,datetime,pathlib
 src,persist,run_id,exp=sys.argv[1:]
@@ -57,7 +58,11 @@ payload={'run_id':run_id,'experiment_id':exp,'source':src,'persistent_copy':pers
 PY
 
 printf 'run_id=%s\nexperiment_id=%s\nutc=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$(utc)" > "$DEST_PERSIST/escrow/PERSISTENT_ESCROW_GATE.PASS"
+printf 'CONTROLLER_OFFPOWDER_REQUIRED=YES\nTEARDOWN_AUTHORIZED=NO\n' > "$DEST_PERSIST/escrow/CONTROLLER_OFFPOWDER_REQUIRED"
 
-bar 100 'Persistent escrow PASS'; echo
+bar 100 'Persistent escrow PASS; controller round-trip still required'; echo
 printf 'PERSISTENT_EVIDENCE=%s\n' "$DEST_PERSIST"
 printf 'PERSISTENT_ESCROW_GATE=PASS\n'
+printf 'CONTROLLER_OFFPOWDER_GATE=PENDING\n'
+printf 'EVIDENCE_ESCROW_GATE=PENDING_CONTROLLER_COPY\n'
+printf 'TEARDOWN_AUTHORIZED=NO\n'
