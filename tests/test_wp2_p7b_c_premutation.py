@@ -70,7 +70,13 @@ class P7BCPremutationSafetyTests(unittest.TestCase):
         self.assertIn("reservation_limit=1", text)
         self.assertIn("cells=P7B-B1-S3,P7B-W1-S3,P7B-B2-S3", text)
         self.assertIn("P7B-D: **NOT STARTED**", text)
-        self.assertNotIn("portal-cli experiment terminate", text)
+        # The workflow may mention the forbidden command only as a negative
+        # grep guard. Actual reservation/teardown authority lives in the
+        # controller, which is checked independently above.
+        self.assertIn(
+            "! grep -q --fixed-strings 'portal-cli experiment terminate' powder/wp2_p7b_c_execute.sh",
+            text,
+        )
         self.assertNotIn("upload-artifact", text)
 
 
