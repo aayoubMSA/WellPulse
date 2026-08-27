@@ -63,12 +63,15 @@ jobs:
           bash -n scripts/wp2_golden_evidence_escrow.sh
           bash -n scripts/wp2_golden_offpowder_rclone.sh
           bash -n scripts/wp2_golden_teardown_guard_rclone.sh
+          bash -n powder/wp2_h_epc_broker.sh
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py scripts/wp_pwd01_h_receiver.py scripts/reconstruct_wp2_golden.py scripts/wp2_golden_rclone_verify.py
           ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh
           ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_prepare_q0.sh
           grep -q 'WP-GOLDEN-A3' powder/wp2_a3_adopt.sh
+          grep -q '^cafile ' <(sed -n '/cat > "$WORKDIR\/mosquitto.conf" <<EOF/,/^EOF$/p' powder/wp2_h_epc_broker.sh)
+          grep -q '^tls_version tlsv1.2$' powder/wp2_h_epc_broker.sh
           printf '{"scored":false}\n' | jq -e '.scored == false' >/dev/null
           if printf '{"scored":true}\n' | jq -e '.scored == false' >/dev/null; then
             echo 'BOOLEAN_REGRESSION_GATE=FAIL'
@@ -125,17 +128,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f evidence/powder/wp2-a3-adoption-latest.md ]]; then
+          CHECKPOINT='evidence/powder/wp2-a3-adoption-latest.md'
+          TMP_CHECKPOINT='/tmp/wp2-a3-adoption-latest.md'
+          if [[ ! -f "$CHECKPOINT" ]]; then
             echo 'NO_A3_CHECKPOINT_TO_COMMIT=1'
             exit 0
           fi
+          cp "$CHECKPOINT" "$TMP_CHECKPOINT"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add evidence/powder/wp2-a3-adoption-latest.md
-          git diff --cached --quiet && exit 0
-          git commit -m 'Record A3 Golden adoption checkpoint'
-          git pull --rebase "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${GITHUB_REF_NAME}"
-          git push "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:"${GITHUB_REF_NAME}"
+          AUTH_REMOTE="https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3; do
+            git fetch "$AUTH_REMOTE" "${GITHUB_REF_NAME}"
+            git reset --hard FETCH_HEAD
+            git clean -fdx
+            mkdir -p "$(dirname "$CHECKPOINT")"
+            cp "$TMP_CHECKPOINT" "$CHECKPOINT"
+            git add "$CHECKPOINT"
+            if git diff --cached --quiet; then
+              echo 'A3_CHECKPOINT_ALREADY_CURRENT=1'
+              exit 0
+            fi
+            git commit -m 'Record A3 Golden adoption checkpoint'
+            if git push "$AUTH_REMOTE" HEAD:"${GITHUB_REF_NAME}"; then
+              echo 'A3_CHECKPOINT_PUSH=PASS'
+              exit 0
+            fi
+            echo "A3_CHECKPOINT_PUSH_RETRY=$attempt"
+          done
+          echo 'A3_CHECKPOINT_PUSH=FAIL' >&2
+          exit 92
 
       - name: Final workflow verdict
         if: always()
