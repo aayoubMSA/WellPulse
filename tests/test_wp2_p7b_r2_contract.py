@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
-import tempfile
 import unittest
 
 
@@ -121,11 +120,26 @@ portal-cli experiment terminate --experiment-id "$EXPID"
 """
         self.assertEqual(self.validator.validate_controller_text(text, self.contract), [])
 
-    def test_no_live_p7b_workflow_or_trigger_is_created_by_r2(self):
-        workflows = {p.name for p in (ROOT / ".github" / "workflows").glob("*.yml")}
-        self.assertFalse(any("p7b" in name.lower() and "b2-semantics" not in name.lower() for name in workflows))
-        root_names = {p.name for p in ROOT.iterdir() if p.is_file()}
-        self.assertNotIn(".wp2-p7b-rq1-live-trigger", root_names)
+    def test_r2_itself_grants_no_live_authority_and_later_r3_surface_is_bounded(self):
+        # R2 remains an offline contract forever; a later, separately authorized
+        # R3 surface may exist without retroactively changing R2's authority bits.
+        self.assertFalse(self.contract["live_authorized"])
+        self.assertFalse(self.contract["powder_contact_authorized"])
+        self.assertFalse(self.contract["scored_runs_authorized"])
+
+        workflows = {
+            p.name
+            for p in (ROOT / ".github" / "workflows").glob("*.yml")
+            if "p7b" in p.name.lower() and "b2-semantics" not in p.name.lower()
+        }
+        self.assertTrue(workflows.issubset({"wp2-p7b-r3-live.yml"}), workflows)
+        if "wp2-p7b-r3-live.yml" in workflows:
+            text = (ROOT / ".github" / "workflows" / "wp2-p7b-r3-live.yml").read_text(encoding="utf-8")
+            self.assertIn("authority_id=P7B-RQ1", text)
+            self.assertIn("reservation_limit=1", text)
+            self.assertIn("automatic_retry=NO", text)
+            self.assertIn("second_replacement=NO", text)
+            self.assertNotIn("workflow_dispatch", text)
 
 
 if __name__ == "__main__":
