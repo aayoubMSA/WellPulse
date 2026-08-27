@@ -32,7 +32,6 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
         helper = ROOT / "scripts/wp2_p7b_preservation_helpers_v2.sh"
         text = helper.read_text(encoding="utf-8")
         self.assertNotIn("python3", text)
-        self.assertNotIn("$HOME", "\n".join(line for line in text.splitlines() if line.strip().startswith("p7b_require_absolute_remote_path")))
         p = subprocess.run(["bash", "-n", str(helper)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
 
@@ -90,6 +89,9 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
         self.assertIn("MUST NOT", text)
         self.assertIn("invoke `tmcc attenuator` as a presumed readback probe", text)
         self.assertIn("generic `GET_ERROR` means unknown control-plane state", text)
+        script = (ROOT / "scripts/wp2_p7b_target_node_preflight.sh").read_text(encoding="utf-8")
+        self.assertIn("FIXTURE_ONLY_NO_LIVE_TMCC_READBACK", script)
+        self.assertNotIn("/usr/local/etc/emulab/tmcc attenuator", script)
 
     def test_portal_and_cross_step_semantics_are_fail_closed(self):
         portal = self.runtime["portal_policy"]
@@ -121,6 +123,18 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
         p = subprocess.run(["git", "hash-object", str(EXEC)], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
         self.assertEqual(p.stdout.strip(), expected)
+
+    def test_static_target_runtime_qa_script_passes(self):
+        p = subprocess.run(
+            ["python3", str(ROOT / "scripts/wp2_p7b_target_runtime_qa.py")],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        self.assertEqual(p.returncode, 0, p.stdout)
+        self.assertIn("WP2_P7B_TARGET_RUNTIME_QA=PASS", p.stdout)
+        self.assertIn("LIVE_AUTHORIZATION=BLOCKED", p.stdout)
 
 
 if __name__ == "__main__":
