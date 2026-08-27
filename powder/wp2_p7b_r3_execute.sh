@@ -27,6 +27,9 @@ echo 'SECOND_REPLACEMENT=NO' >/dev/null
 # Required R1 surfaces are deliberately named here and used below.
 R1_ENTRYPOINT='scripts/wp2_p7b_c_node_r1.py'
 PRESERVATION_HELPER='scripts/wp2_p7b_preservation_helpers.sh'
+R1_ENTRYPOINT_BLOB='6d28468c93742046d952668b9df1cad8e6ea78c0'
+PATH_CONTRACT_BLOB='2e77e7e355e25c6e3f747956e2f2b0ac5ad46161'
+PRESERVATION_HELPER_BLOB='9063ec2e97e9cbf7a9f76d6ea10920236d8370ef'
 
 mkdir -p "$TMP"
 touch "$RESULT"
@@ -84,7 +87,10 @@ strict_bundle_check(){
     test -s "$ue/cells/$c/service_ready_probe.txt"
     test -s "$core/cells/$c/receiver/receiver_events.jsonl"
     test -s "$core/cells/$c/receiver/telemetry_received.csv"
-    test -s "$core/cells/$c/receiver/console.txt"
+    # A healthy receiver writes its authoritative events/CSV directly and may
+    # legitimately emit no stdout. Console existence is required for provenance;
+    # non-empty console content is not a scientific completeness criterion.
+    test -e "$core/cells/$c/receiver/console.txt"
   done
   test -s "$ue/cells/P7B-B1-S3/mqtt_events.jsonl"
   test -s "$ue/cells/P7B-B1-S3/pre_restart_transport_snapshot.json"
@@ -98,10 +104,15 @@ strict_bundle_check(){
 
 prepare(){
   rm -rf "$TMP"; mkdir -p "$TMP"; : > "$RESULT"
-  portal_bootstrap; init_ssh
-  bar 5 'Authority guards + no-active-P7B check'; echo
+  # Premutation code/contract locks are checked before the first POWDER API call.
+  bash -n powder/wp2_p7b_r3_execute.sh || fail R3_CONTROLLER_SHELL_SYNTAX 5
   python3 scripts/wp2_p7b_r2_validate_controller.py --controller powder/wp2_p7b_r3_execute.sh | tee "$TMP/r2-static.txt"
   grep -q '^P7B_R2_CONTROLLER_STATIC_GATE=PASS$' "$TMP/r2-static.txt" || fail R2_STATIC_CONTROLLER_GATE 5
+  test "$(git hash-object "$R1_ENTRYPOINT")" = "$R1_ENTRYPOINT_BLOB" || fail R1_ENTRYPOINT_BLOB_DRIFT 5
+  test "$(git hash-object scripts/wp2_p7b_path_contract.py)" = "$PATH_CONTRACT_BLOB" || fail PATH_CONTRACT_BLOB_DRIFT 5
+  test "$(git hash-object "$PRESERVATION_HELPER")" = "$PRESERVATION_HELPER_BLOB" || fail PRESERVATION_HELPER_BLOB_DRIFT 5
+  portal_bootstrap; init_ssh
+  bar 5 'Authority guards + no-active-P7B check'; echo
   portal-cli experiment list > "$TMP/list-before.json" || fail PORTAL_LIST 5
   python3 - "$TMP/list-before.json" <<'PY'
 import json,sys
@@ -123,6 +134,9 @@ PY
   PUB="$(cat "$TMP/public.key")"
   portal-cli experiment create --name "$EXP_NAME" --project WellPulse --profile-name "$PROFILE_NAME" --profile-project "$PROFILE_PROJECT" --duration 2 --bindings "$BINDINGS" --sshpubkey "$PUB" > "$TMP/create.json" || fail RESERVATION_CREATE 6
   EXPID="$(jq -r '.id // empty' "$TMP/create.json")"; [[ "$EXPID" =~ ^[0-9A-Fa-f-]{36}$ ]] || fail CREATE_RETURNED_NO_UUID 6
+  set_output experiment_id "$EXPID"
+  set_output experiment_name "$EXP_NAME"
+  printf 'EXPID=%q\nEXP_NAME=%q\nPREPARE_GATE=LIVE_RESERVATION_CREATED\n' "$EXPID" "$EXP_NAME" > "$STATE"
 
   bar 15 'Waiting for authoritative READY + immutable identity checks'; echo
   READY=0
@@ -228,6 +242,8 @@ PY
   set +e
   ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "cd \"\$HOME/WellPulse\" && WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$EXPID' WP_CORE_HOST='enb1' WP_UE_HOST='rue1' WP_REMOTE_USER='aayoub' WP_REPO_ROOT=\"\$HOME/WellPulse\" WP_PYTHON=\"\$HOME/.wp2-golden-venv/bin/python\" WP_HARD_EXPIRY_UTC='$EXPIRES' WP_CORE_MANAGEMENT_HOST='$CORE_EXT' WP_UE_MANAGEMENT_HOST='$UE_EXT' \"\$HOME/.wp2-golden-venv/bin/python\" $R1_ENTRYPOINT" 2>&1 | tee "$TMP/r3-node-console.txt"
   NODE_RC=${PIPESTATUS[0]}; set -e
+  set_output node_rc "$NODE_RC"
+  set_output run_id "$RUN_ID"
 
   UE_HOME="$(ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" 'printf "%s" "$HOME"')"
   CORE_HOME="$(ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_EXT" 'printf "%s" "$HOME"')"
@@ -271,7 +287,7 @@ PY
   tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -C "$TMP/controller" -cf "$BUNDLE" .
   BUNDLE_SHA="$(sha256sum "$BUNDLE" | awk '{print $1}')"; BUNDLE_BYTES="$(stat -c%s "$BUNDLE")"
   printf 'EXPID=%q\nEXP_NAME=%q\nRUN_ID=%q\nNODE_RC=%q\nBUNDLE_SHA=%q\nBUNDLE_BYTES=%q\nPREPARE_GATE=PASS\n' "$EXPID" "$EXP_NAME" "$RUN_ID" "$NODE_RC" "$BUNDLE_SHA" "$BUNDLE_BYTES" > "$STATE"
-  set_output bundle_path "$BUNDLE"; set_output bundle_sha256 "$BUNDLE_SHA"; set_output bundle_bytes "$BUNDLE_BYTES"; set_output node_rc "$NODE_RC"; set_output experiment_id "$EXPID"; set_output run_id "$RUN_ID"
+  set_output bundle_path "$BUNDLE"; set_output bundle_sha256 "$BUNDLE_SHA"; set_output bundle_bytes "$BUNDLE_BYTES"
   echo "CONTROLLER_BUNDLE_SHA256=$BUNDLE_SHA"
   bar 90 'Prepared verified bundle; waiting for GitHub artifact round-trip'; echo
 }
