@@ -41,32 +41,40 @@ jobs:
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
           setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
 
-      - name: Inspect G2 TLS broker without mutation
+      - name: Inspect G2 TLS compatibility without mutation
         shell: bash
         run: |
           set -euo pipefail
           ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net 'bash -s' <<'REMOTE'
           set +e
           W=/tmp/wellpulse-wp2-golden-broker
+          PID=$(cat "$W/mosquitto.pid" 2>/dev/null || true)
           echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
           echo "HOST=$(hostname)"
-          echo "OPENSSL=$(openssl version 2>&1)"
-          echo '--- LISTENER ---'
-          sudo ss -ltnp 2>/dev/null | grep -E '(:|\.)8883[[:space:]]' || true
-          echo '--- MOSQUITTO PROCESSES ---'
-          pgrep -a mosquitto || true
-          echo '--- WORKDIR METADATA ---'
-          ls -ld "$W" 2>/dev/null || true
-          find "$W" -maxdepth 1 -type f -printf '%f %m %s bytes\n' 2>/dev/null | sort | grep -Ev '\.key$' || true
-          echo '--- CERTIFICATE ---'
-          openssl x509 -in "$W/server.crt" -noout -subject -issuer -dates -fingerprint -sha256 -ext subjectAltName 2>&1 || true
-          sha256sum "$W/ca.crt" "$W/server.crt" 2>/dev/null || true
-          echo '--- BROKER PUBLIC ---'
-          cat "$W/broker_public.json" 2>/dev/null || true
-          echo '--- MOSQUITTO LOG ---'
-          sed -n '1,200p' "$W/mosquitto.log" 2>/dev/null || true
-          echo '--- LOCAL TLS PROBE ---'
-          timeout 8 openssl s_client -connect 127.0.0.1:8883 -CAfile "$W/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null 2>&1 | sed -n '1,100p'
-          echo "LOCAL_TLS_RC=${PIPESTATUS[0]}"
+          echo "OPENSSL=$(openssl version -a 2>&1 | head -1)"
+          echo '--- BROKER PROCESS / LINKAGE ---'
+          ps -o user=,group=,pid=,ppid=,etime=,args= -p "$PID" 2>/dev/null || true
+          ldd "$(command -v mosquitto)" 2>/dev/null | grep -E 'ssl|crypto' || true
+          echo '--- CERT / KEY CONSISTENCY ---'
+          openssl verify -CAfile "$W/ca.crt" "$W/server.crt" 2>&1 || true
+          CERT_MOD=$(openssl x509 -noout -modulus -in "$W/server.crt" 2>/dev/null | sha256sum | awk '{print $1}')
+          KEY_MOD=$(openssl rsa -noout -modulus -in "$W/server.key" 2>/dev/null | sha256sum | awk '{print $1}')
+          echo "CERT_KEY_MODULUS_MATCH=$([[ "$CERT_MOD" == "$KEY_MOD" ]] && echo YES || echo NO)"
+          echo '--- TLS PROTOCOL PROBES ---'
+          probe(){
+            local name="$1"; shift
+            echo "=== PROBE=$name ==="
+            timeout 6 openssl s_client -connect 127.0.0.1:8883 -CAfile "$W/ca.crt" -verify_return_error -verify_ip 172.16.0.1 "$@" </dev/null 2>&1 \
+              | grep -E '^(CONNECTED|Protocol *:|Cipher *:|New,|Verification:|Verify return code:|no peer certificate|SSL handshake|write:|read:|[0-9A-F]+:error:)' \
+              | head -30
+            echo "PROBE_RC=${PIPESTATUS[0]}"
+          }
+          probe DEFAULT
+          probe TLS12 -tls1_2
+          probe TLS12_SEC0 -tls1_2 -cipher 'DEFAULT@SECLEVEL=0'
+          probe TLS11 -tls1_1 -cipher 'DEFAULT@SECLEVEL=0'
+          probe TLS10 -tls1 -cipher 'DEFAULT@SECLEVEL=0'
+          echo '--- MOSQUITTO LOG TAIL AFTER PROBES ---'
+          tail -n 80 "$W/mosquitto.log" 2>/dev/null || true
           echo 'POWDER_MUTATION_EXECUTED=NO'
           REMOTE
