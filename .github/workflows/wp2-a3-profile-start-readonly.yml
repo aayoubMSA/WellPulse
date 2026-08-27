@@ -1,0 +1,60 @@
+name: WP2 A3 Profile Start Readonly Inspection
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-profile-start-readonly.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3profile
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3profile/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3profile/askpass
+          export SSH_ASKPASS=/tmp/a3profile/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+
+      - name: Inspect authoritative profile start scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for host in nuc1.emulab.net nuc2.emulab.net; do
+            echo "=== HOST=$host ==="
+            ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "aayoub@$host" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "NODE=$(hostname)"
+          echo '--- START.SH ---'
+          sed -n '1,220p' /local/repository/bin/start.sh
+          echo '--- TMUX NOW ---'
+          tmux ls 2>&1 || true
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          echo 'GOLDEN_EXECUTED=NO'
+          REMOTE
+          done
