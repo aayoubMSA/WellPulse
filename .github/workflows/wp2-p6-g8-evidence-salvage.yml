@@ -1,0 +1,279 @@
+name: WP2 P6 — Same-Run G8 Evidence Salvage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-p6-g8-salvage-trigger'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: wp2-p6-g8-evidence-salvage
+  cancel-in-progress: false
+
+jobs:
+  salvage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXPID: 5579cf25-dbb1-4d04-87e3-ff558e3be2af
+      RUN_ID: wp2-p6r-33099648133-20260827T174149Z
+      EXPECTED_PROFILE_REVISION: a6da96560b6526dc6816761282722c996418fd8c
+      EXPECTED_HARDWARE: nuc5300
+      EXPECTED_IMAGE: urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1
+
+    steps:
+      - name: Checkout evidence-recovery control state
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Install bounded controller dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rsync jq curl >/dev/null
+
+      - name: Freeze no-rerun salvage contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH="$(awk -F= '$1=="salvage" {print $2}' .wp2-p6-g8-salvage-trigger | tail -n1 | tr -d '\r')"
+          RID="$(awk -F= '$1=="run_id" {print $2}' .wp2-p6-g8-salvage-trigger | tail -n1 | tr -d '\r')"
+          [[ "$AUTH" == "WP2_P6_G8_SAME_RUN_EVIDENCE_ONLY" ]]
+          [[ "$RID" == "$RUN_ID" ]]
+          [[ -n "$PORTAL_TOKEN" ]]
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]]
+          ! grep -q 'wp_pwd01_golden_sender.py' .github/workflows/wp2-p6-g8-evidence-salvage.yml
+          ! grep -Eq 'tmcc[[:space:]]+attenuator' .github/workflows/wp2-p6-g8-evidence-salvage.yml
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create' .github/workflows/wp2-p6-g8-evidence-salvage.yml
+          echo 'P6_G8_SALVAGE_CONTRACT=PASS'
+          echo 'SCIENTIFIC_RERUN=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'SECOND_RESERVATION=NO'
+          echo 'TEARDOWN_AUTHORIZED=NO'
+
+      - name: Recover exact raw evidence and create persistent escrow
+        id: recover
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP=/tmp/wp2-p6-g8-salvage
+          rm -rf "$TMP" /tmp/portal-api-salvage
+          mkdir -p "$TMP" "$HOME/.ssh"
+          umask 077
+
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api-salvage | tee "$TMP/portal-pin.txt"
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' "$TMP/portal-pin.txt"
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path('/tmp/wp2-p6-g8-salvage/private.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$TMP/private.key"
+          cat > "$TMP/askpass" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f "$TMP/private.key" > "$TMP/public.key" </dev/null
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          portal-cli experiment get --experiment-id "$EXPID" > "$TMP/status.json"
+          STATUS="$(jq -r '.status // "unknown"' "$TMP/status.json")"
+          [[ "$STATUS" == ready ]]
+          python3 scripts/wp2_portal_record_guard.py --json "$TMP/status.json" --expected-experiment-id "$EXPID" | tee "$TMP/portal-record.txt"
+          grep -q '^PORTAL_RECORD_GATE=PASS$' "$TMP/portal-record.txt"
+          portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json"
+
+          python3 - "$TMP/manifests.json" "$TMP/nodes.json" "$EXPECTED_HARDWARE" "$EXPECTED_IMAGE" <<'PY'
+          import json,sys,xml.etree.ElementTree as ET
+          obj=json.load(open(sys.argv[1])); out={}; xmls=[]
+          hw,img=sys.argv[3],sys.argv[4]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xmls.append(x)
+          walk(obj)
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for node in root.iter():
+                  if node.tag.rsplit('}',1)[-1] != 'node': continue
+                  cid=node.attrib.get('client_id','')
+                  if cid not in {'enb1','rue1'}: continue
+                  r={'component_id':node.attrib.get('component_id','')}
+                  for ch in node.iter():
+                      tag=ch.tag.rsplit('}',1)[-1]
+                      if tag=='hardware_type' and 'hardware_type' not in r: r['hardware_type']=ch.attrib.get('name','')
+                      if tag=='disk_image' and 'disk_image' not in r: r['disk_image']=ch.attrib.get('name','')
+                      if tag=='login' and ch.attrib.get('hostname') and 'login' not in r:
+                          r['login']={'username':ch.attrib.get('username',''),'hostname':ch.attrib['hostname'],'port':int(ch.attrib.get('port','22'))}
+                  out[cid]=r
+          for cid,node in (('enb1','nuc1'),('rue1','nuc2')):
+              r=out.get(cid) or {}
+              assert r.get('login') and r.get('hardware_type')==hw and r.get('disk_image')==img
+              assert r.get('component_id','').endswith('+'+node)
+          json.dump(out,open(sys.argv[2],'w'),indent=2,sort_keys=True)
+          print('P6_G8_SALVAGE_MANIFEST=PASS')
+          PY
+
+          login(){ jq -r --arg n "$1" '.[$n].login | [.username,.hostname,(.port|tostring)] | @tsv' "$TMP/nodes.json"; }
+          IFS=$'\t' read -r CORE_USER CORE_HOST CORE_PORT < <(login enb1)
+          IFS=$'\t' read -r UE_USER UE_HOST UE_PORT < <(login rue1)
+          CORE_USER="${CORE_USER:-$POWDER_USERNAME}"; UE_USER="${UE_USER:-$POWDER_USERNAME}"
+          SSH=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" true
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" true
+
+          UE_ROOT="\$HOME/wellpulse-powder-evidence/golden/$RUN_ID"
+          CORE_ROOT="\$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core"
+
+          # Prove the protected measurement completed before any salvage action.
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" "set -eu
+            ROOT=\"$UE_ROOT\"
+            test -s \"\$ROOT/sender/sender_summary.json\"
+            test \"\$(\"\$HOME/.wp2-golden-venv/bin/python\" -c \"import json;print(json.load(open('\\\$HOME/wellpulse-powder-evidence/golden/$RUN_ID/sender/sender_summary.json'))['status'])\")\" = GOLDEN_FIXED_HORIZON_COMPLETE
+            grep -q '\"gate\":\"G7\".*\"status\":\"PASS\"' \"\$ROOT/orchestration/gate_events.jsonl\"
+            test -s \"\$ROOT/sender/telemetry_generated.csv\"
+            echo P6_PROTECTED_MEASUREMENT_COMPLETE=PASS"
+
+          # Replace only the failed receiver transport. No measurement is regenerated.
+          ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" \
+            "set -eu; ROOT=\"$CORE_ROOT\"; test -s \"\$ROOT/receiver/telemetry_received.csv\"; test -s \"\$ROOT/receiver/receiver_events.jsonl\"; tar -C \"\$ROOT/receiver\" -cf - ." \
+            > "$TMP/receiver.tar"
+          test -s "$TMP/receiver.tar"
+          tar -tf "$TMP/receiver.tar" >/dev/null
+          scp "${SSH[@]}" -P "$UE_PORT" "$TMP/receiver.tar" "$UE_USER@$UE_HOST:/tmp/wp2-p6-receiver-salvage.tar" >/dev/null
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" "set -eu
+            ROOT=\"$UE_ROOT\"; mkdir -p \"\$ROOT/receiver\"; tar -xf /tmp/wp2-p6-receiver-salvage.tar -C \"\$ROOT/receiver\"; rm -f /tmp/wp2-p6-receiver-salvage.tar
+            test -s \"\$ROOT/receiver/telemetry_received.csv\"; test -s \"\$ROOT/receiver/receiver_events.jsonl\""
+          echo 'P6_RECEIVER_TAR_SALVAGE=PASS'
+
+          # Required post-run diagnostic captures, collected after protected G7 ended.
+          ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" \
+            "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$TMP/core_tmux_capture.txt"
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" \
+            "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$TMP/ue_tmux_capture.txt"
+          test -s "$TMP/core_tmux_capture.txt"; test -s "$TMP/ue_tmux_capture.txt"
+          scp "${SSH[@]}" -P "$UE_PORT" "$TMP/core_tmux_capture.txt" "$TMP/ue_tmux_capture.txt" "$UE_USER@$UE_HOST:/tmp/" >/dev/null
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" "set -eu
+            ROOT=\"$UE_ROOT\"; install -m 600 /tmp/core_tmux_capture.txt \"\$ROOT/substrate/core_tmux_capture.txt\"; install -m 600 /tmp/ue_tmux_capture.txt \"\$ROOT/substrate/ue_tmux_capture.txt\""
+
+          # Reconstruct from the immutable run, then freeze/hash/copy to /proj.
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" "set -eu
+            cd \"\$HOME/WellPulse\"
+            ROOT=\"$UE_ROOT\"
+            \"\$HOME/.wp2-golden-venv/bin/python\" scripts/reconstruct_wp2_golden.py --root \"\$ROOT\"
+            cat \"\$ROOT/analysis/golden_reconstruction.json\"
+            WP_EVIDENCE_SRC=\"\$ROOT\" WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$EXPID' WP_PERSIST_ROOT='/proj/WellPulse/evidence-escrow' WP_EVIDENCE_INVENTORY=\"\$HOME/WellPulse/experiments/WP-PWD01/evidence_inventory_golden_v1.txt\" bash scripts/wp2_golden_evidence_escrow.sh
+            test -s '/proj/WellPulse/evidence-escrow/$EXPID/$RUN_ID/escrow/PERSISTENT_ESCROW_GATE.PASS'
+            echo P6_G8_RECONSTRUCT_AND_PERSIST=PASS" | tee "$TMP/reconstruct-persist.txt"
+          grep -q '^P6_G8_RECONSTRUCT_AND_PERSIST=PASS$' "$TMP/reconstruct-persist.txt"
+
+          PDIR="/proj/WellPulse/evidence-escrow/$EXPID/$RUN_ID"
+          BUNDLE="$TMP/wp2-p6-g8-salvage-$RUN_ID.tar"
+          WP_PERSIST_HOST="$UE_HOST" WP_REMOTE_USER="$UE_USER" WP_SSH_PORT="$UE_PORT" \
+          WP_PERSIST_REMOTE_DIR="$PDIR" WP_CONTROLLER_LOCAL_DIR="$TMP/controller" WP_CONTROLLER_BUNDLE_OUT="$BUNDLE" WP_KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts" \
+          bash scripts/wp2_controller_pull_persistent_escrow.sh | tee "$TMP/controller-pull.txt"
+          grep -q '^CONTROLLER_PULL_GATE=PASS$' "$TMP/controller-pull.txt"
+          SHA="$(awk -F= '$1=="CONTROLLER_BUNDLE_SHA256" {print $2}' "$TMP/controller-pull.txt" | tail -1)"
+          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]]
+          echo "bundle_path=$BUNDLE" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo 'P6_G8_SALVAGE_EXECUTE=PASS'
+
+      - name: Upload same-run recovered evidence
+        id: upload
+        if: steps.recover.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p6-g8-salvage-${{ github.run_id }}
+          path: ${{ steps.recover.outputs.bundle_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Independent recovered-evidence read-back
+        id: download
+        if: steps.upload.outcome == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p6-g8-salvage-${{ github.run_id }}
+          path: /tmp/wp2-p6-g8-roundtrip
+
+      - name: Verify same-run evidence and terminate
+        id: finalize
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.recover.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          ROUNDTRIP="$(find /tmp/wp2-p6-g8-roundtrip -maxdepth 2 -type f -name '*.tar' | head -1)"
+          test -s "$ROUNDTRIP"
+          WP_ROUNDTRIP_TAR="$ROUNDTRIP" WP_EXPECTED_BUNDLE_SHA256="$EXPECTED_SHA" WP_VERIFY_DIR=/tmp/wp2-p6-g8-verified \
+            bash scripts/wp2_controller_verify_artifact_roundtrip.sh | tee /tmp/wp2-p6-g8-final.txt
+          grep -q '^EVIDENCE_ESCROW_GATE=PASS$' /tmp/wp2-p6-g8-final.txt
+          grep -q '^TEARDOWN_AUTHORIZED=YES$' /tmp/wp2-p6-g8-final.txt
+          echo 'P6_G8_VERIFIED_RECONSTRUCTION:'
+          cat /tmp/wp2-p6-g8-verified/analysis/golden_reconstruction.json
+
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api-g8-final >/tmp/wp2-p6-g8-portal-pin.txt
+          portal-cli experiment terminate --experiment-id "$EXPID" >/tmp/wp2-p6-g8-terminate.json 2>/tmp/wp2-p6-g8-terminate.err || true
+          TERMINATED=0
+          for i in $(seq 1 60); do
+            set +e; portal-cli experiment get --experiment-id "$EXPID" >/tmp/wp2-p6-g8-postterm.json 2>/dev/null; rc=$?; set -e
+            if [[ "$rc" -ne 0 ]]; then TERMINATED=1; break; fi
+            st="$(jq -r '.status // "unknown"' /tmp/wp2-p6-g8-postterm.json)"
+            echo "P6_G8_TERMINATION_POLL_${i}=$st"
+            if [[ "$st" =~ ^(terminated|destroyed)$ ]]; then TERMINATED=1; break; fi
+            sleep 5
+          done
+          [[ "$TERMINATED" -eq 1 ]]
+          echo 'P6_G8_EVIDENCE_SALVAGE=PASS'
+          echo 'EVIDENCE_ESCROW_GATE=PASS'
+          echo 'TEARDOWN_AUTHORIZED=YES'
+          echo 'TEARDOWN_CONFIRMED=YES'
+
+      - name: Final salvage verdict
+        if: always()
+        shell: bash
+        env:
+          RECOVER_OUTCOME: ${{ steps.recover.outcome }}
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+        run: |
+          set -euo pipefail
+          echo "P6_G8_RECOVER_OUTCOME=$RECOVER_OUTCOME"
+          echo "P6_G8_FINALIZE_OUTCOME=$FINALIZE_OUTCOME"
+          if [[ "$FINALIZE_OUTCOME" != success ]]; then
+            echo 'WP2_P6_G8_SALVAGE=FAIL_CLOSED'
+            echo 'SCIENTIFIC_RERUN=NO'
+            echo 'SCORED_RUN_AUTHORIZED=NO'
+            exit 1
+          fi
+          echo 'WP2_P6_G8_SALVAGE=PASS'
+          echo 'SCIENTIFIC_RERUN=NO'
+          echo 'SCORED_RUN_AUTHORIZED=NO'
