@@ -19,7 +19,7 @@ bar(){
 }
 
 echo '=== WP2 Golden offline QA ==='
-bar 3 'Checking static Golden/controller contracts'; echo
+bar 3 'Checking static Golden/controller/HCI contracts'; echo
 PYTHONPATH=src python3 - <<'PY'
 from pathlib import Path
 from wellpulse.transport import make_run_topic
@@ -44,7 +44,21 @@ assert 'TEARDOWN_AUTHORIZED=NO' in escrow
 verifier=Path('scripts/wp2_controller_verify_artifact_roundtrip.sh').read_text()
 for marker in ('CONTROLLER_OFFPOWDER_GATE=PASS','EVIDENCE_ESCROW_GATE=PASS','TEARDOWN_AUTHORIZED=YES'):
     assert marker in verifier, marker
-print('STATIC_GOLDEN_CONTROLLER_CONTRACTS=PASS')
+
+# HCI is a passive observer, not a second control plane.
+assert 'HCI_CONTROL_ACTIONS_ENABLED=false' in orch
+assert 'HCI_OBSERVER=DEGRADED_NON_AUTHORITATIVE' in orch
+assert 'hci_emit G10 PENDING' in orch
+hci=Path('scripts/wp2_golden_hci_emit.py').read_text()
+for forbidden in ('subprocess', 'paramiko', 'requests', 'socket'):
+    assert forbidden not in hci, f'forbidden HCI control/probe dependency: {forbidden}'
+assert 'hci_control_actions_enabled' in hci
+assert 'independent_probes' in hci
+assert 'teardown_authorized' in hci
+inventory=Path('experiments/WP-PWD01/evidence_inventory_golden_v1.txt').read_text()
+assert 'CONDITIONAL|orchestration/hci_events.jsonl|yes|' in inventory
+assert 'REQUIRED|orchestration/hci_events.jsonl|' not in inventory
+print('STATIC_GOLDEN_CONTROLLER_HCI_CONTRACTS=PASS')
 PY
 
 bar 7 'Creating synthetic evidence tree'; echo
@@ -93,6 +107,32 @@ printf 'ue runtime\n' > "$SRC/runtime/ue_runtime_fingerprint.txt"
 printf 'golden console\n' > "$SRC/orchestration/golden_console.txt"
 printf '{"gate":"offline_qa"}\n' > "$SRC/orchestration/gate_events.jsonl"
 
+bar 14 'Generating and validating passive HCI event'; echo
+python3 scripts/wp2_golden_hci_emit.py \
+  --output "$SRC/orchestration/hci_events.jsonl" \
+  --run-id "$RUN_ID" --experiment-id "$EXP_ID" \
+  --gate G6 --phase SERVICE_READY --status PASS --progress-pct 58 \
+  --code-commit offline-qa \
+  --evidence-state NOT_STARTED --persistent-copy-state NOT_STARTED \
+  --off-powder-copy-state NOT_STARTED --teardown-authorized NO \
+  | tee "$ROOT/hci-stdout.txt"
+grep -q '^HCI_EVENT=' "$ROOT/hci-stdout.txt"
+python3 - "$SRC/orchestration/hci_events.jsonl" <<'PY'
+import json,sys
+p=sys.argv[1]
+rows=[json.loads(line) for line in open(p, encoding='utf-8') if line.strip()]
+assert len(rows)==1
+x=rows[0]
+assert x['schema_version']=='wp2-hci-v1'
+assert x['gate']=='G6' and x['phase']=='SERVICE_READY' and x['progress_pct']==58
+assert x['scored_run'] is False
+assert x['hci_control_actions_enabled'] is False
+assert x['independent_probes']=='DISABLED'
+assert x['teardown_authorized']=='NO'
+assert 'detail' not in x
+print('PASSIVE_HCI_EVENT_QA=PASS')
+PY
+
 bar 20 'Running Golden reconstruction from raw files'; echo
 python3 scripts/reconstruct_wp2_golden.py --root "$SRC"
 grep -q '"primary_cohort_count": 3' "$SRC/analysis/golden_reconstruction.json"
@@ -108,6 +148,7 @@ bash scripts/wp2_golden_evidence_escrow.sh | tee "$ROOT/persistent-escrow.txt"
 PDIR="$PERSIST/$EXP_ID/$RUN_ID"
 [[ -s "$PDIR/escrow/PERSISTENT_ESCROW_GATE.PASS" ]]
 [[ -s "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED" ]]
+[[ -s "$PDIR/orchestration/hci_events.jsonl" ]]
 grep -q '^TEARDOWN_AUTHORIZED=NO$' "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED"
 grep -q '^PERSISTENT_ESCROW_GATE=PASS$' "$ROOT/persistent-escrow.txt"
 grep -q '^CONTROLLER_OFFPOWDER_GATE=PENDING$' "$ROOT/persistent-escrow.txt"
@@ -164,8 +205,10 @@ grep -q '^CONTROLLER_OFFPOWDER_GATE=FAIL:INTERNAL_RAW_HASH_MISMATCH$' "$ROOT/cor
 grep -q '^TEARDOWN_AUTHORIZED=NO$' "$ROOT/corrupt-internal.txt"
 ! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/corrupt-internal.txt"
 
-bar 100 'Offline reconstruction/controller escrow/interlock QA PASS'; echo
+bar 100 'Offline HCI/reconstruction/controller escrow/interlock QA PASS'; echo
 printf 'QA_ROOT=%s\n' "$ROOT"
+printf 'PASSIVE_HCI_EVENT_QA=PASS\n'
+printf 'HCI_CONTROL_ACTIONS_ENABLED=false\n'
 printf 'WP2_GOLDEN_OFFLINE_QA=PASS\n'
 printf 'POWDER_CONTACT=NO\n'
 printf 'DRIVE_CONTACT=NO\n'
