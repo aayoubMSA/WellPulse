@@ -1,0 +1,124 @@
+{
+  "schema_version": "wp2-p7b-target-runtime-contract-v1",
+  "status": "OFFLINE_RUNTIME_COMPATIBILITY_GATE_NOT_LIVE_AUTHORITY",
+  "base_executable_contract": {
+    "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
+    "git_blob_sha": "233aabeaf3081470bc3ebc1ee04168f8932fc415"
+  },
+  "scored_runs_authorized": false,
+  "live_authorized": false,
+  "runtime_evidence": "evidence/powder/wp2-p7b-r3-target-runtime-probe-2026-08-28.json",
+  "roles": {
+    "github_controller": {
+      "os_family": "ubuntu",
+      "project_python_min": "3.11",
+      "bash_min": "4.4",
+      "ssh_agent_state_must_be_initialized_in_same_step_as_use": true
+    },
+    "ue": {
+      "system_python_observed": "3.6.9",
+      "system_python_project_code_allowed": false,
+      "project_python": "$HOME/.wp2-golden-venv/bin/python",
+      "project_python_exact": "3.11.13",
+      "bash_min": "4.4",
+      "java_required": true,
+      "java_major": 11,
+      "mosquitto_daemon_required": false,
+      "mosquitto_pub_required": true,
+      "proj_wellpulse_required_writable": true
+    },
+    "core": {
+      "system_python_observed": "3.6.9",
+      "system_python_project_code_allowed": false,
+      "project_python": "$HOME/.wp2-golden-venv/bin/python",
+      "project_python_exact": "3.11.13",
+      "bash_min": "4.4",
+      "java_required": false,
+      "mosquitto_daemon_required": true,
+      "mosquitto_version_observed": "1.4.15",
+      "mosquitto_pub_required": true,
+      "proj_wellpulse_required_writable": true
+    }
+  },
+  "node_project_python_policy": {
+    "unqualified_python3_for_repo_scripts_prohibited": true,
+    "from_future_annotations_scripts_require_pinned_python": true,
+    "syntax_check_with_target_interpreter_required_before_rf_mutation": true,
+    "required_entrypoint_interpreter": "$HOME/.wp2-golden-venv/bin/python"
+  },
+  "preservation_policy": {
+    "remote_preservation_language": "bash_and_coreutils_only",
+    "remote_project_python_dependency_prohibited": true,
+    "required_commands": ["bash", "find", "sort", "xargs", "sha256sum", "tar", "rsync"],
+    "controller_pull_each_node_from_originating_node": true,
+    "cross_node_proj_visibility_may_not_be_assumed_for_controller_pull": true,
+    "outer_and_internal_sha256_required": true
+  },
+  "attenuation_control": {
+    "set_command_template": "/usr/local/etc/emulab/tmcc attenuator {id} {db}",
+    "attenuator_ids": [1, 33, 2, 34],
+    "readback_supported_by_observed_tmcc_interface": false,
+    "physical_db_readback_claim_prohibited": true,
+    "q0_readiness_verification_mode": "SET_COMMAND_ACK_PLUS_INDEPENDENT_Q0_PATH_EVIDENCE",
+    "required_set_ack": {
+      "rc": 0,
+      "output_contains": "changing attenuation",
+      "exact_id_set_required": true,
+      "exact_requested_db_required": true
+    },
+    "required_independent_q0_evidence": [
+      "route_via_tun_srsue",
+      "five_probes_zero_packet_loss",
+      "tls_mqtt_probe_pass",
+      "initial_session_present_false",
+      "runtime_config_lock_pass"
+    ],
+    "tmcc_id_only_command_must_not_be_used_as_readback": true
+  },
+  "package_and_dependency_policy": {
+    "apt_install_during_or_after_rf_mutation_prohibited": true,
+    "apt_repository_warning_may_not_be_silently_accepted_as_runtime_proof": true,
+    "role_specific_requirements_only": true,
+    "external_downloads_after_rf_mutation_prohibited": true,
+    "downloaded_artifacts_require_exact_sha256": true,
+    "all_runtime_dependencies_must_pass_pre_rf_preflight": true
+  },
+  "portal_policy": {
+    "generic_get_error_semantic": "UNKNOWN_CONTROL_PLANE_STATE",
+    "generic_get_error_is_not_not_ready": true,
+    "generic_get_error_is_not_not_found": true,
+    "generic_get_error_may_not_confirm_teardown": true,
+    "readiness_requires_successful_record_or_manifest_plus_ssh_identity": true,
+    "teardown_confirmation_requires_explicit_terminal_state_or_typed_not_found_evidence": true
+  },
+  "github_actions_policy": {
+    "ssh_agent_cross_step_persistence_prohibited": true,
+    "background_process_cross_step_persistence_prohibited": true,
+    "step_local_ephemeral_environment_must_be_recreated": true,
+    "trigger_retirement_order": ["workflow", "trigger"],
+    "workflow_trigger_deletion_race_must_be_considered": true
+  },
+  "interface_preflight": {
+    "required_before_rf_mutation": [
+      "system_and_pinned_python_versions",
+      "target_python_syntax_compile",
+      "bash_version",
+      "role_specific_java_presence",
+      "role_specific_mosquitto_presence",
+      "mosquitto_pub_presence",
+      "openssl_presence",
+      "tar_sha256sum_find_sort_rsync_presence",
+      "proj_wellpulse_writable",
+      "profile_revision",
+      "manifest_bindings",
+      "ssh_to_both_nodes",
+      "attenuator_set_interface_contract"
+    ]
+  },
+  "future_execution": {
+    "historical_r1_entrypoint_prohibited": true,
+    "r2_entrypoint_requires_runtime_compatibility_layer_before_live_use": true,
+    "live_workflow_may_not_exist_until_target_runtime_qa_passes": true
+  },
+  "claim_boundary": "runtime and interface compatibility only; does not authorize live execution, RF mutation, replacement reservation, or scored work"
+}
