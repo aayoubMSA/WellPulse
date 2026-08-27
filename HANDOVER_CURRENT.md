@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after K1-P authoritative Portal API revision resolution attempt.
+Last updated: 2026-08-27 after K1-P2 authoritative Portal API pin closure and offline static validation.
 
 ## Executive state
 
@@ -14,8 +14,7 @@ Last updated: 2026-08-27 after K1-P authoritative Portal API revision resolution
 - Repository workflow cleanup: **CLOSED / 100% — C0..C4 PASS**.
 - H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery from GitHub failed**.
 - H1-PSH local salvage: **CLOSED_NO_RECOVERY**.
-- K1 supply-chain/runtime pin closure: **BLOCKED_PORTAL_API_REVISION**.
-- K1-P Portal API revision resolution: **BLOCKED_AUTHORITATIVE_PORTAL_API_REVISION_UNAVAILABLE**.
+- K1 supply-chain/runtime pin closure: **PASS**.
 - `H=UNFROZEN`.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
@@ -24,7 +23,11 @@ Last updated: 2026-08-27 after K1-P authoritative Portal API revision resolution
 
 `execute exactly one declared patch -> PASS/BLOCKED -> update canonical handover/status -> STOP -> resume only on explicit user instruction`
 
-Never start the next patch before explicit user resume/continue. An umbrella request to continue the K-series does not override a fail-closed blocker inside an individual K patch.
+Never start the next patch before explicit user resume/continue.
+
+## Workstation-independence rule
+
+Home and work PCs are interchangeable operator terminals only. No future Golden/scored execution may depend on workstation-local history, downloads, unique filesystem state, or workstation-local experiment authority. Canonical control state remains GitHub + frozen repository state + GitHub Actions/secrets. One-time local bootstrap/capture steps may establish immutable provenance but are not part of normal experiment execution.
 
 ## H1 experiment of record
 
@@ -104,73 +107,31 @@ Final verdict:
 
 Do not expand into forensic recovery unless a genuinely new evidence source appears.
 
-## K1 — Offline supply-chain/runtime pin closure — BLOCKED
+## K1 — Offline supply-chain/runtime pin closure — PASS
 
-Canonical record:
+Canonical records:
 
-`docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
+- `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
+- `docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md` — historical blocked attempt retained as provenance.
+- `docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md` — final PASS closure.
 
 Verdict:
 
-`K1=BLOCKED_PORTAL_API_REVISION`
+`K1=PASS`
 
-### K1 items closed
+Closed K1 contracts:
 
-1. **Immutable checkout action for pre-integration/future integration contract**
-   - `actions/checkout@11d5960a326750d5838078e36cf38b85af677262`
-   - active pre-integration runner label: `ubuntu-24.04`
+1. `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` for the pre-integration/future integration contract.
+2. Explicit pre-integration runner label `ubuntu-24.04`.
+3. uv `0.12.1`, archive `uv-x86_64-unknown-linux-gnu.tar.gz`, SHA-256 `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`.
+4. rclone `1.75.0`, Linux amd64 ZIP SHA-256 `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`.
+5. Authoritative Portal API repository `https://gitlab.flux.utah.edu/emulab/portal-api.git` pinned to revision `01be03b2f60c067815a7654437320dd981ca3617`.
+6. Portal API capture archive provenance SHA-256 `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8`, size `1003520` bytes.
+7. Accepted future Portal bootstrap: `scripts/wp2_portal_client_bootstrap.sh`; implementation commit `4a88d439b4084f0f0155a94166304150018e2fac`.
+8. Portal-pin static fail-close implementation commit `76aa56c202d66b12ec7bf9239b2177c2007da73e`.
+9. Offline static validation trigger commit `479459d801e4b08e438eb1aa793a5c747121fe3b`; workflow run `33081196297` completed `success`.
 
-2. **uv pinned and hash-verified**
-   - version: `0.12.1`
-   - asset: `uv-x86_64-unknown-linux-gnu.tar.gz`
-   - SHA-256: `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`
-   - upstream release target commit: `329541a503de8a4d9bb021814f9c0875efe033c8`
-   - mutable `https://astral.sh/uv/install.sh` path removed from runtime bootstrap
-   - implementation commit: `353be59fa222150fbedf731ae45bbac9026ba543`
-
-3. **rclone exact binary contract retained**
-   - version: `1.75.0`
-   - Linux amd64 ZIP SHA-256: `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`
-   - moving current/latest download path prohibited
-
-4. **Static acceptance extended**
-   - verifies uv version/hash and rejects mutable installer
-   - verifies rclone version/hash and rejects moving download
-   - verifies immutable checkout SHA and explicit `ubuntu-24.04`
-   - fixes archived Attempt-6 workflow path used by the static check
-   - retains receiver-launch/TLS/time-budget fail-close checks
-   - implementation commit: `421eb314b7210c646dfc19405b2fd6a867a5bfd6`
-
-5. **Compatibility matrix reconciled**
-   - update commit: `3f3fefc3584f0eea91e620867ff873dd4d5a91f8`
-
-### K1-P — authoritative Portal API revision resolution — BLOCKED
-
-Canonical result:
-
-`docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md`
-
-Result record commit:
-
-`a8788e85edc9968f9cffd1880bf2d45f29eed905`
-
-Authoritative POWDER documentation identifies the supported current Portal API client repository as:
-
-`https://gitlab.flux.utah.edu/emulab/portal-api`
-
-and states that the Portal API is under active development. The legacy XML-RPC Portal API is deprecated.
-
-K1-P attempted to resolve an immutable upstream revision only from authoritative sources. The official GitLab project surface returned HTTP 403 through the available web runtime; a direct `git ls-remote` attempt from the local execution container could not resolve `gitlab.flux.utah.edu`; indexed web sources did not expose a trustworthy immutable commit SHA.
-
-No SHA was guessed, copied from a mirror/fork, or substituted from the deprecated legacy API.
-
-Therefore:
-
-- `K1P=BLOCKED_AUTHORITATIVE_PORTAL_API_REVISION_UNAVAILABLE`
-- `PORTAL_API_REVISION=UNRESOLVED`
-- `K1=BLOCKED_PORTAL_API_REVISION`
-
-K1 cannot PASS until the official GitLab repository yields an authoritative immutable revision, or the Portal client dependency is deliberately redesigned out of the future Golden path under a separately declared patch.
+K1 does **not** close the whole compatibility gate.
 
 ## Compatibility / Golden state
 
@@ -187,10 +148,10 @@ Before any future GitHub Actions <-> POWDER live integration both remain mandato
 
 Current compatibility status: **BLOCKED**.
 
-Material remaining compatibility blockers include:
+Remaining material compatibility blockers include:
 
-- Portal API immutable revision and lifecycle/error semantics;
 - dedicated Google Drive OAuth + write/read/hash verification;
+- Portal lifecycle/status/error/expiry semantics;
 - exact live OpenSSL/Mosquitto/runtime fingerprints;
 - fresh receiver detach/launch-time proof;
 - authoritative reservation-expiry semantics feeding the time guard;
@@ -236,7 +197,7 @@ Required evidence path:
 ## Mandatory current read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md`
+2. `docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md`
 3. `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
 4. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
 5. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
@@ -255,20 +216,22 @@ Required evidence path:
 
 ## Exact next action
 
-**STOP after K1-P.**
+**STOP after K1 closure.**
 
-K1-P is blocked and K1 remains blocked. Do **not** advance to K2 under the current patch discipline.
+On the next explicit user resume, execute exactly one bounded patch:
 
-On the next explicit user resume, choose exactly one declared path:
+### K2 — Auth / Drive transport contract closure
 
-### K1-P2 — User-accessible authoritative revision capture
+Goal:
 
-Use a user-accessible browser/shell path to the official GitLab repository to capture `git rev-parse HEAD` / `git ls-remote` evidence for the exact upstream revision, then freeze it in WellPulse.
+Replace the shared rclone Google Drive OAuth client dependency with a dedicated OAuth/client contract suitable for unattended GitHub-Actions-driven evidence escrow, then perform a disposable write → read/list → hash/byte equality → delete verification without contacting POWDER.
 
-**or**
+Constraints:
 
-### K1-R — Portal-client dependency redesign
+- no POWDER reservation or live experiment contact;
+- no scientific run;
+- secrets remain in GitHub Secrets / approved local one-time bootstrap only, never committed;
+- workstation independence is mandatory for normal operation;
+- fail closed if a dedicated unattended Drive transport cannot be established and verified.
 
-Remove the mutable runtime clone/install dependency from the future Golden architecture and replace it with a separately versioned, auditable interface contract. This is a design change and must be handled as its own bounded patch.
-
-No K2 work is authorized until K1 passes or the patch discipline is explicitly changed.
+After K2: update canonical handover/status and STOP again.
