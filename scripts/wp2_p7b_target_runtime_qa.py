@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 import re
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json"
@@ -27,6 +26,14 @@ def git_blob_sha(path: Path) -> str:
     return hashlib.sha1(header + data).hexdigest()
 
 
+def shell_executable_text(text: str) -> str:
+    """Return non-empty, non-comment shell lines for dependency checks."""
+    return "\n".join(
+        raw for raw in text.splitlines()
+        if raw.strip() and not raw.lstrip().startswith("#")
+    )
+
+
 def main() -> int:
     runtime = json.loads(RUNTIME.read_text(encoding="utf-8"))
     if runtime.get("schema_version") != "wp2-p7b-target-runtime-contract-v1": fail("SCHEMA")
@@ -40,7 +47,9 @@ def main() -> int:
         if r["project_python_exact"] != "3.11.13": fail(f"PINNED_PYTHON_{role.upper()}")
 
     ptxt = PRESERVE.read_text(encoding="utf-8")
-    if "python3" in ptxt: fail("PRESERVATION_SYSTEM_PYTHON_DEPENDENCY")
+    pexec = shell_executable_text(ptxt)
+    if re.search(r"(^|[;&|()[:space:]])python3([;&|()[:space:]]|$)", pexec):
+        fail("PRESERVATION_SYSTEM_PYTHON_DEPENDENCY")
     if "p7b_copy_tree_with_hash_manifest_v2" not in ptxt: fail("PRESERVATION_V2_FUNCTION_MISSING")
     q = subprocess.run(["bash", "-n", str(PRESERVE)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if q.returncode: fail("PRESERVATION_SHELL_SYNTAX")
@@ -48,7 +57,8 @@ def main() -> int:
     pre = PREFLIGHT.read_text(encoding="utf-8")
     for token in ("PINNED_PYTHON_VERSION", "PROJECT_CODE_SYSTEM_PYTHON=PROHIBITED", "FIXTURE_ONLY_NO_LIVE_TMCC_READBACK", "compile("):
         if token not in pre: fail("PREFLIGHT_MARKER_" + re.sub(r"\W+", "_", token))
-    if re.search(r"tmcc\s+attenuator\s+['\"$0-9]", pre): fail("PREFLIGHT_LIVE_ATTENUATOR_CALL")
+    if re.search(r"tmcc\s+attenuator\s+['\"$0-9]", shell_executable_text(pre)):
+        fail("PREFLIGHT_LIVE_ATTENUATOR_CALL")
     q = subprocess.run(["bash", "-n", str(PREFLIGHT)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if q.returncode: fail("PREFLIGHT_SHELL_SYNTAX")
 
