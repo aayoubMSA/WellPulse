@@ -14,7 +14,11 @@ on:
       - "pyproject.toml"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: local-unit-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unittest:
@@ -33,19 +37,18 @@ jobs:
           set -euo pipefail
           python -m pip install --quiet 'paho-mqtt==2.1.0'
           python -c "import importlib.metadata as m; assert m.version('paho-mqtt') == '2.1.0'; print('paho-mqtt', m.version('paho-mqtt'))"
-      - name: Run deterministic unit tests and write evidence
+      - name: Run deterministic unit tests and publish run summary
         id: tests
         shell: bash
         run: |
           set -uo pipefail
-          mkdir -p evidence/local
           set +e
           python -m unittest discover -s tests -v > /tmp/unit-tests.log 2>&1
           RC=$?
           set -e
           PAHO_VERSION="$(python -c 'import importlib.metadata as m; print(m.version("paho-mqtt"))')"
           {
-            echo "# Local unit-test gate — latest"
+            echo "# Local unit-test gate"
             echo
             echo "- Checked UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- GitHub SHA: ${GITHUB_SHA}"
@@ -61,26 +64,8 @@ jobs:
             echo '```text'
             tail -n 160 /tmp/unit-tests.log
             echo '```'
-          } > evidence/local/unit-tests-latest.md
+          } | tee -a "$GITHUB_STEP_SUMMARY"
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
-
-      - name: Commit sanitized test evidence
-        if: github.event_name == 'push' && always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! -f evidence/local/unit-tests-latest.md ]]; then
-            exit 0
-          fi
-          if git diff --quiet -- evidence/local/unit-tests-latest.md && git ls-files --error-unmatch evidence/local/unit-tests-latest.md >/dev/null 2>&1; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add evidence/local/unit-tests-latest.md
-          git commit -m "Record local unit-test evidence"
-          git pull --rebase origin "$GITHUB_REF_NAME"
-          git push origin "HEAD:$GITHUB_REF_NAME"
 
       - name: Enforce unit-test result
         if: always()
