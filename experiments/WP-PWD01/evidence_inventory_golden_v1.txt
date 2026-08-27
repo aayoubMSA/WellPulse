@@ -1,8 +1,8 @@
-# WP-PWD01 Golden E2E mandatory evidence inventory v1.4
+# WP-PWD01 Golden E2E mandatory evidence inventory v1.5
 # Format: CLASS|RELATIVE_PATH_OR_SIGNAL|NONEMPTY|DESCRIPTION
 # CLASS:
 #   REQUIRED          = must exist before persistent Evidence Escrow starts
-#   CONDITIONAL       = preserved when the platform exposes that exact file
+#   CONDITIONAL       = preserved when the platform/runtime exposes that exact file; absence alone is not a scientific-validity or teardown failure
 #   GENERATED         = generated file inside the persistent/controller handoff bundle
 #   CONTROLLER_SIGNAL = mandatory controller stdout/result signal after off-POWDER transport/verification
 
@@ -27,7 +27,8 @@ CONDITIONAL|substrate/ue.log|yes|Native UE/NAS/RRC/PHY log when exposed by profi
 REQUIRED|runtime/core_runtime_fingerprint.txt|yes|Core/eNB runtime/config/code fingerprint
 REQUIRED|runtime/ue_runtime_fingerprint.txt|yes|UE/application runtime/config/code fingerprint
 REQUIRED|orchestration/golden_console.txt|yes|Top-level progress-visible G0-G10 console log
-REQUIRED|orchestration/gate_events.jsonl|yes|Machine-readable gate transition/result ledger
+REQUIRED|orchestration/gate_events.jsonl|yes|Authoritative machine-readable gate transition/result ledger
+CONDITIONAL|orchestration/hci_events.jsonl|yes|Non-authoritative passive observer stream derived only from orchestrator state; never substitutes for raw/gate evidence and its absence alone cannot invalidate science or authorize/deny teardown
 REQUIRED|analysis/golden_reconstruction.json|yes|Machine-readable reconstruction from escrowed raw evidence
 REQUIRED|analysis/golden_reconstruction.md|yes|Human-readable reconstruction report
 GENERATED|escrow/SOURCE_SHA256SUMS.txt|yes|Source-node admitted-artifact SHA-256 manifest; internal hash authority
