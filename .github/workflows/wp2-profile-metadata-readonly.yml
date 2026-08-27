@@ -16,6 +16,8 @@ jobs:
     env:
       PORTAL_HTTP: https://boss.emulab.net:43794
       PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      TARGET_PROJECT: PowderProfiles
+      TARGET_NAME: srslte-controlled-rf
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -27,12 +29,64 @@ jobs:
           set -euo pipefail
           bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api >/tmp/pin.txt
           grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/pin.txt
-          portal-cli profile --help | tee /tmp/profile-help.txt
-          set +e
-          portal-cli profile get --help >/tmp/profile-get-help.txt 2>&1
-          GET_HELP_RC=$?
-          set -e
-          echo "PROFILE_GET_HELP_RC=$GET_HELP_RC"
-          cat /tmp/profile-get-help.txt
+          portal-cli profile list >/tmp/profiles.json
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/profiles.json').read_text())
+          project=os.environ['TARGET_PROJECT']; name=os.environ['TARGET_NAME']
+          matches=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  nm=x.get('name') or x.get('profile_name')
+                  pr=x.get('project') or x.get('profile_project') or x.get('project_name')
+                  if nm==name and (pr==project or str(pr).endswith('/'+project)):
+                      matches.append(x)
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+          walk(obj)
+          # If project is not present in list records, allow one unique name match.
+          if not matches:
+              def walk_name(x):
+                  if isinstance(x,dict):
+                      if (x.get('name') or x.get('profile_name'))==name: matches.append(x)
+                      for v in x.values(): walk_name(v)
+                  elif isinstance(x,list):
+                      for v in x: walk_name(v)
+              walk_name(obj)
+          unique=[]
+          seen=set()
+          for m in matches:
+              key=json.dumps(m,sort_keys=True)
+              if key not in seen: seen.add(key); unique.append(m)
+          assert len(unique)==1, f'profile match count={len(unique)}'
+          m=unique[0]
+          pid=m.get('id') or m.get('profile_id')
+          assert isinstance(pid,str) and pid
+          Path('/tmp/profile_id').write_text(pid)
+          deny=re.compile(r'(?i)(token|secret|credential|password|private|key)')
+          def clean(x):
+              if isinstance(x,dict): return {k:('[REDACTED]' if deny.search(str(k)) else clean(v)) for k,v in x.items()}
+              if isinstance(x,list): return [clean(v) for v in x]
+              return x
+          print('PROFILE_LIST_MATCH='+json.dumps(clean(m),sort_keys=True,separators=(',',':')))
+          print('PROFILE_ID='+pid)
+          PY
+          PID="$(cat /tmp/profile_id)"
+          portal-cli profile get --profile-id "$PID" >/tmp/profile-get.json
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          obj=json.loads(Path('/tmp/profile-get.json').read_text())
+          deny=re.compile(r'(?i)(token|secret|credential|password|private|key)')
+          def clean(x):
+              if isinstance(x,dict): return {k:('[REDACTED]' if deny.search(str(k)) else clean(v)) for k,v in x.items()}
+              if isinstance(x,list): return [clean(v) for v in x]
+              return x
+          print('PROFILE_GET_RECORD='+json.dumps(clean(obj),sort_keys=True,separators=(',',':')))
+          PY
+          portal-cli profile version --help | tee /tmp/profile-version-help.txt
+          echo 'PROFILE_METADATA_READONLY=PASS'
           echo 'POWDER_RESOURCE_MUTATION=NO'
           echo 'NEW_RESERVATION_CREATED=NO'
