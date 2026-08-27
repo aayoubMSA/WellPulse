@@ -1,0 +1,7 @@
+execute=WP2_P7B_R3_PORTAL_SIDECAR_ONCE
+experiment_name=wp7brq19810043
+reservation_create=NO
+ssh=NO
+testbed_mutation=NO
+teardown=NO
+scored=NO
