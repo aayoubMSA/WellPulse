@@ -1,0 +1,2 @@
+triggered_utc=2026-08-27T09:49Z
+purpose=observe_current_wp2_golden_owner_state_without_mutation
