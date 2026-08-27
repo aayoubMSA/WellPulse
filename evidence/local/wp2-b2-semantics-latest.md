@@ -1,7 +1,7 @@
 # WP2 B2 Durable MQTT Client Semantics — latest
 
-- Checked UTC: 2026-08-27T19:31:56Z
-- Tested GitHub SHA: 6892ad26810d598965dfbe85ecb38f53b1097a5c
+- Checked UTC: 2026-08-27T20:02:39Z
+- Tested GitHub SHA: cb648e99743962cee86aa252d21c032a793e23fe
 - Evidence class: **LOCAL NON-SCORED PRE-SCORE COMPARATOR QUALIFICATION**
 - POWDER interaction: **NONE**
 - Scored run interaction: **NONE**
