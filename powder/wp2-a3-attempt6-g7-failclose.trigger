@@ -1,0 +1,7 @@
+experiment_id=357f3275-403d-491a-906f-99677bdf454f
+workflow_run=33067316888
+run_id=wp2-golden-a3-gh-33067316888-20260827T112727Z
+classification=diagnostic_noncanonical
+scored=false
+required_prior_gate=G6_PASS
+forbid_g8_g9_g10=true
