@@ -1,0 +1,82 @@
+name: WP2 A3 Attempt6 Focused Status Readonly
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-attempt6-status-readonly.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3status
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3status/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3status/askpass
+          export SSH_ASKPASS=/tmp/a3status/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+
+      - name: Read exact attempt 6 gate and RF status only
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID='wp2-golden-a3-gh-33067316888-20260827T112727Z'
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc2.emulab.net "RUN_ID='$RUN_ID' bash -s" <<'REMOTE'
+          set +e
+          R="$HOME/wellpulse-powder-evidence/golden/$RUN_ID"
+          echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
+          echo '--- PROCESS STATE ---'
+          ps -eo pid,ppid,etime,args | grep -E "wp2_golden_orchestrator|wp_pwd01_golden_sender.py" | grep -F "$RUN_ID" | grep -v grep || true
+          echo '--- GATE EVENTS ---'
+          cat "$R/orchestration/gate_events.jsonl" 2>/dev/null || true
+          echo '--- GOLDEN CONSOLE TAIL ---'
+          tail -n 160 "$R/orchestration/golden_console.txt" 2>/dev/null || true
+          echo '--- ATTENUATION TIMELINE ---'
+          cat "$R/sender/attenuation_timeline.csv" 2>/dev/null || true
+          for f in sender/rf_restore.ready sender/sender_summary.json substrate/service_restore.txt substrate/service_ready_probe.txt substrate/service_ready.marker analysis/reconstruction.json analysis/reconstruction_summary.json; do
+            if [[ -e "$R/$f" ]]; then echo "--- FILE=$f ---"; cat "$R/$f" 2>/dev/null || true; else echo "MISSING=$f"; fi
+          done
+          echo '--- LIVE ATTENUATORS READONLY ---'
+          for id in 1 33 2 34; do
+            printf 'attenuator_%s=' "$id"
+            /usr/local/etc/emulab/tmcc attenuator "$id" 2>&1 || true
+          done
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          REMOTE
+
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net "RUN_ID='$RUN_ID' bash -s" <<'REMOTE'
+          set +e
+          R="$HOME/wellpulse-powder-evidence/golden/${RUN_ID}-core/receiver"
+          echo '--- CORE RECEIVER PROCESS ---'
+          ps -eo pid,ppid,etime,args | grep -E 'wp_pwd01_h_receiver.py' | grep -F "$RUN_ID" | grep -v grep || true
+          echo '--- CORE RECEIVER EVENTS TAIL ---'
+          tail -n 40 "$R/receiver_events.jsonl" 2>/dev/null || true
+          echo '--- CORE RECEIVED CSV TAIL ---'
+          tail -n 10 "$R/telemetry_received.csv" 2>/dev/null || true
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          REMOTE
