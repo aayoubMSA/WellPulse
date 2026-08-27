@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after K1-P2 authoritative Portal API pin closure and offline static validation.
+Last updated: 2026-08-27 after the first bounded WP2 K-fastlane live compatibility reservation failed during provisioning and cleanup was requested successfully.
 
 ## Executive state
 
@@ -12,24 +12,34 @@ Last updated: 2026-08-27 after K1-P2 authoritative Portal API pin closure and of
 - WP2: **ACTIVE — GOLDEN REHEARSAL NOT YET PASSED**.
 - Scientific weighted completion: **20%**.
 - Repository workflow cleanup: **CLOSED / 100% — C0..C4 PASS**.
-- H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery from GitHub failed**.
-- H1-PSH local salvage: **CLOSED_NO_RECOVERY**.
+- H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery failed**.
+- H1 PowerShell/local salvage: **CLOSED_NO_RECOVERY**.
 - K1 supply-chain/runtime pin closure: **PASS**.
+- K2 controller/off-POWDER transport: **OFFLINE PASS / LIVE CLOSURE OPEN**.
+- K3 Portal contract: **STATIC PASS / LIVE BLOCKED ON RESERVATION PROVISIONING FAILURE**.
+- K4 receiver detach: **IMPLEMENTED / LIVE PROOF NOT RUN**.
+- K5 time budget: **IMPLEMENTED / LIVE EXPIRY BINDING NOT RUN**.
+- K6 `/proj/WellPulse` persistence + controller round-trip: **IMPLEMENTED / LIVE PROOF NOT RUN**.
+- K7 observation policy: **POLICY FROZEN / STATIC ASSERTION NEEDS FIX**.
+- K8 pre-integration compatibility gate: **BLOCKED**.
 - `H=UNFROZEN`.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
+- `HCI_CONTROL_ACTIONS_ENABLED=false`.
 
-## Mandatory patch discipline
+## Mission rule
 
-`execute exactly one declared patch -> PASS/BLOCKED -> update canonical handover/status -> STOP -> resume only on explicit user instruction`
+K-fastlane is part of WP2 only. The user explicitly wants shortest path / highest ROI and does not want infrastructure work to drift away from the scientific WPs.
 
-Never start the next patch before explicit user resume/continue.
+Do not continue K work beyond what is necessary to close the compatibility blocker. After K8, return immediately to the HCI/raw-evidence gate and then the clean non-scored Golden.
 
-## Workstation-independence rule
+## Workstation independence
 
-Home and work PCs are interchangeable operator terminals only. No future Golden/scored execution may depend on workstation-local history, downloads, unique filesystem state, or workstation-local experiment authority. Canonical control state remains GitHub + frozen repository state + GitHub Actions/secrets. One-time local bootstrap/capture steps may establish immutable provenance but are not part of normal experiment execution.
+Home and work PCs are interchangeable operator terminals only.
 
-## H1 experiment of record
+No future Golden/scored execution may depend on workstation-local history, downloads, tokens, or unique filesystem state. Canonical authority is GitHub + frozen repository state + GitHub Actions/secrets + verified evidence stores.
+
+## H1 experiment of record — frozen
 
 - Experiment: `WP-HCAL-E`
 - UUID: `9153e16a-1eb1-45f5-88bf-303636a9d1ec`
@@ -41,9 +51,16 @@ Home and work PCs are interchangeable operator terminals only. No future Golden/
 - Scored: **NO**
 - Frozen classification: `VALID_W1_RECOVERY_FAILURE`
 
-H1 must never be replaced or reclassified.
+H1 must never be replaced, repaired retroactively, or reclassified.
 
-## H1 surviving high-level record
+Known H1 raw archive hash anchors:
+
+- nuc1: `3e3d4c44847bfb7e6304de89d8c1cc05ff9722b6a54d93dd08ce0acfa7418210`
+- nuc2: `c5d3b212af015061c092c79025258a7f3378e3351051eef48318f12964af2593`
+
+Raw bundles were not recovered. GitHub salvage remains derived/provenance only. PowerShell/local salvage is `CLOSED_NO_RECOVERY`. Do not reopen salvage without a genuinely new evidence source.
+
+## Frozen H1 scientific record
 
 - Q0/Q1/Q2/Q3: `0/40/52/55 dB`; attenuation IDs `1 33 2 34` remain coupled.
 - Q3 full-state duration: `120.000117905 s`.
@@ -59,11 +76,11 @@ H1 must never be replaced or reclassified.
 - Sender status: `STOP_AND_INVESTIGATE_H_WOULD_EXCEED_300S`.
 - Sender rc: `20`.
 
-These survive as Git-native derived/live-captured summaries, not record-level raw evidence.
+These survive as derived/live-captured summaries, not record-level raw evidence.
 
 ## H1 failure localization / recovery
 
-Preserved evidence localizes the dominant H1 non-recovery below the WellPulse application layer in LTE core/session-context/IP continuity behavior. RF/eNB recovery occurred, while EPC/MME/SPGW showed stale/session-context churn. This does not demonstrate a WellPulse durable-queue failure.
+Preserved evidence localizes the dominant H1 non-recovery below the WellPulse application layer in LTE core/session-context/IP continuity behavior. This does not demonstrate a WellPulse durable-queue failure.
 
 Recovery characterization remains:
 
@@ -71,116 +88,182 @@ Recovery characterization remains:
 - EPC/eNB reset with UE left running: reset PASS; Q0/user-plane recovery **FAIL**.
 - Clean ordered recovery `stop UE -> EPC -> eNB -> fresh UE`: **PASS**.
 - Post-recovery Q0: 10/10 packets, 0% loss.
-- Full LTE/TLS/MQTT v3.1.1/QoS1 application path: **3/3 fresh sessions PASS** with payload hash equality.
+- Full LTE/TLS/MQTT v3.1.1/QoS1 path: **3/3 fresh sessions PASS** with payload hash equality.
 
-This is operational recovery knowledge only and does not retroactively repair H1.
+Operational recovery knowledge only; no retroactive H1 repair.
 
-## H1 evidence salvage — CLOSED
-
-### GitHub salvage
-
-- `H1_GITHUB_SALVAGE=PASS`
-- `H1_FULL_RAW_FROM_GITHUB=NOT_RECOVERED`
-- `H1_DERIVED_LOG_EVIDENCE=AVAILABLE`
-- `H1_RECORD_LEVEL_RECONSTRUCTION_FROM_GITHUB=BLOCKED`
-- `RS1_RAW_RECONSTRUCTION=BLOCKED_ON_RAW_BUNDLES`
-
-Canonical artifacts:
-
-- `evidence/powder/h1-github-salvage-2026-08-27.md`
-- `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
-
-### Home-PC PowerShell/local provenance salvage
-
-Canonical result records:
-
-- `evidence/powder/h1-psh0-history-freeze-result-2026-08-27.md`
-- `evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
-- `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
-
-Final verdict:
-
-- `H1_POWERSHELL_SALVAGE=CLOSED_NO_RECOVERY`
-- `H1_FULL_RAW_FROM_HOME_PC=NOT_RECOVERED`
-- `H1_MATERIAL_LOCAL_PROVENANCE_LEAD=NONE`
-- `RS1_RAW_RECONSTRUCTION=BLOCKED_ON_RAW_BUNDLES`
-
-Do not expand into forensic recovery unless a genuinely new evidence source appears.
-
-## K1 — Offline supply-chain/runtime pin closure — PASS
-
-Canonical records:
-
-- `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
-- `docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md` — historical blocked attempt retained as provenance.
-- `docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md` — final PASS closure.
-
-Verdict:
+## K1 — PASS / closed
 
 `K1=PASS`
 
-Closed K1 contracts:
+Frozen controller/supply-chain facts:
 
-1. `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` for the pre-integration/future integration contract.
-2. Explicit pre-integration runner label `ubuntu-24.04`.
-3. uv `0.12.1`, archive `uv-x86_64-unknown-linux-gnu.tar.gz`, SHA-256 `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`.
-4. rclone `1.75.0`, Linux amd64 ZIP SHA-256 `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`.
-5. Authoritative Portal API repository `https://gitlab.flux.utah.edu/emulab/portal-api.git` pinned to revision `01be03b2f60c067815a7654437320dd981ca3617`.
-6. Portal API capture archive provenance SHA-256 `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8`, size `1003520` bytes.
-7. Accepted future Portal bootstrap: `scripts/wp2_portal_client_bootstrap.sh`; implementation commit `4a88d439b4084f0f0155a94166304150018e2fac`.
-8. Portal-pin static fail-close implementation commit `76aa56c202d66b12ec7bf9239b2177c2007da73e`.
-9. Offline static validation trigger commit `479459d801e4b08e438eb1aa793a5c747121fe3b`; workflow run `33081196297` completed `success`.
+- Portal API repo: `https://gitlab.flux.utah.edu/emulab/portal-api.git`
+- Portal revision: `01be03b2f60c067815a7654437320dd981ca3617`
+- Portal source capture SHA-256: `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8`
+- uv `0.12.1`, SHA-256 `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`
+- rclone `1.75.0`, SHA-256 `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`
+- runner: `ubuntu-24.04`
+- `actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`
+- `actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f`
+- `actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131`
 
-K1 does **not** close the whole compatibility gate.
+Do not revert to moving tags.
 
-## Compatibility / Golden state
+## Evidence architecture after K-fastlane simplification
 
-Experiment `WP-GOLDEN-A3` is expired/removed and must not be reused.
+Critical path is now:
 
-- Attempt 6: G0..G6 PASS; G7 `DIAGNOSTIC_NONCANONICAL` due mutating `tmcc attenuator <id>` semantics; scored NO.
-- Attempt 7: stopped before science after A3 returned 404; scored NO.
+`POWDER raw -> /proj/WellPulse persistent escrow -> controller pull -> GitHub Actions artifact -> independent controller download/read-back -> outer + internal hash verification -> teardown authority`
 
-Before any future GitHub Actions <-> POWDER live integration both remain mandatory:
+Google Drive/rclone is no longer teardown-critical. Drive may later be an optional secondary mirror.
 
-`PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
+The Golden node phase must never authorize teardown by itself. It must leave:
+
+- `CONTROLLER_OFFPOWDER_GATE=PENDING`
+- `TEARDOWN_AUTHORIZED=NO`
+
+Only verified controller round-trip may emit:
+
+- `CONTROLLER_OFFPOWDER_GATE=PASS`
+- `EVIDENCE_ESCROW_GATE=PASS`
+- `TEARDOWN_AUTHORIZED=YES`
+
+Relevant scripts:
+
+- `scripts/wp2_controller_pull_persistent_escrow.sh`
+- `scripts/wp2_controller_verify_artifact_roundtrip.sh`
+- `scripts/wp2_golden_evidence_escrow.sh`
+- `scripts/wp2_golden_orchestrator.sh`
+
+## K2 — offline PASS / live closure open
+
+Successful hardened controller artifact QA:
+
+- workflow run `33082470592`: `success`
+- source tar SHA-256 `1a5c78b3ff588cef38338d12b7891793aca8f436f312c501b5712bb74d423605`
+- artifact ID `9650653376`
+- artifact digest `b213b5a5170528c72f0cfa27780756796262c91234235bb2155a1f706e6b6a6b`
+- internal hashes verified after download.
+
+K2 final live closure remains open because the first actual compatibility reservation failed before `/proj` and controller artifact steps.
+
+## K3 — static PASS / live blocked
+
+Corrected offline CLI QA exists at:
+
+`.github/workflows/wp2-k3-portal-cli-contract-qa.yml`
+
+The frozen Portal client exposes the needed experiment lifecycle surface. An earlier expanded QA failure (`33082657617`) was caused by a bad nested help-tree assumption, not by the Portal pin.
+
+Fail-closed real record guard:
+
+`scripts/wp2_portal_record_guard.py`
+
+The first live compatibility reservation failed before READY and before real expiry binding.
+
+Current live verdict:
+
+`K3_LIVE_PORTAL_BINDING=BLOCKED_ON_RESERVATION_PROVISIONING_FAILURE`
+
+## K4 — implementation PASS / live not run
+
+The orchestrator has bounded detached SSH startup using `ssh -n`, remote `nohup ... </dev/null`, a 15 s default timeout, elapsed-time recording, and remote PID/readiness checks.
+
+`K4_LIVE_DETACH_GATE=NOT_RUN`
+
+## K5 — implementation PASS / live not run
+
+`scripts/wp2_prelaunch_time_guard.py` passes offline boundary tests and blocks malformed/insufficient expiry.
+
+The first compatibility experiment never reached READY, so authoritative expiry could not be fed into the time guard.
+
+`K5_LIVE_TIME_BINDING=NOT_RUN`
+
+## K6 — implementation ready / live not run
+
+Required live chain remains cross-node `/proj/WellPulse` write/read/hash plus controller pull/artifact round-trip.
+
+`K6_CROSS_NODE_PROJ_GATE=NOT_RUN`
+
+## K7 — policy frozen / checker defect open
+
+Frozen rule:
+
+- `tmcc attenuator` is **not** a read-only observation command.
+- no unqualified independent RF probe during protected science.
+- protocol-prescribed RF mutation by the authoritative science process remains distinct and allowed.
+
+Known QA defect: `.github/workflows/wp2-preintegration-static.yml` currently relies on a `! grep ...` K7 assertion while the checker itself contains the target phrase. Run `33083214108` printed a self-match yet still completed successfully. Therefore that run cannot be used as sufficient K7 proof.
+
+`K7_STATIC_ASSERTION=NEEDS_FIX`
+
+Shortest fix: exclude the checker or scan only execution workflows, capture match count explicitly, and fail with an explicit conditional.
+
+## First live K-fastlane compatibility reservation — final record
+
+Workflow:
+
+`.github/workflows/wp2-kfastlane-live-compat.yml`
+
+Run ID:
+
+`33084240768`
+
+Trigger commit:
+
+`dd275a3f7dbc75a7096b587ae3f01d61ff801411`
+
+Experiment UUID:
+
+`02bc305d-5d84-48f9-b518-dbebd1728ee6`
+
+Classification:
+
+`INFRASTRUCTURE_ONLY_NON_SCORED`
+
+Final observed sequence:
+
+- controller authorization: PASS
+- frozen Portal client: PASS
+- SSH identity: PASS
+- exactly one one-hour reservation creation: PASS
+- `PORTAL_POLL_1=provisioning`
+- `PORTAL_POLL_2=failed`
+- READY/expiry step: FAIL, rc `21`
+- manifest identity: SKIPPED
+- runtime/profile fingerprints: SKIPPED
+- K4 live detach: SKIPPED
+- K6 `/proj`: SKIPPED
+- controller artifact round-trip: SKIPPED
+- mandatory cleanup: PASS as `COMPAT_CLEANUP=TERMINATE_REQUESTED`
+
+No Golden workload, H calibration, or scored science ran.
+
+The next agent must verify this failed experiment no longer resolves before any replacement reservation.
+
+## K8 / Golden state
+
+`PRE_INTEGRATION_COMPATIBILITY_GATE=BLOCKED`
+
+Still required before K8 PASS:
+
+- successful reservation READY state;
+- real Portal status/expiry binding;
+- expiry -> time-budget PASS;
+- manifest hardware/image/login identity;
+- runtime/profile/SSH fingerprints;
+- K4 live detach PASS;
+- K6 cross-node `/proj` PASS;
+- actual controller off-POWDER artifact round-trip PASS;
+- cleanup verified;
+- corrected K7 static assertion PASS.
+
+Separate prerequisite remains:
 
 `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
-Current compatibility status: **BLOCKED**.
-
-Remaining material compatibility blockers include:
-
-- dedicated Google Drive OAuth + write/read/hash verification;
-- Portal lifecycle/status/error/expiry semantics;
-- exact live OpenSSL/Mosquitto/runtime fingerprints;
-- fresh receiver detach/launch-time proof;
-- authoritative reservation-expiry semantics feeding the time guard;
-- `/proj/WellPulse` live write/read/hash validation;
-- observation semantics closure for any live RF-status mechanism.
-
-No live reservation, Golden run, H requalification, or scored work is authorized.
-
-Future HCI remains passive/one-way/non-authoritative:
-
-`HCI_CONTROL_ACTIONS_ENABLED=false`
-
-Before teardown of every future live experiment require:
-
-`RAW_EVIDENCE_COMPLETE=PASS`
-
-`EVIDENCE_ESCROW_GATE=PASS`
-
-`TEARDOWN_AUTHORIZED=YES`
-
-Required evidence path:
-
-`freeze writers -> inventory mandatory raw -> hash -> /proj/WellPulse/evidence-escrow/... -> verify -> off-POWDER copy -> read-back/hash verify -> provenance record -> teardown`
-
-## Repository hygiene — CLOSED / 100%
-
-- C0..C4 PASS.
-- 50 workflow files removed from active Actions path with provenance retained.
-- Exactly six local/offline/static workflows remain active; none contacts live POWDER.
+No Golden reservation until **both** major gates pass.
 
 ## Frozen scientific state
 
@@ -189,49 +272,49 @@ Required evidence path:
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
 - Scientific weighted completion: **20%**.
-- Recovery-semantics amendment v1 and protocol v0.6 remain frozen.
 - Primary cohort cutoff remains `t_rf_restore`.
 - Application horizon remains 300 s from `t_service_ready`.
-- No scored B1/W1/B2 run is authorized.
+- No B1/W1/B2 scored run is authorized.
 
-## Mandatory current read order
+## Repository hygiene
+
+C0..C4 remain PASS / closed. Do not reintroduce archived live workflows casually.
+
+## Mandatory read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md`
-3. `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
-4. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
-5. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-6. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
-7. `evidence/powder/h1-github-salvage-2026-08-27.md`
-8. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
-9. `docs/NEXT_GATE.md`
-10. `docs/WORKFLOW_REGISTRY.md`
-11. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
-12. `AGENTS.md`
-13. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-14. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-15. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+2. `docs/AGENT_HANDOVER_WP2_KFASTLANE_2026-08-27.md`
+3. `.github/workflows/wp2-kfastlane-live-compat.yml`
+4. `.github/workflows/wp2-preintegration-static.yml`
+5. `.github/workflows/wp2-k3-portal-cli-contract-qa.yml`
+6. `scripts/wp2_portal_record_guard.py`
+7. `scripts/wp2_prelaunch_time_guard.py`
+8. `scripts/wp2_controller_pull_persistent_escrow.sh`
+9. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
+10. `scripts/wp2_golden_orchestrator.sh`
+11. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+12. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+13. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
+14. `docs/NEXT_GATE.md`
+15. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
 16. `experiments/WP-PWD01/protocol.md`
 17. `experiments/WP-PWD01/evidence-schema.md`
 
 ## Exact next action
 
-**STOP after K1 closure.**
+**STOP at handover. Do not trigger another reservation automatically.**
 
-On the next explicit user resume, execute exactly one bounded patch:
+On explicit resume:
 
-### K2 — Auth / Drive transport contract closure
+1. verify compatibility experiment `02bc305d-5d84-48f9-b518-dbebd1728ee6` is absent/terminated;
+2. recover the smallest authoritative evidence explaining the provisioning `failed` state;
+3. rerun the corrected K3 offline CLI QA once;
+4. fix the K7 static assertion and rerun static acceptance once;
+5. only if the provisioning failure is understood/bounded, decide whether one replacement compatibility-only reservation is justified;
+6. use that single reservation to finish the remaining live K evidence;
+7. evaluate K8;
+8. return immediately to the HCI/raw-evidence gate and the WP2 scientific path.
 
-Goal:
+Shortest mission path:
 
-Replace the shared rclone Google Drive OAuth client dependency with a dedicated OAuth/client contract suitable for unattended GitHub-Actions-driven evidence escrow, then perform a disposable write → read/list → hash/byte equality → delete verification without contacting POWDER.
-
-Constraints:
-
-- no POWDER reservation or live experiment contact;
-- no scientific run;
-- secrets remain in GitHub Secrets / approved local one-time bootstrap only, never committed;
-- workstation independence is mandatory for normal operation;
-- fail closed if a dedicated unattended Drive transport cannot be established and verified.
-
-After K2: update canonical handover/status and STOP again.
+`provisioning failure -> remaining live K proofs -> K7 fix -> K8 -> HCI/raw gate -> clean non-scored Golden -> freeze H -> WP2 close -> WP3 -> WP4 -> WP5`
