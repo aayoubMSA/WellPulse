@@ -1,6 +1,6 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-27 after **WP2-P5 HCI/raw-evidence closure PASS**.
+Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization BLOCKED**.
 
 ## Scientific work packages
 
@@ -8,14 +8,14 @@ Last updated: 2026-08-27 after **WP2-P5 HCI/raw-evidence closure PASS**.
 |---|---|---:|---:|---|
 | WP0 | Novelty & Venue Lock | 8% | 8/8 | PASS |
 | WP1 | Confirmatory Protocol & Statistics Freeze | 12% | 12/12 | PASS / FROZEN |
-| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — compatibility PASS; AUDIT-R1 PASS; HCI/raw PASS; Golden remains** |
+| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — P6 Golden PASS; P7 hardening PASS; physical pre-score qualification open** |
 | WP3 | Conducted-RF Confirmatory Campaign | 30% | 0/30 | BLOCKED ON WP2 |
 | WP4 | OTA External Replication | 15% | 0/15 | BLOCKED |
 | WP5 | Analysis + Artifact + Paper Closure | 20% | 0/20 scientific closure | PREPARED, NOT EXECUTED |
 
 Under gate-based scientific credit, weighted completion remains **20%** until WP2 closes.
 
-## Revised WP2 management/readiness decomposition
+## WP2 management/readiness decomposition
 
 This internal tracking does not create partial scientific credit.
 
@@ -25,13 +25,13 @@ This internal tracking does not create partial scientific credit.
 | WP2-P2 | Recovery Semantics | 15% | PASS / FROZEN |
 | WP2-P3 | Platform Compatibility | 20% | PASS / CLOSED |
 | WP2-P4 | Pre-Golden Reconciliation / AUDIT-R1 | 15% | PASS / CLOSED |
-| WP2-P5 | HCI & Raw-Evidence Closure | 10% | **PASS / CLOSED** |
-| WP2-P6 | One clean non-scored Golden | 15% | BLOCKED / NOT STARTED |
-| WP2-P7 | Formal WP2 scientific closure + scored authorization decision | 5% | BLOCKED / NOT STARTED |
+| WP2-P5 | HCI & Raw-Evidence Closure | 10% | PASS / CLOSED |
+| WP2-P6 | One clean non-scored Golden | 15% | **PASS_RECOVERED_SINGLE_RUN / CLOSED** |
+| WP2-P7 | Reusable-path hardening + scored authorization decision | 5% | **HARDENING PASS / SCORED AUTHORIZATION BLOCKED** |
 
-`WP2_MANAGEMENT_READINESS_PROGRESS=80/100`
+`WP2_MANAGEMENT_READINESS_PROGRESS=95/100`
 
-Scientific weighted completion remains **20%**.
+The remaining 5/100 is the mandatory pre-score physical qualification + immutable authorization snapshot. Scientific weighted completion remains **20%**.
 
 ## Frozen RF/scientific state
 
@@ -55,7 +55,7 @@ Run: `wp2h1-a1-20260826-001`
 Classification: **`VALID_W1_RECOVERY_FAILURE`**  
 Scored: **NO**
 
-The original H1 node-local raw bundles were **not recovered after teardown**. GitHub/local salvage is derived/provenance only. H1 remains valid adverse non-scored evidence and must not be rerun/replaced/relabelled to select a horizon.
+The original H1 node-local raw bundles were not recovered after teardown. H1 remains valid adverse non-scored evidence and must not be rerun/replaced/relabelled to select a horizon.
 
 ## K-series / compatibility state
 
@@ -67,78 +67,81 @@ Decisive live compatibility run: `33085406598`
 Experiment: `fc7c2187-2376-4a92-8de1-4665a06ea943`  
 Classification: `INFRASTRUCTURE_ONLY_NON_SCORED`
 
-Canonical record: `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`.
+## AUDIT-R1 and P5
 
-## AUDIT-R1 state
+- `AUDIT_R1=PASS`.
+- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`.
+- `HCI_CONTROL_ACTIONS_ENABLED=false`.
+- no background `/proj` checkpoint during protected G3-G7 science.
+- persistent escrow occurs after reconstruction.
+- only independent controller artifact round-trip/hash verification may authorize teardown.
 
-`AUDIT_R1=PASS`
+## WP2-P6 Golden
 
-Analysis semantics, H-selection supersession, controller/GitHub evidence authority, workflow governance and stale-status supersession remain reconciled and frozen.
+Canonical record: `docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`.
 
-## WP2-P5 HCI/raw-evidence closure
+- `WP2_P6=PASS_RECOVERED_SINGLE_RUN`.
+- one reservation only; no scientific rerun.
+- scientific run `wp2-p6r-33099648133-20260827T174149Z`.
+- primary cohort `181`; valid by 300 s `181/181`; `completeness_300=1.0`.
+- raw evidence complete, `/proj` escrow PASS, controller artifact round-trip PASS, teardown confirmed.
 
-Canonical record:
+P6 exposed two reusable-path defects after the scientific measurement: internal management alias resolution and `scp .../receiver/.` collection. P7 hardened both without rerunning the science.
 
-`docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+## WP2-P7 hardening and decision
 
-`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
+Canonical record: `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`.
 
-Frozen implementation consequences:
+- management aliases now require manifest-derived endpoints and pre-G0 SSH proof;
+- receiver evidence uses the live-qualified tar-stream transfer;
+- planned post-cohort generated traffic is separated from truly unexpected identities;
+- clock-authority and transport regressions are executable under the actual unit-test gate;
+- bounded offline closure run `33103997677` PASS;
+- **36/36 tests PASS**;
+- full offline escrow/interlock and corruption fail-closed QA PASS;
+- no POWDER contact, mutation, science or scored run occurred in P7.
 
-- `HCI_CONTROL_ACTIONS_ENABLED=false`;
-- HCI is passive and consumes orchestrator-owned state only;
-- observer failure is non-authoritative and non-fatal;
-- `orchestration/hci_events.jsonl` is conditional/non-scientific observer evidence;
-- mandatory scientific evidence remains independent of the HCI;
-- no background/in-run `/proj` checkpoint is enabled during protected G3-G7 science;
-- G9 persistent escrow occurs after G8 reconstruction;
-- persistent/node side cannot authorize teardown;
-- only independent controller artifact round-trip verification may emit `TEARDOWN_AUTHORIZED=YES`.
+Decision:
 
-No POWDER contact, reservation, SSH, Golden or scored work occurred in WP2-P5.
+`SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`
 
-## Current WP2 frontier
+`scored_runs_authorized=false`
 
-P5 is closed. The project is **STOPPED before P6**.
+## Remaining pre-score blockers
 
-Only after a separate explicit user continuation:
+1. B1 accepted/unacknowledged instrumentation on the real remote path.
+2. B1/W1 matched runtime/config proof on POWDER.
+3. S3 process-restart-domain separation non-scored proof.
+4. B2 Java durable-client remote runtime/path/restart qualification.
+5. Full inter-run washout/readiness enforcement for B1/W1/B2.
+6. Immutable pre-score snapshot only after 1-5 PASS.
 
-1. perform protocol v0.6.1 advisory resource-availability preflight (`resinfo.php`, record `PASS|DEFER|UNKNOWN`) immediately before booking;
-2. never change frozen hardware/profile merely to chase capacity;
-3. book and execute one clean non-scored G0-G10 Golden rehearsal;
-4. verify complete raw evidence and controller round-trip before teardown;
-5. then decide WP2-P7 formal scientific closure and explicit scored authorization.
+The shortest defensible closure is one bounded non-scored qualification reservation designed to close items 1-5 together.
 
-There is **no future H-calibration/freeze step**. `H_app=300 s from t_service_ready` is already prospectively frozen.
+## Current frontier
 
-Current controls:
+`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
 
-- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`;
-- `REBOOK_GOLDEN=false`;
-- `HCI_CONTROL_ACTIONS_ENABLED=false`;
-- `H_app=300 s from t_service_ready`;
-- `outcome_derived_H_calibration=PROHIBITED`;
-- `scored_runs_authorized=false`;
-- no B1/W1/B2 scored run is authorized.
+Status: **BLOCKED / NOT STARTED pending explicit continuation**.
+
+No current workflow has authority to create a POWDER reservation or run scored science. There is no future H-calibration step.
 
 ## Remaining scientific path
 
 ```text
 WP0 PASS + WP1 PASS
         ↓
-WP2 compatibility K1–K8 PASS
+WP2 K1–K8 + AUDIT-R1 + P5 PASS
         ↓
-AUDIT-R1 PASS
+P6 non-scored Golden PASS
         ↓
-WP2-P5 HCI/raw-evidence PASS
+P7 hardening PASS / scored authorization BLOCKED
         ↓
-STOP / separate explicit user resume
+STOP / explicit resume
         ↓
-advisory resinfo preflight
+P7B one non-scored physical qualification reservation
         ↓
-one clean non-scored Golden G0–G10
-        ↓
-WP2-P7 scientific closure + scored authorization decision
+if PASS: immutable pre-score snapshot + scored-authorization decision
         ↓
 WP3 conducted-RF B1/W1 + fixed B2 sensitivity
         ↓
