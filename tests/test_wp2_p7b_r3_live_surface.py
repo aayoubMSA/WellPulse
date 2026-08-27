@@ -19,6 +19,19 @@ class P7BR3LiveSurfaceTests(unittest.TestCase):
         self.assertEqual(q.returncode, 0, q.stdout)
         self.assertIn("P7B_R2_CONTROLLER_STATIC_GATE=PASS", q.stdout)
 
+    def test_progress_helper_is_runtime_safe_under_nounset(self):
+        text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
+        line = next(x for x in text.splitlines() if x.startswith("bar(){"))
+        p = subprocess.run(
+            ["bash", "-lc", f"set -u; {line}; bar 5 test"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(p.returncode, 0, p.stdout)
+        self.assertIn("5%", p.stdout)
+
     def test_controller_has_exact_one_replacement_and_one_teardown(self):
         text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
         self.assertEqual(text.count("portal-cli experiment create"), 1)
