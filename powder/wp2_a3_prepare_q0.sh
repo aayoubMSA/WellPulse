@@ -102,18 +102,25 @@ printf "UE_PREMUTATION=PASS\n"' || fail UE_PREMUTATION 6
 
 bar 32 'Stopping stale UE state'; echo
 ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'set -u
-tmux kill-session -t srs-ue >/dev/null 2>&1 || true
+# The POWDER U18LL-SRSLTE profile uses tmux session "ue". Keep legacy aliases
+# in the cleanup set so recovery remains idempotent across earlier harness states.
+for s in ue srs-ue; do tmux kill-session -t "$s" >/dev/null 2>&1 || true; done
 sudo killall srsue >/dev/null 2>&1 || true
 sudo ip link del tun_srsue >/dev/null 2>&1 || true
 sleep 2
+! tmux has-session -t ue >/dev/null 2>&1
+! tmux has-session -t srs-ue >/dev/null 2>&1
 ! pgrep -x srsue >/dev/null 2>&1' || fail STOP_UE 7
 
 bar 42 'Stopping stale EPC/eNB state'; echo
 ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'set -u
-tmux kill-session -t srs-epc >/dev/null 2>&1 || true
-tmux kill-session -t srs-enb >/dev/null 2>&1 || true
+# The POWDER U18LL-SRSLTE profile uses tmux session "enb" for EPC+eNB.
+for s in enb srs-epc srs-enb; do tmux kill-session -t "$s" >/dev/null 2>&1 || true; done
 sudo killall srsenb srsepc >/dev/null 2>&1 || true
 sleep 2
+! tmux has-session -t enb >/dev/null 2>&1
+! tmux has-session -t srs-epc >/dev/null 2>&1
+! tmux has-session -t srs-enb >/dev/null 2>&1
 ! pgrep -x srsepc >/dev/null 2>&1
 ! pgrep -x srsenb >/dev/null 2>&1' || fail STOP_CORE 8
 
