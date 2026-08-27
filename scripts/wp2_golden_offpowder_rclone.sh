@@ -11,7 +11,7 @@ RETRY_SLEEP="${WP_RCLONE_RETRY_SLEEP_S:-15}"
 REMOTE_DIR="${REMOTE_ROOT%/}/$EXPERIMENT_ID/$RUN_ID"
 MANIFEST="$LOCAL_ROOT/escrow/SOURCE_SHA256SUMS.txt"
 
-bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
+bar(){ local p="$1" m="$2" n; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
 fail(){ echo; echo "RCLONE_OFF_POWDER_GATE=FAIL:$1" >&2; echo 'STOP_DO_NOT_TERMINATE=1'; exit 60; }
 
 command -v rclone >/dev/null 2>&1 || fail RCLONE_MISSING

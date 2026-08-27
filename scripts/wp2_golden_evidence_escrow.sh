@@ -8,7 +8,7 @@ PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
 INVENTORY="${WP_EVIDENCE_INVENTORY:-experiments/WP-PWD01/evidence_inventory_golden_v1.txt}"
 DEST_PERSIST="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
 
-bar(){ local p="$1" m="$2" n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
+bar(){ local p="$1" m="$2" n; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-48s' "$p" "$m"; }
 fail(){ echo; echo "PERSISTENT_ESCROW_GATE=FAIL:$1" >&2; exit 40; }
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
 

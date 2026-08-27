@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT="${1:-$(mktemp -d)}"
 SRC="$ROOT/source"
 PERSIST="$ROOT/persist"
-OFF="$ROOT/offtestbed"
 RCLONE_LOCAL="$ROOT/rclone-remote"
 RUN_ID="wp2-golden-offline-qa"
 EXP_ID="OFFLINE-QA"
@@ -19,7 +18,30 @@ bar(){
 }
 
 echo '=== WP2 Golden offline QA ==='
-bar 5 'Creating synthetic evidence tree'; echo
+bar 3 'Checking static Golden contracts'; echo
+PYTHONPATH=src python3 - <<'PY'
+from pathlib import Path
+from wellpulse.transport import make_run_topic
+run_id='wp2-golden-offline-qa'
+expected=make_run_topic(run_id,'GOLDEN')
+assert expected.startswith('wellpulse/wp-pwd01/gold/'), expected
+orch=Path('scripts/wp2_golden_orchestrator.sh').read_text()
+assert 'MQTT_TOPIC="wellpulse/wp-pwd01/gold/${RUN_DIGEST}/records"' in orch
+assert "--topic '$MQTT_TOPIC'" in orch
+unsafe='local p="$1" m="$2" n=$((p/5))'
+for name in (
+    'scripts/wp2_golden_orchestrator.sh',
+    'scripts/wp2_golden_evidence_escrow.sh',
+    'scripts/wp2_golden_offpowder_rclone.sh',
+    'scripts/wp2_golden_service_restore.sh',
+    'scripts/wp2_golden_service_ready_probe.sh',
+):
+    text=Path(name).read_text()
+    assert unsafe not in text, f'unsafe set -u progress helper remains in {name}'
+print('STATIC_GOLDEN_CONTRACTS=PASS')
+PY
+
+bar 7 'Creating synthetic evidence tree'; echo
 mkdir -p "$SRC"/{sender,receiver,substrate,runtime,orchestration,analysis} "$RCLONE_LOCAL"
 
 cat > "$SRC/sender/attenuation_timeline.csv" <<'EOF'
@@ -71,20 +93,16 @@ grep -q '"primary_cohort_count": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"received_valid_by_horizon": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"completeness_300": 1.0' "$SRC/analysis/golden_reconstruction.json"
 
-bar 40 'Running dual-filesystem escrow simulation'; echo
+bar 40 'Running persistent escrow simulation'; echo
 WP_EVIDENCE_SRC="$SRC" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
-WP_PERSIST_ROOT="$PERSIST" WP_OFF_POWDER_ROOT="$OFF" \
+WP_PERSIST_ROOT="$PERSIST" \
 WP_EVIDENCE_INVENTORY="experiments/WP-PWD01/evidence_inventory_golden_v1.txt" \
 bash scripts/wp2_golden_evidence_escrow.sh
 
 PDIR="$PERSIST/$EXP_ID/$RUN_ID"
-ODIR="$OFF/$EXP_ID/$RUN_ID"
-bar 58 'Running filesystem teardown interlock'; echo
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" \
-bash scripts/wp2_golden_teardown_guard.sh | tee "$ROOT/teardown.txt"
-grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/teardown.txt"
+[[ -s "$PDIR/escrow/PERSISTENT_ESCROW_GATE.PASS" ]]
 
-bar 70 'Testing rclone remote copy/read-back SHA verification'; echo
+bar 65 'Testing rclone remote copy/read-back SHA verification'; echo
 RROOT=":local:$RCLONE_LOCAL"
 WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
 bash scripts/wp2_golden_offpowder_rclone.sh | tee "$ROOT/rclone-copy.txt"
@@ -93,16 +111,16 @@ WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$REMOTE_DIR" WP_RUN_ID="
 bash scripts/wp2_golden_teardown_guard_rclone.sh | tee "$ROOT/rclone-guard.txt"
 grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/rclone-guard.txt"
 
-bar 85 'Testing fail-closed corruption behavior'; echo
-printf 'corruption\n' >> "$ODIR/sender/telemetry_generated.csv"
+bar 85 'Testing fail-closed remote corruption behavior'; echo
+printf 'corruption\n' >> "$RCLONE_LOCAL/$EXP_ID/$RUN_ID/sender/telemetry_generated.csv"
 set +e
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_OFF_POWDER_EVIDENCE_DIR="$ODIR" WP_RUN_ID="$RUN_ID" \
-bash scripts/wp2_golden_teardown_guard.sh > "$ROOT/corrupt-guard.txt" 2>&1
+WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$REMOTE_DIR" WP_RUN_ID="$RUN_ID" \
+bash scripts/wp2_golden_teardown_guard_rclone.sh > "$ROOT/corrupt-guard.txt" 2>&1
 RC=$?
 set -e
 [[ "$RC" -ne 0 ]]
 ! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/corrupt-guard.txt"
 
-bar 100 'Offline reconstruction/escrow/interlock QA PASS'; echo
+bar 100 'Offline reconstruction/rclone escrow/interlock QA PASS'; echo
 printf 'QA_ROOT=%s\n' "$ROOT"
 printf 'WP2_GOLDEN_OFFLINE_QA=PASS\n'

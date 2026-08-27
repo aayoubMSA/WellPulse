@@ -16,6 +16,8 @@ CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN
 PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
 RCLONE_ROOT="${WP_RCLONE_REMOTE_ROOT:-gdrive:}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
+RUN_DIGEST="$(printf '%s' "$RUN_ID" | sha256sum | awk '{print substr($1,1,16)}')"
+MQTT_TOPIC="wellpulse/wp-pwd01/gold/${RUN_DIGEST}/records"
 
 mkdir -p "$EVDIR"/{sender,receiver,substrate,runtime,orchestration,analysis,escrow}
 CONSOLE="$EVDIR/orchestration/golden_console.txt"
@@ -42,13 +44,14 @@ echo "RUN_ID=$RUN_ID"
 echo "EXPERIMENT_ID=$EXPERIMENT_ID"
 echo "CORE_HOST=$CORE_HOST"
 echo "UE_HOST=$UE_HOST"
+echo "MQTT_TOPIC=$MQTT_TOPIC"
 echo "RCLONE_ROOT=$RCLONE_ROOT"
 echo "START_UTC=$(utc)"
 
 bar 5 'G0 environment identity'; echo
 cd "$REPO" || fail G0 REPO_NOT_FOUND
 GIT_SHA=$(git rev-parse HEAD)
-printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\ngit_sha=%s\nutc=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$GIT_SHA" "$(utc)" > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
+printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\nutc=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA" "$(utc)" > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
 ssh_core "cd '$REPO' && printf 'host=%s\\ngit_sha=%s\\nutc=%s\\n' \"\$(hostname)\" \"\$(git rev-parse HEAD)\" \"\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)\"" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
 [[ -s "$EVDIR/runtime/ue_runtime_fingerprint.txt" && -s "$EVDIR/runtime/core_runtime_fingerprint.txt" ]] || fail G0 EMPTY_FINGERPRINT
 gate G0 PASS "$GIT_SHA"
@@ -67,7 +70,7 @@ openssl s_client -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -ver
 gate G2 PASS READY
 
 bar 22 'G2 launching receiver on core node'; echo
-ssh_core "cd '$REPO' && nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & echo \$! > '$CORE_EVDIR/receiver/receiver.pid'" || fail G2 RECEIVER_START
+ssh_core "cd '$REPO' && nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --topic '$MQTT_TOPIC' --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & echo \$! > '$CORE_EVDIR/receiver/receiver.pid'" || fail G2 RECEIVER_START
 sleep 3
 ssh_core "test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'" || fail G2 RECEIVER_NOT_READY
 
@@ -102,7 +105,7 @@ gate G6 PASS "$T_SERVICE_READY"
 
 bar 66 'G7 fixed 300 s application observation'; echo
 wait "$SENDER_PID" || fail G7 SENDER_FIXED_HORIZON
-[[ $(python3 -c "import json;print(json.load(open('$EVDIR/sender/sender_summary.json'))['status'])") == GOLDEN_FIXED_HORIZON_COMPLETE ]] || fail G7 BAD_SENDER_STATUS
+[[ $("$PY" -c "import json;print(json.load(open('$EVDIR/sender/sender_summary.json'))['status'])") == GOLDEN_FIXED_HORIZON_COMPLETE ]] || fail G7 BAD_SENDER_STATUS
 gate G7 PASS 300S_COMPLETE
 
 bar 74 'Collecting receiver and substrate evidence'; echo
@@ -116,7 +119,7 @@ scp_core "/tmp/enb.log" "$EVDIR/substrate/enb.log" 2>/dev/null || scp_core "/tmp
 scp_ue "/tmp/ue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || scp_ue "/tmp/wp2-srsue.log" "$EVDIR/substrate/ue.log" 2>/dev/null || true
 
 bar 82 'G8 reconstructing endpoint from raw evidence'; echo
-python3 scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
+"$PY" scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
 gate G8 PASS RECONSTRUCTABLE
 
 bar 88 'G9 copying and verifying persistent /proj escrow'; echo
@@ -124,11 +127,11 @@ WP_EVIDENCE_SRC="$EVDIR" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" W
 PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
 
 bar 93 'G9 saving verified evidence to Google Drive'; echo
-WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RCLONE_ROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" bash scripts/wp2_golden_offpowder_rclone.sh || fail G9 DRIVE_ESCROW
+WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RCLONE_ROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PYTHON="$PY" bash scripts/wp2_golden_offpowder_rclone.sh || fail G9 DRIVE_ESCROW
 RDIR="${RCLONE_ROOT%/}/$EXPERIMENT_ID/$RUN_ID"
 
 bar 97 'G9 enforcing dual-copy teardown guard'; echo
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$RDIR" WP_RUN_ID="$RUN_ID" bash scripts/wp2_golden_teardown_guard_rclone.sh || fail G9 TEARDOWN_GUARD
+WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$RDIR" WP_RUN_ID="$RUN_ID" WP_PYTHON="$PY" bash scripts/wp2_golden_teardown_guard_rclone.sh || fail G9 TEARDOWN_GUARD
 gate G9 PASS DUAL_VERIFIED
 
 bar 100 'G10 Golden E2E methods rehearsal PASS'; echo
