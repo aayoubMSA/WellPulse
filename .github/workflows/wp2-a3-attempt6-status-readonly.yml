@@ -41,7 +41,7 @@ jobs:
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
           setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
 
-      - name: Read exact attempt 6 gate and RF status only
+      - name: Read exact attempt 6 gate status only
         shell: bash
         run: |
           set -euo pipefail
@@ -56,16 +56,12 @@ jobs:
           cat "$R/orchestration/gate_events.jsonl" 2>/dev/null || true
           echo '--- GOLDEN CONSOLE TAIL ---'
           tail -n 160 "$R/orchestration/golden_console.txt" 2>/dev/null || true
-          echo '--- ATTENUATION TIMELINE ---'
+          echo '--- RECORDED ATTENUATION TIMELINE ONLY ---'
           cat "$R/sender/attenuation_timeline.csv" 2>/dev/null || true
           for f in sender/rf_restore.ready sender/sender_summary.json substrate/service_restore.txt substrate/service_ready_probe.txt substrate/service_ready.marker analysis/reconstruction.json analysis/reconstruction_summary.json; do
             if [[ -e "$R/$f" ]]; then echo "--- FILE=$f ---"; cat "$R/$f" 2>/dev/null || true; else echo "MISSING=$f"; fi
           done
-          echo '--- LIVE ATTENUATORS READONLY ---'
-          for id in 1 33 2 34; do
-            printf 'attenuator_%s=' "$id"
-            /usr/local/etc/emulab/tmcc attenuator "$id" 2>&1 || true
-          done
+          echo 'LIVE_ATTENUATOR_QUERY_EXECUTED=NO'
           echo 'POWDER_MUTATION_EXECUTED=NO'
           REMOTE
 
