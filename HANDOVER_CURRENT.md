@@ -1,32 +1,41 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after **AUDIT-R1 offline pre-Golden reconciliation PASS and final offline QA review**.
+Last updated: 2026-08-27 after **WP2-P5 HCI & Raw-Evidence Closure PASS**.
 
 ## Executive state
 
 - Canonical repository: `aayoubMSA/WellPulse`, branch `main`.
-- Last accepted checkpoint: **AUDIT-R1 PASS / CLOSED / STOPPED**.
+- Last accepted checkpoint: **WP2-P5 PASS / CLOSED / STOPPED BEFORE GOLDEN**.
 - Scientific weighted completion: **20%**.
+- WP2 management/readiness progress: **80/100**; this creates no partial scientific credit.
 - WP0: **PASS**, 8/8.
 - WP1: **PASS / FROZEN**, 12/12.
-- WP2: **ACTIVE**.
+- WP2: **ACTIVE** — P1-P5 closed; P6 Golden + P7 formal closure remain.
 - WP3: **BLOCKED ON WP2**, 0/30.
 - WP4: **BLOCKED**, 0/15.
 - WP5: **PREPARED / NOT EXECUTED**, 0/20.
 - FIT IoT-LAB layer: **FINAL PASS**.
-- POWDER G0–G5: **PASS**.
+- POWDER G0-G5: **PASS**.
 - RF calibration: **PASS / FROZEN**.
-- K1–K8 compatibility series: **PASS / CLOSED**.
+- K1-K8 compatibility series: **PASS / CLOSED**.
 - `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`.
 - `AUDIT_R1=PASS`.
-- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=BLOCKED_NOT_STARTED`.
+- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`.
+- `HCI_CONTROL_ACTIONS_ENABLED=false`.
 - `REBOOK_GOLDEN=false`.
 - `scored_runs_authorized=false`.
-- `HCI_CONTROL_ACTIONS_ENABLED=false`.
 
-AUDIT-R1 acceptance: **100/100**. It earns no additional scientific WP credit; scientific weighted completion remains **20%** until WP2 closes.
+**STOP.** Do not perform the POWDER resource preflight, contact POWDER, create/modify/terminate a reservation, SSH to POWDER, execute Golden, run H calibration, execute B1/W1/B2 scored work, reopen K1-K8, reopen RF calibration, or reopen H1 salvage until a separate explicit user continuation.
 
-## Canonical closure records
+## Canonical closure/control records
+
+Current P5 closure:
+
+`docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+
+Frozen HCI/raw-evidence contract:
+
+`docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
 
 Audit + AUDIT-R1 closure:
 
@@ -44,45 +53,177 @@ Current next-gate record:
 
 `docs/NEXT_GATE.md`
 
-## AUDIT-R1 closure summary
+Current milestone state:
 
-All mandatory P0 audit inconsistencies were reconciled **offline only**.
+`docs/MILESTONE_STATUS.md`
 
-### A1 — analysis semantics — PASS — 30/30
+## Revised WP2 management decomposition
 
-Current operational analysis artifacts agree with Recovery Semantics Amendment v1:
+| Patch | Scope | Internal share | Status |
+|---|---|---:|---|
+| WP2-P1 | RF Foundation | 20% | PASS / FROZEN |
+| WP2-P2 | Recovery Semantics | 15% | PASS / FROZEN |
+| WP2-P3 | Platform Compatibility | 20% | PASS / CLOSED |
+| WP2-P4 | Pre-Golden Reconciliation / AUDIT-R1 | 15% | PASS / CLOSED |
+| WP2-P5 | HCI & Raw-Evidence Closure | 10% | **PASS / CLOSED** |
+| WP2-P6 | One clean non-scored Golden | 15% | **BLOCKED / NOT STARTED** |
+| WP2-P7 | Formal WP2 scientific closure + scored authorization decision | 5% | **BLOCKED / NOT STARTED** |
 
-- primary cohort cutoff = `t_rf_restore`;
-- fixed application observation horizon = `t_service_ready + 300 s`;
-- primary endpoint = `completeness_300`;
-- preserve separate `T_service`, `T_app`, `T_total`;
-- no outcome-derived/W1-derived H re-estimation.
+`WP2_MANAGEMENT_READINESS_PROGRESS=80/100`
 
-The old H-calculation path is fail-closed rather than silently reusable.
+Scientific weighted completion remains **20%** until WP2-P7 closes WP2 scientifically.
 
-### A2 — evidence contract — PASS — 20/20
+## WP2-P5 closure summary
 
-Mandatory teardown-critical path is:
+`WP2_P5=PASS`
 
-`POWDER raw -> /proj/WellPulse persistent escrow -> controller pull -> GitHub Actions artifact -> independent controller download/read-back -> outer + internal SHA-256 verification -> teardown authority`
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
-Google Drive/rclone is optional secondary only.
+P5 acceptance: **100/100**.
 
-Persistent escrow emits the controller-handoff marker required by controller verification and remains fail-closed:
+### P5.1 — passive HCI contract — PASS — 20/20
 
+Implemented:
+
+`scripts/wp2_golden_hci_emit.py`
+
+Integrated only through:
+
+`scripts/wp2_golden_orchestrator.sh`
+
+Frozen one-way architecture:
+
+`orchestrator-owned gate/state -> passive wp2-hci-v1 JSONL/stdout`
+
+Prohibited:
+
+`HCI -> SSH/API/tmcc/live probe/control -> experiment`
+
+The observer emits `orchestration/hci_events.jsonl` and `HCI_EVENT=<json>` stdout. It contains bounded identity/gate/phase/progress/safety state only; no raw payloads, credentials, TLS secrets or arbitrary gate detail.
+
+HCI failure is explicitly non-authoritative/non-fatal:
+
+`HCI_OBSERVER=DEGRADED_NON_AUTHORITATIVE`
+
+and cannot stop or invalidate scientific execution.
+
+### P5.2 — exact raw-evidence contract — PASS — 30/30
+
+Frozen inventory:
+
+`experiments/WP-PWD01/evidence_inventory_golden_v1.txt` v1.5.
+
+Authoritative scientific gate chronology remains:
+
+`orchestration/gate_events.jsonl`
+
+HCI is intentionally:
+
+`CONDITIONAL|orchestration/hci_events.jsonl`
+
+It is preserved/hashed when present but is **not** mandatory scientific evidence and cannot replace raw sender/receiver/RF/substrate/runtime/reconstruction artifacts.
+
+### P5.3 — finalization/teardown contract — PASS — 25/25
+
+No background/in-run `/proj` checkpoint is enabled during protected G3-G7 science.
+
+Frozen sequence:
+
+`G3-G7 protected acquisition/observation -> G8 reconstruction -> G9 freeze/hash/persistent /proj escrow -> controller finalization`
+
+Node/persistent side may emit only:
+
+- `RAW_EVIDENCE_COMPLETE=PASS`;
 - `PERSISTENT_ESCROW_GATE=PASS`;
 - `CONTROLLER_OFFPOWDER_REQUIRED`;
-- `TEARDOWN_AUTHORIZED=NO` until controller round-trip verification.
+- `TEARDOWN_AUTHORIZED=NO`.
 
-Only successful controller/artifact verification may emit:
+Only successful independent controller artifact round-trip may emit:
 
+- `CONTROLLER_PULL_GATE=PASS`;
+- `CONTROLLER_BUNDLE_SHA256=<64hex>`;
 - `CONTROLLER_OFFPOWDER_GATE=PASS`;
+- `ROUNDTRIP_BUNDLE_SHA256=<same_64hex>`;
 - `EVIDENCE_ESCROW_GATE=PASS`;
 - `TEARDOWN_AUTHORIZED=YES`.
 
-### A3 — workflow/governance control — PASS — 20/20
+Mandatory path:
 
-Current active GitHub Actions surface is exactly **6** offline/static workflows:
+`POWDER raw -> /proj/WellPulse persistent escrow -> controller pull -> GitHub Actions artifact -> independent controller download/read-back -> outer + internal SHA-256 verification -> teardown authority`
+
+Google Drive/rclone is optional secondary mirroring only.
+
+### P5.4 — bounded offline QA — PASS — 15/15
+
+No POWDER or Drive contact was used.
+
+Accepted P5-specific checks:
+
+- `EMITTER_QA=PASS`;
+- `HCI_FAILURE_ISOLATION_QA=PASS`;
+- `INVENTORY_HCI_SEPARATION_QA=PASS`;
+- `PERSISTENT_CONTROLLER_ROUNDTRIP_MODEL_QA=PASS`;
+- `TEARDOWN_PRE_CONTROLLER=NO`.
+
+The existing offline workflow `.github/workflows/wp2-golden-offline-qa.yml` was extended to compile/test the passive HCI contract and retained reconstruction/escrow/interlock checks. No new live workflow was added.
+
+The connector available during P5 did not expose a reliable private-repository listing of push-triggered Actions runs, therefore **no new Actions run ID is claimed for P5**. Existing accepted runtime evidence for the unchanged off-POWDER transport remains AUDIT-R1 run `33092849805`.
+
+### P5.5 — governance/canonical closure — PASS — 10/10
+
+Current status, workflow registry, supersession map, next gate and this handover were reconciled. P5 does not authorize P6.
+
+No POWDER contact, reservation, SSH, Golden, H calibration, scored execution, RF recalibration, K reopening or H1 salvage occurred during P5.
+
+## Governing scientific state — frozen
+
+Recovery Semantics Amendment v1 remains scientific authority:
+
+- `t_rf_restore`, `t_service_ready`, `t_app_complete` are distinct;
+- primary cohort = valid records generated at or before `t_rf_restore`;
+- **`H_app=300 s from t_service_ready`** is prospectively frozen;
+- primary endpoint = `completeness_300` at `t_service_ready + 300 s`;
+- preserve `T_service`, `T_app`, `T_total`;
+- S2/S3 clean ordered restore = `stop UE -> EPC -> eNB -> fresh UE -> architecture-blind service-ready probe`;
+- Golden G6 qualification bound = 120 s;
+- negative/null outcomes remain valid scientific evidence;
+- W1/Golden/scored outcome-driven H changes are prohibited.
+
+Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; attenuation IDs `1 33 2 34` remain coupled. Do not reopen RF calibration.
+
+There is **no future H-calibration/freeze step**.
+
+## H1 — frozen adverse experiment of record
+
+- experiment `WP-HCAL-E`;
+- UUID `9153e16a-1eb1-45f5-88bf-303636a9d1ec`;
+- run `wp2h1-a1-20260826-001`;
+- profile revision `a6da96560b6526dc6816761282722c996418fd8c`;
+- mapping `enb1 -> nuc1`, `rue1 -> nuc2`;
+- exact deployed WellPulse commit `95ba9a57bef159450b00b8a439d393d22e1c0519`;
+- classification **`VALID_W1_RECOVERY_FAILURE`**;
+- scored: **NO**.
+
+Original H1 node-local raw bundles were **not recovered** after teardown. GitHub/local salvage is derived/provenance only. POWDER support confirmed the node-local disks were reloaded after termination while `/proj` persists across experiments. Do not reopen H1 salvage, rerun H1 to select H, or relabel the adverse result.
+
+## K1-K8 — closed
+
+Canonical record:
+
+`docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
+
+Decisive compatibility evidence:
+
+- historical workflow `wp2-kfastlane-live-compat-v2.yml`;
+- Actions run `33085406598` — success;
+- experiment `fc7c2187-2376-4a92-8de1-4665a06ea943`;
+- classification `INFRASTRUCTURE_ONLY_NON_SCORED`.
+
+K1-K8 remain PASS/CLOSED absent a material interface change.
+
+## Workflow/governance surface
+
+Exactly **6** active offline/static workflows remain:
 
 1. `local-gate-once.yml`
 2. `local-unit-tests.yml`
@@ -98,162 +239,70 @@ Exactly **4** root sentinels remain:
 - `.wp2-offpowder-artifact-qa-trigger`
 - `.wp2-preintegration-static-trigger`
 
-Completed K live/diagnostic workflows and the obsolete H-preflight workflow are no longer active. Historical content remains preserved in Git history and the canonical K closure record. Do not re-enable these historical workflows or their trigger paths without a new compatibility review and explicit authorization.
+No active workflow is currently authorized to contact/mutate POWDER or launch Golden/scored work.
 
-### A4 — provenance/supersession — PASS — 15/15
+## Current exact frontier — STOPPED before WP2-P6
 
-Historical status/readiness/old-H material is preserved but cannot override current authority. In particular:
-
-- old `H=UNFROZEN` / future H-calibration instructions are superseded;
-- old `RESERVE=true` is superseded;
-- Drive-critical teardown instructions are superseded;
-- original H1 raw bundles must not be represented as recovered;
-- old decision text D-017 and old horizon-selection portions of D-019 are historical only where superseded by Recovery Semantics Amendment v1.
-
-### A5 — offline QA + canonical closure — PASS — 15/15
-
-Current runtime acceptance evidence:
-
-- `Local Unit Tests` Actions run `33092273688`: **SUCCESS** on commit `bc42add0a3e1ea58f7c5f4d88055ba8587fbd9a7`.
-- **33/33 tests PASS** under Python 3.12.14 / `paho-mqtt==2.1.0`.
-- Tests explicitly verify `H_app=300`, anchor=`t_service_ready`, `completeness_300`, inconsistent/non-300 horizons rejected, and the historical H finalizer/CLI fail closed with outcome-derived H re-estimation prohibited.
-- `WP2 Off-POWDER Artifact Transport QA` Actions run `33092849805`: **SUCCESS** on commit `4f0d94d3e8c02284c5d92c80a0c1260f91701b51`.
-- Artifact ID `9655099849`; deterministic round-trip TAR SHA-256 `1a5c78b3ff588cef38338d12b7891793aca8f436f312c501b5712bb74d423605`.
-- Artifact QA verified independent upload/download byte equality and internal raw SHA-256 manifest; it logged `POWDER_CONTACT=NO`, `DRIVE_CONTACT=NO`, `SCIENTIFIC_RUN=NO`.
-- The current `scripts/wp2_golden_offline_qa.sh` was statically reviewed after reconciliation: it exercises synthetic Golden reconstruction, persistent escrow + `CONTROLLER_OFFPOWDER_REQUIRED`, controller round-trip verification, outer-hash corruption fail-closed, and internal raw-hash corruption fail-closed. A connector-created no-op trigger did not dispatch a new Actions run and is **not counted as runtime evidence**; the no-op trigger stamps were removed.
-- Historical Golden Offline QA run `33014162397` remains prior regression evidence only; it is not represented as current-controller-contract runtime acceptance.
-- Current workflow/trigger surface was re-enumerated after cleanup: 6 workflows / 4 root sentinels, zero active K/H-calibration execution surface.
-
-No POWDER contact, reservation, SSH, Golden run, H calibration, scored run, RF recalibration, K reopening, or H1 salvage occurred during AUDIT-R1.
-
-## Governing scientific state — frozen
-
-Recovery Semantics Amendment v1 remains authority:
-
-- `t_rf_restore`, `t_service_ready`, `t_app_complete` are distinct;
-- primary cohort = valid records generated at or before `t_rf_restore`;
-- **`H_app=300 s from t_service_ready`** is prospectively frozen;
-- primary endpoint = `completeness_300` at `t_service_ready + 300 s`;
-- preserve `T_service`, `T_app`, `T_total`;
-- S2/S3 clean ordered restore = `stop UE -> EPC -> eNB -> fresh UE -> architecture-blind service-ready probe`;
-- Golden G6 qualification bound = 120 s;
-- negative/null outcomes remain valid scientific evidence;
-- W1/Golden/scored outcome-driven H changes are prohibited.
-
-Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; attenuation IDs `1 33 2 34` remain coupled. Do not reopen RF calibration.
-
-## Protocol v0.6.1
-
-Current protocol:
-
-`experiments/WP-PWD01/protocol.md`
-
-The advisory pre-reservation resource-availability check remains **future-only**:
-
-`https://www.powderwireless.net/resinfo.php`
-
-Immediately before a later authorized booking attempt, record `PASS|DEFER|UNKNOWN`. Never silently change frozen nodes/hardware/profile to chase capacity. Portal lifecycle/READY/manifest remains authoritative.
-
-AUDIT-R1 did not contact this page or POWDER.
-
-## H1 — frozen adverse experiment of record
-
-- experiment `WP-HCAL-E`;
-- UUID `9153e16a-1eb1-45f5-88bf-303636a9d1ec`;
-- run `wp2h1-a1-20260826-001`;
-- profile revision `a6da96560b6526dc6816761282722c996418fd8c`;
-- mapping `enb1 -> nuc1`, `rue1 -> nuc2`;
-- exact deployed WellPulse commit `95ba9a57bef159450b00b8a439d393d22e1c0519`;
-- classification **`VALID_W1_RECOVERY_FAILURE`**;
-- scored: **NO**.
-
-Original H1 node-local raw bundles were **not recovered** after teardown. GitHub/local salvage is derived/provenance only. POWDER support subsequently confirmed that the `nuc1` and `nuc2` node-local disks had been reloaded immediately after experiment termination, while `/proj` storage persists across experiments. This confirms the operational rule now captured in the evidence architecture: mandatory raw evidence must leave node-local home and reach persistent `/proj` plus verified off-platform escrow before teardown. The support confirmation is retained outside the repository in the project experience/asset ledger rather than as scientific raw evidence.
-
-Do not reopen H1 salvage, rerun H1 to select H, or relabel the adverse result.
-
-## K1–K8 — closed
-
-Canonical record:
-
-`docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
-
-Decisive compatibility evidence:
-
-- historical workflow `wp2-kfastlane-live-compat-v2.yml`;
-- Actions run `33085406598` — success;
-- experiment `fc7c2187-2376-4a92-8de1-4665a06ea943`;
-- classification `INFRASTRUCTURE_ONLY_NON_SCORED`.
-
-It verified Portal READY/expiry binding, exact profile/hardware/image, controller SSH, detached launch, cross-node `/proj/WellPulse`, controller artifact round-trip, hashes and teardown authority.
-
-The historical K workflow is no longer active after AUDIT-R1 cleanup. Do not reopen K1–K8 absent a material interface change.
-
-## Current gate — STOPPED before execution
-
-The next bounded patch is:
-
-`LIVE_HCI_AND_RAW_EVIDENCE_GATE — CLOSURE PATCH`
-
-**Status: BLOCKED / NOT STARTED.**
-
-Do not begin it until the user explicitly says to continue.
-
-When authorized, keep it minimal and bounded:
-
-1. passive one-way HCI only;
-2. `HCI_CONTROL_ACTIONS_ENABLED=false`;
-3. enrich orchestrator-emitted status/events only; no independent POWDER probe;
-4. freeze exact mandatory raw-evidence/finalization contract;
-5. no background/in-run `/proj` checkpoint during protected science unless separately proven non-perturbing;
-6. run only bounded/offline QA needed for this gate;
-7. update canonical handover and **STOP before Golden**.
-
-## Golden remains prohibited
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
 `REBOOK_GOLDEN=false`
 
-Do **not**:
+`scored_runs_authorized=false`
 
-- contact POWDER for this stopped frontier;
-- create/modify/terminate a reservation;
-- SSH to POWDER;
-- run Golden;
-- run H calibration;
-- execute B1/W1/B2 scored work;
-- reopen K1–K8;
-- reopen RF calibration;
-- reopen H1 salvage.
+`HCI_CONTROL_ACTIONS_ENABLED=false`
 
-Only after the HCI/raw-evidence gate passes **and** a separate later explicit user authorization may the project perform the advisory resource preflight and book one clean non-scored Golden.
+The next bounded patch is:
+
+`WP2-P6 — ONE CLEAN NON-SCORED GOLDEN REHEARSAL`
+
+**Status: BLOCKED / NOT STARTED.**
+
+Do not begin P6 until the user separately and explicitly continues.
+
+When separately authorized, the shortest path is:
+
+1. immediately before booking, perform protocol v0.6.1 advisory resource-availability preflight at `https://www.powderwireless.net/resinfo.php`;
+2. record `RESOURCE_AVAILABILITY_PREFLIGHT=PASS|DEFER|UNKNOWN`;
+3. never silently change frozen hardware/profile/bindings to chase capacity;
+4. use Portal lifecycle/READY/manifest as authoritative;
+5. book exactly one clean non-scored Golden;
+6. execute frozen G0-G10 using passive HCI only;
+7. reconstruct from raw evidence;
+8. complete G9 persistent escrow and independent controller artifact round-trip;
+9. require `EVIDENCE_ESCROW_GATE=PASS` and `TEARDOWN_AUTHORIZED=YES` before teardown;
+10. STOP and perform WP2-P7 formal scientific closure/scored authorization decision separately.
 
 ## Shortest mission path
 
-`AUDIT-R1 PASS -> explicit user resume -> HCI/raw gate PASS -> STOP -> separate explicit user resume -> resinfo advisory preflight -> one clean non-scored Golden -> formal WP2 closure/scored authorization -> WP3 -> WP4 -> WP5`
+`AUDIT-R1 PASS -> WP2-P5 PASS -> STOP -> separate explicit user resume -> resinfo advisory preflight -> one clean non-scored Golden -> WP2-P7 closure/scored authorization -> WP3 -> WP4 -> WP5`
 
 ## Mandatory read order for the next agent
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/PROJECT_AUDIT_HANDOVER_2026-08-27.md`
-3. `docs/AUDIT_R1_SUPERSESSION_MAP_2026-08-27.md`
-4. `docs/AUDIT_R1_WORKFLOW_DEACTIVATION_2026-08-27.md`
-5. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
-6. `experiments/WP-PWD01/protocol.md`
-7. `docs/NEXT_GATE.md`
-8. `docs/MILESTONE_STATUS.md`
-9. `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
-10. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-11. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-12. `experiments/WP-PWD01/evidence_inventory_golden_v1.txt`
-13. `experiments/WP-PWD01/evidence-schema.md`
-14. `experiments/WP-PWD01/analysis-plan.md`
-15. `experiments/WP-PWD01/run-matrix.yaml`
-16. `src/wellpulse/powder_analysis.py`
-17. `scripts/reconstruct_wp2_golden.py`
+2. `docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+3. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+4. `docs/PROJECT_AUDIT_HANDOVER_2026-08-27.md`
+5. `docs/AUDIT_R1_SUPERSESSION_MAP_2026-08-27.md`
+6. `docs/AUDIT_R1_WORKFLOW_DEACTIVATION_2026-08-27.md`
+7. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
+8. `experiments/WP-PWD01/protocol.md`
+9. `docs/NEXT_GATE.md`
+10. `docs/MILESTONE_STATUS.md`
+11. `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
+12. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
+13. `experiments/WP-PWD01/evidence_inventory_golden_v1.txt`
+14. `experiments/WP-PWD01/evidence-schema.md`
+15. `experiments/WP-PWD01/analysis-plan.md`
+16. `experiments/WP-PWD01/run-matrix.yaml`
+17. `scripts/wp2_golden_hci_emit.py`
 18. `scripts/wp2_golden_orchestrator.sh`
 19. `scripts/wp2_golden_evidence_escrow.sh`
 20. `scripts/wp2_controller_pull_persistent_escrow.sh`
 21. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
-22. `docs/WORKFLOW_REGISTRY.md`
-23. `AGENTS.md`
+22. `scripts/wp2_golden_offline_qa.sh`
+23. `scripts/reconstruct_wp2_golden.py`
+24. `src/wellpulse/powder_analysis.py`
+25. `docs/WORKFLOW_REGISTRY.md`
+26. `AGENTS.md`
 
 **STOP / HANDOVER READY.**
