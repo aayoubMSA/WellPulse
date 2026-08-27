@@ -36,6 +36,18 @@ class P7BR3LiveSurfaceTests(unittest.TestCase):
         self.assertIn("wp2_p7b_path_contract.py validate", text)
         self.assertIn("p7b_copy_tree_with_hash_manifest", text)
 
+    def test_r2_blob_locks_are_checked_before_powder_api_list(self):
+        text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
+        for marker in (
+            "6d28468c93742046d952668b9df1cad8e6ea78c0",
+            "2e77e7e355e25c6e3f747956e2f2b0ac5ad46161",
+            "9063ec2e97e9cbf7a9f76d6ea10920236d8370ef",
+            "git hash-object",
+        ):
+            self.assertIn(marker, text)
+        self.assertLess(text.index("git hash-object"), text.index("portal-cli experiment list"))
+        self.assertLess(text.index("P7B_R2_CONTROLLER_STATIC_GATE=PASS"), text.index("portal-cli experiment list"))
+
     def test_strict_bundle_requires_all_three_receiver_ledgers(self):
         text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
         self.assertIn("for c in P7B-B1-S3 P7B-W1-S3 P7B-B2-S3", text)
@@ -43,6 +55,11 @@ class P7BR3LiveSurfaceTests(unittest.TestCase):
         self.assertIn("receiver/telemetry_received.csv", text)
         self.assertIn("analysis/p7b_reconstruction.json", text)
         self.assertIn("BLOCKED_STRICT_COMPLETENESS", text)
+
+    def test_receiver_console_is_provenance_not_nonempty_scientific_evidence(self):
+        text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
+        self.assertIn('test -e "$core/cells/$c/receiver/console.txt"', text)
+        self.assertNotIn('test -s "$core/cells/$c/receiver/console.txt"', text)
 
     def test_teardown_markers_precede_terminate(self):
         text = (ROOT / "powder" / "wp2_p7b_r3_execute.sh").read_text(encoding="utf-8")
