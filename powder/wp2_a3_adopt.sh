@@ -147,8 +147,8 @@ curl -fsSI --max-time 15 https://astral.sh/uv/install.sh >/dev/null
 curl -fsSI --max-time 15 https://downloads.rclone.org/rclone-current-linux-amd64.zip >/dev/null
 printf "UE_READONLY_RUNTIME=PASS\n"' | tee "$TMP/ue-readonly.txt" || fail UE_RUNTIME_PRECHECK 10
 
-bar 44 'Read-only internal SSH topology check'; echo
-ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '$POWDER_USERNAME@enb1' true && ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '$POWDER_USERNAME@rue1' true" || fail INTERNAL_SSH_TOPOLOGY 11
+bar 44 'Read-only manifest-endpoint SSH topology check'; echo
+ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '$POWDER_USERNAME@$CORE_EXT' true && ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '$POWDER_USERNAME@$UE_EXT' true" || fail INTERNAL_SSH_TOPOLOGY 11
 printf 'A3_INTERNAL_SSH=PASS\n'
 
 if [[ "$MODE" == PRECHECK ]]; then
@@ -206,7 +206,7 @@ RUN_ID="wp2-golden-a3-gh-${GITHUB_RUN_ID:-manual}-$(date -u +%Y%m%dT%H%M%SZ)"
 printf '%s\n' "$RUN_ID" > "$TMP/run-id"
 bar 80 'Launching exactly one non-scored Golden rehearsal on existing A3'; echo
 set +e
-ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "export PATH=\"\$HOME/.local/bin:\$PATH\"; cd \"\$HOME/WellPulse\"; WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$A3_ID' WP_CORE_HOST='enb1' WP_UE_HOST='rue1' WP_REMOTE_USER='$POWDER_USERNAME' WP_REPO_ROOT=\"\$HOME/WellPulse\" WP_PYTHON=\"\$HOME/.wp2-golden-venv/bin/python\" WP_RCLONE_REMOTE_ROOT='gdrive:' bash scripts/wp2_golden_orchestrator.sh" 2>&1 | tee "$TMP/golden-console.txt"
+ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "export PATH=\"\$HOME/.local/bin:\$PATH\"; cd \"\$HOME/WellPulse\"; WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$A3_ID' WP_CORE_HOST='$CORE_EXT' WP_UE_HOST='$UE_EXT' WP_REMOTE_USER='$POWDER_USERNAME' WP_REPO_ROOT=\"\$HOME/WellPulse\" WP_PYTHON=\"\$HOME/.wp2-golden-venv/bin/python\" WP_RCLONE_REMOTE_ROOT='gdrive:' bash scripts/wp2_golden_orchestrator.sh" 2>&1 | tee "$TMP/golden-console.txt"
 GOLDEN_RC=${PIPESTATUS[0]}
 set -e
 
