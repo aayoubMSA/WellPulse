@@ -1,5 +1,6 @@
-triggered_utc=2026-08-27T14:00:00Z
-scope=K1-P2_portal_pin_offline_static_acceptance
+triggered_utc=2026-08-27T14:48:00Z
+scope=K2-K7_fastlane_integrated_offline_static
 powder_contact=false
 drive_contact=false
+scientific_run=false
 portal_revision=01be03b2f60c067815a7654437320dd981ca3617
