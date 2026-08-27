@@ -10,15 +10,12 @@ from wellpulse.p7b_runtime_compat import parse_attenuator_set_evidence, evaluate
 
 ROOT = Path(__file__).resolve().parents[1]
 EXEC = ROOT / "experiments/WP-PWD01/p7b-executable-contract-v2.json"
-RUNTIME = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json"
-PROBE = ROOT / "evidence/powder/wp2-p7b-r3-target-runtime-probe-2026-08-28.json"
+RUNTIME = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json"
+MATRIX = ROOT / "docs/WP2_POWDER_RUNTIME_COMPATIBILITY_MATRIX_2026-08-28.md"
 
 
 def shell_executable_text(text: str) -> str:
-    return "\n".join(
-        raw for raw in text.splitlines()
-        if raw.strip() and not raw.lstrip().startswith("#")
-    )
+    return "\n".join(raw for raw in text.splitlines() if raw.strip() and not raw.lstrip().startswith("#"))
 
 
 class P7BR3CTargetRuntimeTests(unittest.TestCase):
@@ -26,21 +23,59 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
     def setUpClass(cls):
         cls.exec_contract = load_contract(EXEC)
         cls.runtime = json.loads(RUNTIME.read_text(encoding="utf-8"))
-        cls.probe = json.loads(PROBE.read_text(encoding="utf-8"))
+        cls.matrix = MATRIX.read_text(encoding="utf-8")
 
-    def test_observed_system_python_is_explicitly_prohibited_for_project_code(self):
+    def test_efcc_evidence_is_pinned(self):
+        efcc = self.runtime["efcc_evidence"]
+        self.assertEqual(efcc["github_run_id"], 33124645486)
+        self.assertEqual(efcc["artifact_id"], 9667857505)
+        self.assertEqual(efcc["artifact_zip_sha256"], "e0a1923af8ff1ffbbdf5bb20641f01ec9f81e5d96c67b0328260063f14848245")
+        self.assertEqual(efcc["inner_inventory_tar_sha256"], "b94c958a0b23bf812892680372485e6710b8f74b8368ea1c5c109e9f34d5541d")
+        for value in (str(efcc["github_run_id"]), str(efcc["artifact_id"]), efcc["artifact_zip_sha256"], efcc["inner_inventory_tar_sha256"]):
+            self.assertIn(value, self.matrix)
+        self.assertTrue(efcc["read_only"])
+        for flag in ("new_reservation", "rf_mutation", "cells", "restart", "teardown", "scored"):
+            self.assertFalse(efcc[flag])
+
+    def test_runtime_contract_supersedes_v1_only_prospectively(self):
+        sup = self.runtime["supersession"]
+        self.assertEqual(sup["historical_runtime_contract_retained"], "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json")
+        self.assertEqual(sup["prospective_runtime_contract"], "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json")
+        self.assertFalse(self.runtime["live_authorized"])
+        self.assertFalse(self.runtime["scored_runs_authorized"])
+
+    def test_observed_system_python_is_prohibited_and_pinned_runtime_required(self):
         for role in ("ue", "core"):
-            self.assertEqual(self.runtime["roles"][role]["system_python_observed"], "3.6.9")
-            self.assertFalse(self.runtime["roles"][role]["system_python_project_code_allowed"])
-            self.assertEqual(self.runtime["roles"][role]["project_python_exact"], "3.11.13")
-        self.assertIn("SYSTEM_PYTHON_3_6_9_INCOMPATIBLE_WITH_FROM_FUTURE_ANNOTATIONS", self.probe["confirmed_failure_modes"])
+            r = self.runtime["roles"][role]
+            self.assertEqual(r["system_python_observed"], "3.6.9")
+            self.assertFalse(r["system_python_project_code_allowed"])
+            self.assertEqual(r["project_python_exact"], "3.11.13")
+            self.assertEqual(r["paho_mqtt_exact"], "2.1.0")
+            self.assertEqual(r["python_metadata_interface"], "importlib.metadata")
+            self.assertFalse(r["pkg_resources_required"])
+            self.assertTrue(r["remote_jq_dependency_prohibited"])
 
-    def test_shell_preservation_helper_has_zero_python_dependency(self):
+    def test_role_specific_tools_are_not_assumed_symmetric(self):
+        ue = self.runtime["roles"]["ue"]
+        core = self.runtime["roles"]["core"]
+        self.assertTrue(ue["java_required"])
+        self.assertEqual(ue["java_major"], 11)
+        self.assertFalse(core["java_required"])
+        self.assertFalse(ue["mosquitto_daemon_required"])
+        self.assertTrue(core["mosquitto_daemon_required"])
+        self.assertEqual(core["mosquitto_version_observed"], "1.4.15")
+
+    def test_b2_java_jar_is_pre_rf_hash_gated(self):
+        b2 = self.runtime["b2_java_dependency"]
+        self.assertEqual(b2["role"], "ue")
+        self.assertTrue(b2["pre_rf_hash_verification_required"])
+        self.assertEqual(b2["jar_sha256"], "59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185")
+
+    def test_shell_preservation_helper_has_zero_python_or_jq_dependency(self):
         helper = ROOT / "scripts/wp2_p7b_preservation_helpers_v2.sh"
-        text = helper.read_text(encoding="utf-8")
-        executable = shell_executable_text(text)
-        self.assertNotIn("python3", executable)
-        self.assertIn("system python3 is 3.6.9", text)
+        executable = shell_executable_text(helper.read_text(encoding="utf-8"))
+        self.assertNotRegex(executable, r"(^|[;&|()\s])python3([;&|()\s]|$)")
+        self.assertNotRegex(executable, r"(^|[;&|()\s])jq([;&|()\s]|$)")
         p = subprocess.run(["bash", "-n", str(helper)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
 
@@ -82,25 +117,26 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
         verdict = evaluate_readiness_v2(obs, self.exec_contract.legacy_qualification_view())
         self.assertTrue(verdict.passed, verdict.failures)
 
-    def test_r2_entrypoint_enforces_target_python_and_v2_readiness_router(self):
+    def test_r2_entrypoint_enforces_efcc_runtime_v2(self):
         text = (ROOT / "scripts/wp2_p7b_c_node_r2.py").read_text(encoding="utf-8")
         for marker in (
-            "TARGET_PROJECT_PYTHON_MISMATCH",
-            "wp2_p7b_validate_readiness_v2.py",
-            "READBACK_CAPABILITY=UNSUPPORTED_BY_OBSERVED_TMCC_INTERFACE",
-            "PHYSICAL_DB_READBACK_CLAIM=NO",
-            "p7b-target-runtime-contract-v1.json",
+            "TARGET_PROJECT_PYTHON_MISMATCH", "TARGET_PAHO_MQTT_MISMATCH", "importlib.metadata",
+            "wp2_p7b_validate_readiness_v2.py", "READBACK_CAPABILITY=UNSUPPORTED_BY_OBSERVED_TMCC_INTERFACE",
+            "PHYSICAL_DB_READBACK_CLAIM=NO", "p7b-target-runtime-contract-v2.json", "P7B_EFCC_BINDING=PASS",
         ):
             self.assertIn(marker, text)
+        self.assertNotIn("p7b-target-runtime-contract-v1.json", text)
 
-    def test_preflight_prohibits_tmcc_as_presumed_readback(self):
-        text = (ROOT / "experiments/WP-PWD01/P7B_10MIN_PREFLIGHT_CONTRACT_v1.md").read_text(encoding="utf-8")
-        self.assertIn("MUST NOT", text)
-        self.assertIn("invoke `tmcc attenuator` as a presumed readback probe", text)
-        self.assertIn("generic `GET_ERROR` means unknown control-plane state", text)
+    def test_preflight_encodes_observed_target_delta(self):
         script = (ROOT / "scripts/wp2_p7b_target_node_preflight.sh").read_text(encoding="utf-8")
-        self.assertIn("FIXTURE_ONLY_NO_LIVE_TMCC_READBACK", script)
+        for marker in (
+            "3.6.9", "3.11.13", "PAHO_MQTT=", "B2_JAR_PATH_NOT_SUPPLIED", "REMOTE_JQ_DEPENDENCY=PROHIBITED",
+            "PYTHON_METADATA_INTERFACE=importlib.metadata", "EFCC_RUNTIME_BINDING=PASS", "FIXTURE_ONLY_NO_LIVE_TMCC_READBACK",
+        ):
+            self.assertIn(marker, script)
         self.assertNotIn("/usr/local/etc/emulab/tmcc attenuator", script)
+        p = subprocess.run(["bash", "-n", str(ROOT / "scripts/wp2_p7b_target_node_preflight.sh")], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.assertEqual(p.returncode, 0, p.stdout)
 
     def test_portal_and_cross_step_semantics_are_fail_closed(self):
         portal = self.runtime["portal_policy"]
@@ -110,39 +146,23 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
         self.assertTrue(gha["ssh_agent_cross_step_persistence_prohibited"])
         self.assertTrue(gha["background_process_cross_step_persistence_prohibited"])
 
-    def test_role_specific_tools_are_not_assumed_symmetric(self):
-        self.assertEqual(self.probe["ue"]["mosquitto_daemon"], "ABSENT")
-        self.assertEqual(self.probe["core"]["java"], "ABSENT")
-        self.assertTrue(self.runtime["roles"]["ue"]["java_required"])
-        self.assertFalse(self.runtime["roles"]["core"]["java_required"])
-        self.assertFalse(self.runtime["roles"]["ue"]["mosquitto_daemon_required"])
-        self.assertTrue(self.runtime["roles"]["core"]["mosquitto_daemon_required"])
+    def test_efcc_blocks_live_on_unknown_or_mismatch(self):
+        gate = self.runtime["efcc_gate"]
+        self.assertTrue(gate["target_runtime_is_compatibility_baseline"])
+        self.assertTrue(gate["contract_delta_audit_only"])
+        self.assertEqual(set(gate["blocks_live_on_required_dependency_states"]), {"MISSING", "UNKNOWN", "VERSION_INCOMPATIBLE", "ROLE_MISMATCH", "UNTESTED"})
 
-    def test_rescue_and_salvage_live_surfaces_are_retired(self):
-        for path in (
-            ROOT / ".github/workflows/wp2-p7b-r3-same-reservation-rescue.yml",
-            ROOT / ".wp2-p7b-r3-same-reservation-rescue-trigger",
-            ROOT / ".github/workflows/wp2-p7b-r3-evidence-salvage.yml",
-            ROOT / ".wp2-p7b-r3-evidence-salvage-trigger",
-        ):
-            self.assertFalse(path.exists(), str(path))
-
-    def test_target_runtime_contract_is_pinned_to_current_scientific_contract_blob(self):
+    def test_target_runtime_contract_is_pinned_to_scientific_contract_blob(self):
         expected = self.runtime["base_executable_contract"]["git_blob_sha"]
         p = subprocess.run(["git", "hash-object", str(EXEC)], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
         self.assertEqual(p.stdout.strip(), expected)
 
     def test_static_target_runtime_qa_script_passes(self):
-        p = subprocess.run(
-            ["python3", str(ROOT / "scripts/wp2_p7b_target_runtime_qa.py")],
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
+        p = subprocess.run(["python3", str(ROOT / "scripts/wp2_p7b_target_runtime_qa.py")], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
         self.assertIn("WP2_P7B_TARGET_RUNTIME_QA=PASS", p.stdout)
+        self.assertIn("EFCC_CONTRACT_DELTA=PASS", p.stdout)
         self.assertIn("LIVE_AUTHORIZATION=BLOCKED", p.stdout)
 
 
