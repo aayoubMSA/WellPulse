@@ -37,7 +37,8 @@ bash_version="$(bash -c 'printf "%s" "$BASH_VERSION"')"
 
 if [[ "$ROLE" == ue ]]; then
   command -v java >/dev/null || fail JAVA_MISSING_UE
-  java_major="$(java -version 2>&1 | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p')"
+  java_text="$(java -version 2>&1 || true)"
+  java_major="$(printf '%s\n' "$java_text" | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p')"
   [[ "$java_major" == 11 ]] || fail "JAVA_MAJOR_$java_major"
   [[ -n "${WP_B2_JAR_PATH:-}" ]] || fail B2_JAR_PATH_NOT_SUPPLIED
   [[ -s "$WP_B2_JAR_PATH" ]] || fail B2_JAR_MISSING
@@ -45,7 +46,10 @@ if [[ "$ROLE" == ue ]]; then
   [[ "$jar_sha" == 59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185 ]] || fail "B2_JAR_SHA_$jar_sha"
 else
   command -v mosquitto >/dev/null || fail MOSQUITTO_DAEMON_MISSING_CORE
-  mosq_version="$(mosquitto -h 2>&1 | sed -n '1s/.*version \([^ ]*\).*/\1/p')"
+  # Diagnostic/version CLIs may print valid output while returning non-zero (observed: mosquitto -h on 1.4.15).
+  # Do not let pipefail convert a usable version probe into an orchestration failure; parse output, then validate explicitly.
+  mosq_text="$(mosquitto -h 2>&1 || true)"
+  mosq_version="$(printf '%s\n' "$mosq_text" | sed -n '1s/.*version \([^ ]*\).*/\1/p')"
   [[ "$mosq_version" == 1.4.15 ]] || fail "EFCC_MOSQUITTO_CHANGED_$mosq_version"
 fi
 
