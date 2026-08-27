@@ -4,6 +4,9 @@ set -euo pipefail
 REPO="${WP_REPO_ROOT:-$HOME/WellPulse}"
 VENV="${WP_A3_VENV:-$HOME/.wp2-golden-venv}"
 PYTHON_VERSION="${WP_A3_PYTHON_VERSION:-3.11.13}"
+UV_VERSION="${WP_A3_UV_VERSION:-0.12.1}"
+UV_URL="${WP_A3_UV_URL:-https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz}"
+UV_SHA256="${WP_A3_UV_SHA256:-90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb}"
 RCLONE_VERSION="${WP_A3_RCLONE_VERSION:-1.75.0}"
 RCLONE_URL="${WP_A3_RCLONE_URL:-https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip}"
 RCLONE_SHA256="${WP_A3_RCLONE_SHA256:-aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa}"
@@ -14,15 +17,35 @@ fail(){ echo; echo "A3_RUNTIME_BOOTSTRAP=FAIL:$1" >&2; exit 80; }
 [[ -f "$REPO/pyproject.toml" ]] || fail REPO_NOT_PRESENT
 command -v curl >/dev/null 2>&1 || fail CURL_MISSING
 command -v sha256sum >/dev/null 2>&1 || fail SHA256SUM_MISSING
+command -v tar >/dev/null 2>&1 || fail TAR_MISSING
 
-bar 10 'Installing uv in user space'; echo
+bar 10 "Installing verified uv v$UV_VERSION"; echo
+mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
-if ! command -v uv >/dev/null 2>&1; then
-  curl -LsSf https://astral.sh/uv/install.sh | sh >/tmp/wp2-a3-uv-install.log 2>&1 || fail UV_INSTALL
-  export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+LOCAL_UV="$HOME/.local/bin/uv"
+NEED_UV=1
+if [[ -x "$LOCAL_UV" ]]; then
+  INSTALLED_UV="$($LOCAL_UV --version 2>/dev/null | awk '{print $2; exit}')"
+  [[ "$INSTALLED_UV" == "$UV_VERSION" ]] && NEED_UV=0
 fi
-UV="$(command -v uv || true)"
-[[ -x "$UV" ]] || fail UV_NOT_FOUND
+if [[ "$NEED_UV" -eq 1 ]]; then
+  rm -rf /tmp/wp2-a3-uv /tmp/wp2-a3-uv.tar.gz
+  mkdir -p /tmp/wp2-a3-uv
+  curl -fsSLo /tmp/wp2-a3-uv.tar.gz "$UV_URL" || fail UV_DOWNLOAD
+  printf '%s  %s\n' "$UV_SHA256" /tmp/wp2-a3-uv.tar.gz | sha256sum -c - >/tmp/wp2-a3-uv-sha256.txt 2>&1 || {
+    cat /tmp/wp2-a3-uv-sha256.txt >&2 || true
+    fail UV_SHA256
+  }
+  tar -xzf /tmp/wp2-a3-uv.tar.gz -C /tmp/wp2-a3-uv || fail UV_EXTRACT
+  UBIN="$(find /tmp/wp2-a3-uv -type f -name uv | head -1)"
+  [[ -n "$UBIN" ]] || fail UV_BINARY_NOT_FOUND
+  install -m 755 "$UBIN" "$LOCAL_UV" || fail UV_INSTALL
+fi
+[[ -x "$LOCAL_UV" ]] || fail UV_NOT_FOUND
+INSTALLED_UV="$($LOCAL_UV --version 2>/dev/null | awk '{print $2; exit}')"
+[[ "$INSTALLED_UV" == "$UV_VERSION" ]] || fail "UV_VERSION_$INSTALLED_UV"
+printf 'UV_RUNTIME=%s\n' "$INSTALLED_UV"
+UV="$LOCAL_UV"
 
 bar 30 "Installing isolated Python $PYTHON_VERSION"; echo
 "$UV" python install "$PYTHON_VERSION" >/tmp/wp2-a3-uv-python.log 2>&1 || fail PYTHON_INSTALL
@@ -80,7 +103,8 @@ bar 94 'Recording exact runtime versions'; echo
 {
   printf 'utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
   printf 'host=%s\n' "$(hostname)"
-  printf 'uv=%s\n' "$(uv --version 2>/dev/null || true)"
+  printf 'uv=%s\n' "$($UV --version 2>/dev/null || true)"
+  printf 'uv_archive_sha256=%s\n' "$UV_SHA256"
   printf 'python=%s\n' "$("$PY" --version 2>&1)"
   printf 'paho_mqtt=%s\n' "$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')"
   printf 'rclone=%s\n' "$($LOCAL_RCLONE version | head -1)"
@@ -91,5 +115,6 @@ bar 94 'Recording exact runtime versions'; echo
 
 bar 100 'A3 isolated runtime PASS'; echo
 printf 'WP_A3_PYTHON=%s\n' "$PY"
+printf 'WP_A3_UV=%s\n' "$UV"
 printf 'WP_A3_RCLONE=%s\n' "$LOCAL_RCLONE"
 printf 'A3_RUNTIME_BOOTSTRAP=PASS\n'
