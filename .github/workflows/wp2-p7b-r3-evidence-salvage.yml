@@ -72,29 +72,29 @@ jobs:
           done
           test "$MOK" = 1
           python3 - "$TMP/manifests.json" "$TMP/nodes.json" <<'PY'
-import json,sys,xml.etree.ElementTree as ET
-obj=json.load(open(sys.argv[1])); xmls=[]; out={}
-def walk(x):
-    if isinstance(x,dict):
-        for v in x.values(): walk(v)
-    elif isinstance(x,list):
-        for v in x: walk(v)
-    elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xmls.append(x)
-walk(obj)
-for text in xmls:
-    try: root=ET.fromstring(text)
-    except Exception: continue
-    for node in root.iter():
-        if node.tag.rsplit('}',1)[-1] != 'node': continue
-        cid=node.attrib.get('client_id','')
-        if cid not in {'enb1','rue1'}: continue
-        for ch in node.iter():
-            if ch.tag.rsplit('}',1)[-1]=='login' and ch.attrib.get('hostname'):
-                out[cid]={'username':ch.attrib.get('username',''),'hostname':ch.attrib['hostname'],'port':int(ch.attrib.get('port','22'))}
-                break
-assert set(out)=={'enb1','rue1'}, out
-json.dump(out,open(sys.argv[2],'w'),indent=2,sort_keys=True)
-PY
+          import json,sys,xml.etree.ElementTree as ET
+          obj=json.load(open(sys.argv[1])); xmls=[]; out={}
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()): xmls.append(x)
+          walk(obj)
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for node in root.iter():
+                  if node.tag.rsplit('}',1)[-1] != 'node': continue
+                  cid=node.attrib.get('client_id','')
+                  if cid not in {'enb1','rue1'}: continue
+                  for ch in node.iter():
+                      if ch.tag.rsplit('}',1)[-1]=='login' and ch.attrib.get('hostname'):
+                          out[cid]={'username':ch.attrib.get('username',''),'hostname':ch.attrib['hostname'],'port':int(ch.attrib.get('port','22'))}
+                          break
+          assert set(out)=={'enb1','rue1'}, out
+          json.dump(out,open(sys.argv[2],'w'),indent=2,sort_keys=True)
+          PY
           cat "$TMP/nodes.json"
           echo "core_user=$(jq -r '.enb1.username' "$TMP/nodes.json")" >> "$GITHUB_OUTPUT"
           echo "core_host=$(jq -r '.enb1.hostname' "$TMP/nodes.json")" >> "$GITHUB_OUTPUT"
@@ -111,16 +111,13 @@ PY
           umask 077
           mkdir -p /tmp/wp2-p7b-r3-salvage "$HOME/.ssh"
           python3 - <<'PY'
-import os
-from pathlib import Path
-raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
-Path('/tmp/wp2-p7b-r3-salvage/private.key').write_text(raw,encoding='utf-8',newline='\n')
-PY
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path('/tmp/wp2-p7b-r3-salvage/private.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
           chmod 600 /tmp/wp2-p7b-r3-salvage/private.key
-          cat > /tmp/wp2-p7b-r3-salvage/askpass <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
-EOF
+          printf '%s\n' '#!/usr/bin/env bash' 'printf '\''%s\\n'\'' "$POWDER_SSH_KEY_PASSPHRASE"' > /tmp/wp2-p7b-r3-salvage/askpass
           chmod 700 /tmp/wp2-p7b-r3-salvage/askpass
           export SSH_ASKPASS=/tmp/wp2-p7b-r3-salvage/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
           eval "$(ssh-agent -s)" >/dev/null
