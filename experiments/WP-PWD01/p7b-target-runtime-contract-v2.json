@@ -1,0 +1,176 @@
+{
+  "schema_version": "wp2-p7b-target-runtime-contract-v2",
+  "status": "OFFLINE_EFCC_BOUND_RUNTIME_COMPATIBILITY_GATE_NOT_LIVE_AUTHORITY",
+  "supersession": {
+    "prospective_runtime_contract": "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json",
+    "historical_runtime_contract_retained": "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json",
+    "rule": "v2 governs prospective execution; v1 is retained for historical provenance only"
+  },
+  "base_executable_contract": {
+    "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
+    "git_blob_sha": "233aabeaf3081470bc3ebc1ee04168f8932fc415"
+  },
+  "efcc_evidence": {
+    "standard": "EFCC_ENVIRONMENT_FIRST_COMPATIBILITY_CENSUS_GATE",
+    "matrix_path": "docs/WP2_POWDER_RUNTIME_COMPATIBILITY_MATRIX_2026-08-28.md",
+    "workflow": "WP2 POWDER SSH Environment Inventory",
+    "github_run_id": 33124645486,
+    "experiment_id": "12b39276-af0f-4e34-8dfd-685b006dd6bd",
+    "experiment_name": "wp7brq19810043",
+    "artifact_id": 9667857505,
+    "artifact_zip_sha256": "e0a1923af8ff1ffbbdf5bb20641f01ec9f81e5d96c67b0328260063f14848245",
+    "inner_inventory_tar_sha256": "b94c958a0b23bf812892680372485e6710b8f74b8368ea1c5c109e9f34d5541d",
+    "collection_verdict": "WP2_POWDER_SSH_ENV_INVENTORY_WORKFLOW=PASS_COLLECTION_COMPLETE",
+    "read_only": true,
+    "new_reservation": false,
+    "rf_mutation": false,
+    "cells": false,
+    "restart": false,
+    "teardown": false,
+    "scored": false
+  },
+  "scored_runs_authorized": false,
+  "live_authorized": false,
+  "target_image": {
+    "profile": "PowderProfiles/srslte-controlled-rf",
+    "profile_revision": "a6da96560b6526dc6816761282722c996418fd8c",
+    "hardware_type": "nuc5300",
+    "image": "urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1",
+    "os_id": "ubuntu",
+    "os_version": "18.04"
+  },
+  "roles": {
+    "github_controller": {
+      "os_family": "ubuntu",
+      "project_python_min": "3.11",
+      "bash_min": "4.4",
+      "ssh_agent_state_must_be_initialized_in_same_step_as_use": true,
+      "controller_only_jq_allowed": true
+    },
+    "ue": {
+      "node_binding": "nuc2",
+      "system_python_observed": "3.6.9",
+      "system_python_project_code_allowed": false,
+      "project_python": "$HOME/.wp2-golden-venv/bin/python",
+      "project_python_exact": "3.11.13",
+      "paho_mqtt_exact": "2.1.0",
+      "python_metadata_interface": "importlib.metadata",
+      "pkg_resources_required": false,
+      "bash_observed": "4.4.19",
+      "java_required": true,
+      "java_major": 11,
+      "java_observed": "11.0.19",
+      "mosquitto_daemon_required": false,
+      "mosquitto_pub_required": true,
+      "remote_jq_required": false,
+      "remote_jq_dependency_prohibited": true,
+      "openssl_observed": "1.1.1",
+      "gnu_tar_observed": "1.29",
+      "rsync_observed": "3.1.2",
+      "coreutils_sha256sum_observed": "8.28",
+      "proj_wellpulse_required_writable": true
+    },
+    "core": {
+      "node_binding": "nuc1",
+      "system_python_observed": "3.6.9",
+      "system_python_project_code_allowed": false,
+      "project_python": "$HOME/.wp2-golden-venv/bin/python",
+      "project_python_exact": "3.11.13",
+      "paho_mqtt_exact": "2.1.0",
+      "python_metadata_interface": "importlib.metadata",
+      "pkg_resources_required": false,
+      "bash_observed": "4.4.19",
+      "java_required": false,
+      "mosquitto_daemon_required": true,
+      "mosquitto_version_observed": "1.4.15",
+      "mosquitto_pub_required": true,
+      "remote_jq_required": false,
+      "remote_jq_dependency_prohibited": true,
+      "openssl_observed": "1.1.1",
+      "gnu_tar_observed": "1.29",
+      "rsync_observed": "3.1.2",
+      "coreutils_sha256sum_observed": "8.28",
+      "proj_wellpulse_required_writable": true
+    }
+  },
+  "node_project_python_policy": {
+    "unqualified_python3_for_repo_scripts_prohibited": true,
+    "from_future_annotations_scripts_require_pinned_python": true,
+    "syntax_check_with_target_interpreter_required_before_rf_mutation": true,
+    "required_entrypoint_interpreter": "$HOME/.wp2-golden-venv/bin/python",
+    "required_python_dependencies": {"paho-mqtt": "2.1.0"},
+    "package_metadata_interface": "importlib.metadata",
+    "pkg_resources_dependency_prohibited_for_runtime_gate": true
+  },
+  "role_specific_dependency_policy": {
+    "symmetric_tool_assumptions_prohibited": true,
+    "ue_only": ["java_major_11", "b2_paho_java_jar_sha256"],
+    "core_only": ["mosquitto_daemon_1.4.15"],
+    "both_nodes": ["pinned_python_3.11.13", "paho_mqtt_2.1.0", "mosquitto_pub", "openssl", "bash", "find", "sort", "xargs", "sha256sum", "tar", "rsync", "proj_wellpulse_writable"],
+    "remote_jq_dependency_prohibited": true
+  },
+  "b2_java_dependency": {
+    "role": "ue",
+    "implementation": "Eclipse Paho Java 1.2.5",
+    "jar_sha256": "59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185",
+    "pre_rf_hash_verification_required": true
+  },
+  "preservation_policy": {
+    "remote_preservation_language": "bash_and_coreutils_only",
+    "remote_project_python_dependency_prohibited": true,
+    "remote_jq_dependency_prohibited": true,
+    "required_commands": ["bash", "find", "sort", "xargs", "sha256sum", "tar", "rsync"],
+    "controller_pull_each_node_from_originating_node": true,
+    "cross_node_proj_visibility_may_not_be_assumed_for_controller_pull": true,
+    "outer_and_internal_sha256_required": true
+  },
+  "attenuation_control": {
+    "set_command_template": "/usr/local/etc/emulab/tmcc attenuator {id} {db}",
+    "attenuator_ids": [1, 33, 2, 34],
+    "readback_supported_by_observed_tmcc_interface": false,
+    "physical_db_readback_claim_prohibited": true,
+    "q0_readiness_verification_mode": "SET_COMMAND_ACK_PLUS_INDEPENDENT_Q0_PATH_EVIDENCE",
+    "required_set_ack": {
+      "rc": 0,
+      "output_contains": "changing attenuation",
+      "exact_id_set_required": true,
+      "exact_requested_db_required": true
+    },
+    "required_independent_q0_evidence": ["route_via_tun_srsue", "five_probes_zero_packet_loss", "tls_mqtt_probe_pass", "initial_session_present_false", "runtime_config_lock_pass"],
+    "tmcc_id_only_command_must_not_be_used_as_readback": true
+  },
+  "portal_policy": {
+    "generic_get_error_semantic": "UNKNOWN_CONTROL_PLANE_STATE",
+    "generic_get_error_is_not_not_ready": true,
+    "generic_get_error_is_not_not_found": true,
+    "generic_get_error_may_not_confirm_teardown": true,
+    "readiness_requires_successful_record_or_manifest_plus_ssh_identity": true,
+    "teardown_confirmation_requires_explicit_terminal_state_or_typed_not_found_evidence": true
+  },
+  "github_actions_policy": {
+    "ssh_agent_cross_step_persistence_prohibited": true,
+    "background_process_cross_step_persistence_prohibited": true,
+    "step_local_ephemeral_environment_must_be_recreated": true,
+    "trigger_retirement_order": ["workflow", "trigger"],
+    "workflow_trigger_deletion_race_must_be_considered": true
+  },
+  "efcc_gate": {
+    "target_runtime_is_compatibility_baseline": true,
+    "contract_delta_audit_only": true,
+    "independent_or_orthogonal_census_required": true,
+    "machine_readable_compatibility_matrix_required": true,
+    "blocks_live_on_required_dependency_states": ["MISSING", "UNKNOWN", "VERSION_INCOMPATIBLE", "ROLE_MISMATCH", "UNTESTED"],
+    "rerun_required_on_material_change": ["profile_revision", "hardware_type", "image", "system_or_pinned_interpreter", "required_library", "required_cli_or_service", "external_api_or_cli_schema"]
+  },
+  "interface_preflight": {
+    "required_before_rf_mutation": ["target_image_identity", "system_and_pinned_python_versions", "paho_mqtt_exact_version", "target_python_syntax_compile", "no_runtime_pkg_resources_dependency", "bash_version", "role_specific_java_presence", "role_specific_mosquitto_presence", "mosquitto_pub_presence", "remote_jq_not_required", "openssl_presence", "tar_sha256sum_find_sort_rsync_presence", "proj_wellpulse_writable", "b2_jar_exact_sha_on_ue", "profile_revision", "manifest_bindings", "ssh_to_both_nodes", "attenuator_set_interface_contract"]
+  },
+  "future_execution": {
+    "historical_r1_entrypoint_prohibited": true,
+    "authoritative_entrypoint": "scripts/wp2_p7b_c_node_r2.py",
+    "entrypoint_must_consume_this_contract": true,
+    "live_workflow_may_not_exist_until_target_runtime_qa_passes": true,
+    "fresh_explicit_live_authorization_still_required": true
+  },
+  "claim_boundary": "runtime and interface compatibility only; does not authorize live execution, RF mutation, replacement reservation, retry, or scored work"
+}
