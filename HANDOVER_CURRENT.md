@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after H1-PSH PSH-1 local provenance/artifact discovery.
+Last updated: 2026-08-27 after closure of H1-PSH local PowerShell/provenance salvage.
 
 ## Executive state
 
@@ -13,9 +13,7 @@ Last updated: 2026-08-27 after H1-PSH PSH-1 local provenance/artifact discovery.
 - Scientific weighted completion: **20%**.
 - Repository workflow cleanup: **CLOSED / 100% — C0..C4 PASS**.
 - H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery from GitHub failed**.
-- H1-PSH local salvage: **ACTIVE**.
-- PSH-0 history freeze/search: **PASS; no H1-specific hit**.
-- PSH-1 bounded local provenance/artifact discovery: **PASS; no material H1 recovery**.
+- H1-PSH local salvage: **CLOSED_NO_RECOVERY**.
 - `H=UNFROZEN`.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
@@ -89,100 +87,57 @@ Verdict:
 
 Historical H1 archive SHA-256 anchors remain preserved, but the archive bytes are unavailable from GitHub/current user-accessible POWDER storage.
 
-## H1-PSH — Home-PC PowerShell/local provenance salvage
+## H1-PSH — Home-PC PowerShell/local provenance salvage — CLOSED
 
 Canonical specification:
 
 `docs/H1_POWERSHELL_HISTORY_SALVAGE_2026-08-27.md`
 
+Canonical result records:
+
+- `evidence/powder/h1-psh0-history-freeze-result-2026-08-27.md`
+- `evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
+- `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
+
 ### PSH-0 — PASS / CLOSED
 
-Canonical result:
-
-`evidence/powder/h1-psh0-history-freeze-result-2026-08-27.md`
-
-Result commit:
-
-`c140d1b4a87f412b38f352ed71bc5cd9d24476c5`
-
-User-returned local evidence reported:
-
-- `PSEdition=Core`
-- `PSVersion=7.6.5`
-- current-host PSReadLine history: `C:\Users\admino\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt`
-- history sources found: `1`
-- `ALL_HASH_VERIFICATION=PASS`
-- `SOURCE_FILES_MODIFIED=NO`
-- `NETWORK_USED=NO`
-- total broad keyword hits: `1335`
-- high-specificity H1 hits: `0`
-
-Interpretation: the single discovered PSReadLine source was preserved and searched safely but contained no H1-specific anchors. Broad-hit counts were noise from generic terms.
+- PowerShell Core `7.6.5`.
+- Current-host PSReadLine history preserved and hash-verified.
+- One history source found.
+- Source mutation: NO.
+- Network: NO.
+- High-specificity H1 hits: `0`.
 
 ### PSH-1 — PASS / CLOSED
 
-Canonical result:
+- Eight bounded roots scanned.
+- Candidate files: `9`, all unrelated false positives.
+- Transcript files: `0`.
+- High-specificity content hits: `43`, all self-generated salvage-script references and excluded from evidence.
+- Exact known H1/recovery/reproducibility archive hash matches: `0`.
+- No source mutation or network use.
 
-`evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
+### PSH-2 — PASS / CLOSED
 
-Result commit:
+Final low-cost provenance attempt, bounded to Windows mechanisms and the H1 date window:
 
-`1f0398fab2b4dcdd5668e8d8e74bf59d201a0618`
+- PowerShell event H1 hits: `0`.
+- Transcripts with H1 anchor: `0`.
+- Recent Items with H1 anchor: `0`.
+- Shell/SSH prefetch entries in the window: `8`, metadata only.
+- `MATERIAL_H1_PROVENANCE_LEAD=False`.
+- No network, system mutation, disk forensics, USN journal, undelete, or recovery tooling.
 
-User-returned PSH-1 bundle reported:
+### Final H1-PSH verdict
 
-- runtime: PowerShell Core `7.6.5`
-- network used: NO
-- source mutation: NO
-- temp included: NO
-- root count: `8`
-- candidate files: `9`
-- transcript files: `0`
-- high-specificity content hits: `43`
-- exact known-hash matches: `0`
-- errors: none
+- `H1_POWERSHELL_SALVAGE=CLOSED_NO_RECOVERY`
+- `H1_FULL_RAW_FROM_HOME_PC=NOT_RECOVERED`
+- `H1_MATERIAL_LOCAL_PROVENANCE_LEAD=NONE`
+- `RS1_RAW_RECONSTRUCTION=BLOCKED_ON_RAW_BUNDLES`
 
-Interpretation:
+Per the predeclared kill gate, do not expand into forensic recovery, registry carving, USN journal analysis, undelete utilities, or additional full-disk scans. This lane is closed unless a genuinely new external evidence source appears later.
 
-- All nine candidate files were unrelated false positives from other projects/packages.
-- All 43 high-specificity content hits came from the PSH-0/PSH-1 salvage scripts themselves and are excluded as recovery evidence.
-- No PowerShell transcript was discovered in the scanned roots.
-- No file matched any known H1/recovery/reproducibility archive SHA-256.
-- The scanned roots included `E:\` because the resolved Desktop root on this PC mapped there, so the negative result is stronger than a Downloads-only check.
-
-Scientific consequence: PSH-1 recovered no H1 raw bytes. H1 remains `VALID_W1_RECOVERY_FAILURE`; `H=UNFROZEN`; RS-1 remains blocked.
-
-### PSH-2 — NEXT / NOT STARTED
-
-Purpose: targeted **provenance-source recovery**, not another generic file scan.
-
-Allowed targets only:
-
-- Windows Terminal local state/session provenance;
-- PowerShell transcript configuration/registry evidence and any non-default transcript destinations;
-- OpenSSH/SSH/SCP client traces or known-host/session metadata that may reveal the actual operating path;
-- Windows Recent Items / Jump Lists / shell-link provenance around 2026-08-26;
-- filesystem metadata for files created/modified around the H1 execution window on likely user drives;
-- command/shell artifacts outside PSReadLine if a concrete Windows mechanism supports them.
-
-Mandatory PSH-2 contract:
-
-1. local-only, read-only;
-2. no network, POWDER, GitHub, SSH, SCP, SFTP, rclone, cloud, or API contact;
-3. no installs or system configuration changes;
-4. do not repeat the same full filename/content scan from PSH-1;
-5. target provenance mechanisms and the 2026-08-26 time window;
-6. preserve/hash any discovered provenance source before analysis where practical;
-7. never commit credentials, private keys, tokens, or secret-bearing session material;
-8. treat path/session evidence as provenance unless original artifact bytes are recovered;
-9. if an H1 candidate file/path is found, stop broad discovery and move to targeted hash verification only;
-10. do not reopen RS-1 without sufficient legitimate raw bytes.
-
-Possible final H1-PSH outcomes remain:
-
-- `PASS_FULL_RAW_RECOVERED`
-- `PASS_PARTIAL`
-- `CLOSED_NO_RECOVERY`
+H1 remains permanently `VALID_W1_RECOVERY_FAILURE`. No scientific completion credit is added.
 
 ## Repository hygiene — CLOSED / 100%
 
@@ -242,35 +197,44 @@ Required evidence path:
 ## Mandatory current read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/H1_POWERSHELL_HISTORY_SALVAGE_2026-08-27.md`
+2. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
 3. `evidence/powder/h1-psh1-local-discovery-result-2026-08-27.md`
 4. `evidence/powder/h1-psh0-history-freeze-result-2026-08-27.md`
-5. `evidence/powder/h1-github-salvage-2026-08-27.md`
-6. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
-7. `docs/NEXT_GATE.md`
-8. `docs/WORKFLOW_REGISTRY.md`
-9. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
-10. `AGENTS.md`
-11. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-12. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
-13. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-14. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-15. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
-16. `experiments/WP-PWD01/protocol.md`
-17. `experiments/WP-PWD01/evidence-schema.md`
+5. `docs/H1_POWERSHELL_HISTORY_SALVAGE_2026-08-27.md`
+6. `evidence/powder/h1-github-salvage-2026-08-27.md`
+7. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
+8. `docs/NEXT_GATE.md`
+9. `docs/WORKFLOW_REGISTRY.md`
+10. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
+11. `AGENTS.md`
+12. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+13. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
+14. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+15. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
+16. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+17. `experiments/WP-PWD01/protocol.md`
+18. `experiments/WP-PWD01/evidence-schema.md`
 
 ## Exact next action
 
-**STOP after PSH-1 closure.**
+**STOP after H1-PSH closure.**
 
-On the next explicit user resume, execute exactly one bounded patch:
+On the next explicit user resume, return to the main mission and execute exactly one bounded patch:
 
-### PSH-2 — Targeted local provenance-source recovery
+### K1 — Offline supply-chain/runtime pin closure
 
-Provide the smallest safe PowerShell 7.6.5-compatible read-only script/commands to inspect only Windows Terminal/PowerShell transcript provenance, SSH/OpenSSH local traces, Recent Items/Jump Lists, and time-bounded filesystem metadata around 2026-08-26. Do not repeat the PSH-1 generic filename/content scan. If a concrete H1 path/file appears, stop and verify that target only.
+K1 was deferred only while H1-PSH was active and is now the next offline main-path patch.
 
-After PSH-2: update this handover with PASS/BLOCKED/result evidence and STOP again.
+K1 scope remains strictly offline:
 
-### Deferred
+1. inventory moving references in the future Golden/integration path;
+2. freeze GitHub Actions to immutable SHAs where applicable;
+3. freeze exact Portal API client upstream revision;
+4. freeze `uv` and bootstrap tool versions/checksums;
+5. verify rclone exact-version/checksum contract;
+6. extend static acceptance so moving/unpinned references fail closed;
+7. update the compatibility matrix only for evidence actually closed offline.
 
-`K1 — Offline supply-chain/runtime pin closure` remains deferred until H1-PSH is closed or explicitly reprioritized.
+K1 must NOT contact POWDER, reserve, probe live, or claim the whole compatibility gate PASS.
+
+After K1: update the handover/status and STOP again.
