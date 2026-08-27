@@ -1,7 +1,8 @@
 # WP-PWD01 — POWDER Real-RF Resilience Validation
 
-**Protocol version:** v0.6  
-**Status:** PRE-SCORE / RECOVERY SEMANTICS AMENDED / `scored_runs_authorized=false`
+**Protocol version:** v0.6.1  
+**Status:** PRE-SCORE / RECOVERY SEMANTICS AMENDED / `scored_runs_authorized=false`  
+**v0.6.1 note:** operational-only pre-reservation resource-availability preflight added; scientific estimands, RF states, recovery semantics, comparators, horizons, and scoring rules are unchanged.
 
 ## Scientific purpose
 
@@ -18,6 +19,33 @@ Both B1 and W1 use `PahoQoS1Session` with `paho-mqtt==2.1.0`, MQTT v3.1.1, QoS1,
 ## Frozen RF state
 
 Q0/Q1/Q2/Q3 = `0/40/52/55 dB`; attenuation IDs `1 33 2 34`, always coupled. Every physical run requires explicit Q0 end-to-end LTE user-plane PASS; attach/IP alone is insufficient.
+
+## Pre-reservation POWDER resource-availability preflight — operational only
+
+Before requesting any new POWDER reservation for rehearsal, calibration, compatibility, scored, or replication work, perform a low-cost availability check using:
+
+`https://www.powderwireless.net/resinfo.php`
+
+The purpose is to avoid wasting reservation attempts on resources that are visibly unavailable or heavily allocated. This preflight is advisory and does **not** replace the authoritative Portal API reservation/status/manifest checks.
+
+Required procedure:
+
+1. immediately before reservation, inspect the POWDER resource-information page for the exact requested resource class and, where exposed, the exact fixed resources/bindings required by the frozen profile;
+2. record the check time in UTC and the requested profile/resource bindings in the controller/operator evidence;
+3. if required resources are clearly unavailable, down, reserved, or under maintenance, defer the reservation and retry later rather than changing the frozen scientific design merely to obtain capacity;
+4. if resources appear available, proceed to the normal Portal create/get/READY/manifest gates; apparent web-page availability is not proof of schedulability;
+5. if the page is unavailable, stale, or ambiguous, record `RESOURCE_AVAILABILITY_PREFLIGHT=UNKNOWN` and rely on the authoritative fail-closed Portal lifecycle/manifest gates rather than inventing an availability conclusion;
+6. do not silently substitute different nodes, hardware classes, RF paths, images, or profile bindings to chase availability. Any scientifically material substitution requires the existing amendment/change-control process.
+
+Recommended evidence fields:
+
+- `RESOURCE_AVAILABILITY_CHECK_UTC`
+- `RESOURCE_AVAILABILITY_SOURCE=https://www.powderwireless.net/resinfo.php`
+- `REQUESTED_PROFILE`
+- `REQUESTED_BINDINGS`
+- `RESOURCE_AVAILABILITY_PREFLIGHT=PASS|DEFER|UNKNOWN`
+
+This preflight is a scheduling-efficiency safeguard only. It does not authorize Golden, H calibration, scored execution, or teardown.
 
 ## Recovery-semantics amendment — governing
 
