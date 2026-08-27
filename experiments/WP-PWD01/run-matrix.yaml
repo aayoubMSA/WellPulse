@@ -1,6 +1,6 @@
 experiment_id: WP-PWD01
-protocol_version: v0.4
-status: PRE_SCORE_VALIDATION_ACTIVE
+protocol_version: v0.6.1
+status: PRE_GOLDEN_AUDIT_R1_RECONCILED
 scored_runs_authorized: false
 
 pre_score_amendments:
@@ -9,6 +9,8 @@ pre_score_amendments:
   p0_status: IMPLEMENTED_LOCAL_PREFLIGHT_PASS_PHYSICAL_GATES_OPEN
   p1_amendment: experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md
   p1_status: FROZEN_PRE_SCORE_PHYSICAL_AND_IMPLEMENTATION_GATES_OPEN
+  recovery_semantics_amendment: experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md
+  recovery_semantics_status: FROZEN_PROSPECTIVE_H_APP_300_FROM_T_SERVICE_READY
 
 scientific_interpretation:
   primary_question: when_durable_application_record_semantics_add_value_beyond_correctly_configured_mqtt
@@ -123,6 +125,20 @@ rf_states:
   readiness_rule: every scientific/non-scored calibration or scored run begins at Q0 with explicit LTE user-plane PASS; attach/IP alone is insufficient
   further_attenuation_hunting_authorized: false
 
+recovery_semantics:
+  authority: experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md
+  t_rf_restore: exact_physical_Q3_to_Q0_restoration_timestamp
+  t_service_ready: first_architecture_blind_end_to_end_service_ready_timestamp_after_clean_ordered_LTE_restoration
+  t_app_complete: first_timestamp_primary_cohort_application_recovery_is_complete_when_observed
+  h_app_s: 300
+  h_app_anchor: t_service_ready
+  outcome_derived_h_calibration: prohibited
+  w1_only_h_reestimation: prohibited
+  scored_outcome_h_reestimation: prohibited
+  s2_s3_clean_restore_order: stop_UE_then_EPC_then_eNB_then_fresh_UE_then_architecture_blind_probe
+  service_ready_gate_bound_s: 120
+  service_ready_gate_failure: technical_invalidity_fail_closed
+
 workload:
   telemetry_rate_hz: 1
   claim_boundary: low_rate_telemetry_only
@@ -131,47 +147,47 @@ workload:
   warmup_duration_s: 30
   pre_impairment_q0_s: 60
   impairment_window_s: 120
-  recovery_horizon_s: TBD_AFTER_NON_SCORED_H_CALIBRATION
-  recovery_horizon_rule: max(120s, ceil_to_30s(2*p95_W1_backlog_drain_calibration)); stop_and_investigate_if_over_300s
-  h_calibration_plan: experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md
-  h_interpretation: common_operational_observation_window_not_effect_optimized
+  application_observation_horizon_s: 300
+  application_observation_anchor: t_service_ready
+  application_observation_rule: fixed_prospectively_before_Golden_and_scored_results
+  historical_h_calibration_plan: experiments/WP-PWD01/H_CALIBRATION_PLAN_v1.md
+  historical_h_calibration_status: SUPERSEDED_PROVENANCE_ONLY_DO_NOT_EXECUTE
+  h_interpretation: common_operational_application_observation_window_not_effect_optimized
   h_same_for_all_arms_and_scenarios: required
   h_reestimation_after_scoring: prohibited
-  h_n3_p95_wording: maximum_of_three_observed_successful_W1_calibration_drains
-  h_calibration_outcome_rule:
-    technically_invalid: preserve_and_replace_only_for_predefined_technical_invalidity
-    valid_w1_recovery_failure: preserve_block_h_freeze_do_not_replace_as_invalid
-    valid_w1_recovery_success: exactly_three_required_for_h
-    extra_successful_trials: prohibited
 
 primary_cohort:
-  cutoff: final_Q0_restoration_after_impairment
-  s0_cutoff: pseudo_restoration_after_first_180s
-  manifest_field: cohort_cutoff_utc
-  horizon_field: horizon_end_utc
-  inclusion: generated_ts_utc <= cohort_cutoff_utc
-  observation: received_ts_utc <= horizon_end_utc
+  cutoff_clock: t_rf_restore
+  cutoff_definition: exact_final_physical_Q3_to_Q0_restoration_after_impairment
+  s0_cutoff: prospectively_emitted_equivalent_t_rf_restore_marker_after_first_180s
+  manifest_field: t_rf_restore_utc
+  service_ready_field: t_service_ready_utc
+  app_complete_field: t_app_complete_utc
+  h_app_s_field: h_app_s
+  horizon_end_formula: t_service_ready_utc_plus_300_seconds
+  inclusion: generated_ts_utc <= t_rf_restore_utc
+  observation: received_ts_utc <= t_service_ready_utc_plus_300_seconds
   post_cutoff_generation: retained_as_realistic_load_but_excluded_from_primary_denominator
 
 scenarios:
   S0_HEALTHY:
-    scored_schedule: "Q0 60s -> Q0 120s -> Q0 H"
+    scored_schedule: "Q0 60s -> Q0 120s -> emit t_rf_restore/t_service_ready -> observe 300s"
     paired_blocks_min: 3
     paired_blocks_max: 3
     purpose: healthy integrity equivalence and overhead sanity
   S1_INTERMITTENT:
-    scored_schedule: "Q0 60s -> [Q2 20s / Q0 20s] x3 -> Q0 H"
+    scored_schedule: "Q0 60s -> [Q2 20s / Q0 20s] x3 -> emit final t_rf_restore -> service-ready gate -> observe 300s"
     paired_blocks_min: 3
     paired_blocks_max: 5
     purpose: repeated RF-caused near-threshold network-only integrity; recovery/overhead secondary
   S2_HARD_OUTAGE:
-    scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
+    scored_schedule: "Q0 60s -> Q3 120s -> t_rf_restore -> clean ordered LTE restore -> t_service_ready -> observe 300s"
     paired_blocks_min: 3
     paired_blocks_max: 5
     purpose: deterministic network-only RF outage integrity while volatile gateway process state survives; recovery/overhead secondary
     b2_sensitivity_runs: 3
   S3_OUTAGE_RESTART:
-    scored_schedule: "Q0 60s -> Q3 120s -> Q0 H"
+    scored_schedule: "Q0 60s -> Q3 120s -> t_rf_restore -> clean ordered LTE restore -> t_service_ready -> observe 300s"
     restart_event: "gateway process restart 60s into Q3; not node reboot"
     paired_blocks_min: 3
     paired_blocks_max: 5
@@ -191,7 +207,7 @@ scenarios:
 precision_stopping_rule:
   applies_to: [S1_INTERMITTENT, S2_HARD_OUTAGE, S3_OUTAGE_RESTART]
   evaluate_after_valid_pairs: 3
-  estimand: paired_run_level_unique_completeness_difference_W1_minus_B1
+  estimand: paired_run_level_completeness_300_difference_W1_minus_B1
   interval: two_sided_95_percent_t_interval
   stop_if_ci_half_width_percentage_points_le: 2
   additional_pairs_if_not_precise: 2
@@ -209,12 +225,17 @@ planned_conducted_scored_runs:
   total_maximum_if_all_gates_authorized: 42
 
 primary_endpoint:
-  name: unique_primary_cohort_telemetry_completeness_at_H
-  formula: unique_valid_primary_cohort_records_received_by_horizon_end_utc / primary_cohort_generated_records
+  name: completeness_300
+  formula: unique_valid_primary_cohort_records_received_by_t_service_ready_plus_300s / primary_cohort_generated_records_at_t_rf_restore
   integrity_requirement: record_identity_and_checksum_match
   reference_implementation: wellpulse.powder_analysis.reconstruct_primary_endpoint
+  prospective_horizon_s: 300
+  horizon_anchor: t_service_ready
 
 secondary_endpoints:
+  - T_service_s
+  - T_app_s
+  - T_total_s
   - permanent_missing_rate
   - duplicate_attempt_and_final_duplicate_rate
   - checksum_mismatch_count
@@ -256,6 +277,7 @@ pre_score_snapshot:
   required_before_scored_runs_authorized_true: true
   must_include:
     - protocol_and_all_pre_score_amendments
+    - recovery_semantics_amendment
     - analysis_plan_version
     - run_matrix_hash
     - b1_w1_randomization_hash
@@ -263,15 +285,15 @@ pre_score_snapshot:
     - implementation_commit
     - B1_W1_B2_runtime_locks
     - evidence_schema
-    - frozen_H_and_calibration_manifest
+    - fixed_H_app_300_and_clock_contract
     - comparator_decision
     - explicit_scored_authorization_decision
 
 pre_score_gate_status:
   controlled_physical_rf_profile_and_numeric_states: PASS
   q0_user_plane_readiness_rule: PASS_FROZEN
-  h_adverse_outcome_classification: PASS_LOCAL_IMPLEMENTED
-  recovery_horizon_H: OPEN_ACTIVE_GATE
+  recovery_semantics_amendment: PASS_FROZEN_H_APP_300
+  historical_h_calibration: SUPERSEDED_CLOSED_DO_NOT_RERUN
   mqtt_run_session_isolation_implementation: PASS_LOCAL_PHYSICAL_VERIFICATION_OPEN
   remote_paho_runtime_reproduction: OPEN
   experimental_radio_path_verification_for_mqtt: OPEN
@@ -281,31 +303,33 @@ pre_score_gate_status:
   b1_w1_implementation_matching: OPEN
   s3_restart_domain_separation: OPEN_NON_SCORED_VERIFICATION_REQUIRED
   evidence_capture_clock_alignment: OPEN
-  deterministic_non_scored_analysis_reconstruction: OPEN
+  deterministic_non_scored_analysis_reconstruction: PASS_LOCAL_AMENDED_SEMANTICS
   b2_local_semantics: PASS_3_OF_3
   b2_comparator_decision: PASS_QUALIFIED_COMPACT_S2_S3_ONLY
   b2_remote_runtime_path_restart_implementation: OPEN_NON_SCORED_VERIFICATION_REQUIRED
   consortium_p1_analysis_claim_amendments: PASS_FROZEN
   inter_run_washout_readiness_rule: PASS_FROZEN_PHYSICAL_ENFORCEMENT_OPEN
-  pre_score_reproducibility_snapshot: OPEN_BLOCKED_UNTIL_H_AND_IMPLEMENTATION_GATES_CLOSE
+  pre_score_reproducibility_snapshot: OPEN_BLOCKED_UNTIL_IMPLEMENTATION_AND_EVIDENCE_GATES_CLOSE
   automated_powder_ssh_private_key_path: KNOWN_BAD_REPAIR_OR_BYPASS_REQUIRED
 
 freeze_requirements:
   - Use frozen srslte-controlled-rf profile revision and verify live bindings every experiment
   - Preserve frozen Q0-Q3 values and mandatory Q0 user-plane readiness gate
-  - Apply P0 H outcome classification; never replace a valid adverse W1 result as technical invalidity
+  - Preserve H1 as valid adverse non-scored evidence; do not rerun or relabel it
+  - Use t_rf_restore for primary-cohort freeze and t_service_ready as the fixed H_app anchor
+  - Use H_app=300 seconds for every arm and scenario; never derive or re-estimate it from W1, Golden, or scored outcomes
+  - Preserve T_service, T_app, and T_total as separate recovery clocks
   - Use deterministic run-unique MQTT publisher/receiver client identities and topic namespaces
   - Require fresh-run initial session_present=false and preserve session evidence
   - Reproduce pinned Paho 2.1.0 B1/W1 transport settings in remote runtime manifest
   - Verify payload traverses experimental cellular data path rather than POWDER control network
-  - Freeze recovery horizon H once and use the identical common H for B1 W1 B2 and all scenarios
   - Verify record identity/checksum preservation and fail-closed collision semantics
   - Audit B1/W1 matching with corrected B1 accepted/unacknowledged instrumentation semantics
   - Verify S3 restart-domain separation non-scored before scored authorization
   - Verify B2 Java 1.2.5 persistent-client runtime path and restart semantics non-scored on POWDER before B2 scoring
   - Enforce inter-run washout/readiness before every scored run
   - Verify evidence capture and clock alignment
-  - Verify analysis reconstructs primary endpoint from a non-scored pilot bundle
+  - Verify analysis reconstructs completeness_300 from a non-scored pilot bundle
   - Create immutable pre-score reproducibility snapshot before scored authorization
   - Repair or bypass known-bad automated POWDER SSH private-key path before scored automation is trusted
   - Set scored_runs_authorized true only after all gates close
