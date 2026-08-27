@@ -1,6 +1,6 @@
 # WellPulse GitHub Actions Workflow Registry
 
-Canonical status date: 2026-08-27 — **P7B-R1 OFFLINE REPAIR QA PASS / ALL P7B LIVE SURFACES RETIRED**
+Canonical status date: 2026-08-27 — **P7B-R2 OFFLINE CONTRACT FREEZE PASS / ALL P7B LIVE SURFACES RETIRED**
 
 This registry is the authoritative classification of workflow files under `.github/workflows/` on `main`.
 
@@ -30,11 +30,11 @@ Exactly **4** standing offline sentinels remain:
 - `.wp2-offpowder-artifact-qa-trigger`
 - `.wp2-preintegration-static-trigger`
 
-No P6, P7, P7B-C or P7B-D live trigger remains.
+There is no P7B-RQ1 live trigger and no P6/P7/P7B live trigger on `main`.
 
 ## Retired live surface
 
-All P6 one-shot/recovery/final-escrow workflows and all temporary P7/P7B live workflows/triggers are removed from `main` after their terminal evidence/status was captured. They remain available through Git history only and have **no current execution authority**.
+All P6 one-shot/recovery/final-escrow workflows and all temporary P7/P7B live workflows/triggers are removed from `main` after terminal evidence/status capture. They remain available through Git history only and have no current execution authority.
 
 P7B retired surfaces include:
 
@@ -45,26 +45,38 @@ P7B retired surfaces include:
 - `.github/workflows/wp2-p7b-d-evidence-survival-retry.yml`
 - `.wp2-p7b-d-retry-trigger`
 
-Deleting the P7B-C and first P7B-D trigger files caused one fail-closed retirement run each because GitHub path filters react to deletion pushes. P7B-C retirement run `33115086371` failed at the premutation authority gate and skipped reservation execution. P7B-D retirement run `33115100803` failed at the authority-boundary gate and skipped all live/preservation/teardown actions. Neither created a reservation nor contacted POWDER. These are QA provenance only.
+Retirement deletion runs `33115086371` and `33115100803` failed closed before live actions. Neither created a reservation nor contacted POWDER.
 
 ## P7B-R1 offline repair surface
 
-R1 introduced **no workflow and no trigger**. Its implementation is ordinary repository code exercised only by the standing offline `local-unit-tests.yml` gate:
+R1 introduced no workflow or trigger. Its ordinary repository code is exercised only through offline QA:
 
 - `scripts/wp2_p7b_path_contract.py`
 - `scripts/wp2_p7b_c_node_r1.py`
 - `scripts/wp2_p7b_preservation_helpers.sh`
-- updated `tests/test_wp2_p7b_c_premutation.py`
+- `tests/test_wp2_p7b_c_premutation.py`
 
-Accepted R1 QA:
+Accepted R1 QA: Local Unit Tests run `33116073295`, job `98670934415`, **65/65 PASS**; POWDER contact NONE.
 
-- Local Unit Tests run `33116073295`, job `98670934415`;
-- SHA `695b31cba6c0256b3637223abdfef4f4b11bf6ca`;
-- **65/65 PASS**;
+## P7B-R2 offline authority-freeze surface
+
+R2 also introduced **no workflow and no trigger**. It added only offline contract/validation artifacts:
+
+- `experiments/WP-PWD01/p7b-requalification-r2-contract.json`
+- `scripts/wp2_p7b_r2_validate_controller.py`
+- `tests/test_wp2_p7b_r2_contract.py`
+- `docs/WP2_P7B_R2_REQUALIFICATION_CONTRACT_FREEZE_2026-08-27.md`
+
+Accepted R2 QA:
+
+- Local Unit Tests run `33117108893`, job `98674462071`;
+- SHA `b77609bfb9256a0eb189c0e5dd29a2f1f68c3bc2`;
+- **73/73 PASS**;
 - POWDER contact: NONE;
+- reservation: NONE;
 - scored execution: NONE.
 
-The historical controller `powder/wp2_p7b_c_execute.sh` remains a provenance/implementation artifact and still names the old node runner. Because no live workflow reaches it, it has no current execution authority. A future R2 authority contract must explicitly bind any future controller to `scripts/wp2_p7b_c_node_r1.py` before a live workflow could be created.
+R2 freezes replacement authority ID `P7B-RQ1`, but `P7B_RQ1_LIVE_AUTHORIZED=false`. The static validator proves the retired historical controller is not acceptable for RQ1 because it points to the old node runner. A future authority-bearing controller must use `scripts/wp2_p7b_c_node_r1.py`, exactly one reservation create, no automatic/second replacement, and evidence/read-back gates before teardown.
 
 ## Canonical results
 
@@ -74,6 +86,7 @@ The historical controller `powder/wp2_p7b_c_execute.sh` remains a provenance/imp
 - P7B-C retained status: `evidence/powder/wp2-p7b-c-live-status.md`
 - P7B-D retained strict status: `evidence/powder/wp2-p7b-d-live-status.md`
 - P7B-R1 repair closure: `docs/WP2_P7B_R1_RECEIVER_PATH_OBSERVABILITY_CLOSURE_2026-08-27.md`
+- P7B-R2 authority closure: `docs/WP2_P7B_R2_REQUALIFICATION_CONTRACT_FREEZE_2026-08-27.md`
 
 ## Current authority boundary
 
@@ -81,11 +94,13 @@ The historical controller `powder/wp2_p7b_c_execute.sh` remains a provenance/imp
 - `WP2_P7B_D=BLOCKED_STRICT_COMPLETENESS_RECEIVER_EVENT_LEDGER_NOT_RECOVERED`
 - `WP2_P7B_E=PASS_CANONICAL_BLOCKED_CLOSURE`
 - `WP2_P7B_R1=PASS_OFFLINE_RECEIVER_PATH_OBSERVABILITY_QA`
-- `FUTURE_PHYSICAL_REQUALIFICATION_RECOMMENDATION=GO_CONDITIONAL`
+- `WP2_P7B_R2=PASS_ONE_REPLACEMENT_CONTRACT_FREEZE`
+- `P7B_RQ1_AUTHORITY_CONTRACT=FROZEN`
+- `P7B_RQ1_LIVE_AUTHORIZED=false`
 - `SCORED_AUTHORIZATION=BLOCKED`
 - `scored_runs_authorized=false`
 - `WP3=BLOCKED`
 
 No current workflow may create a POWDER reservation or execute physical/scored B1/W1/B2 work.
 
-The exact next patch is offline-only `WP2-P7B-R2 — REQUALIFICATION AUTHORITY + CONTRACT FREEZE`. R2 must stop again before any live contact; any future replacement reservation requires separate explicit live authorization after R2.
+The exact next patch is live `WP2-P7B-R3 — ONE REPLACEMENT NON-SCORED PHYSICAL REQUALIFICATION + EVIDENCE SURVIVAL`, but it is **NOT AUTHORIZED**. A separate explicit live authorization is required before any workflow/trigger or POWDER contact is created.
