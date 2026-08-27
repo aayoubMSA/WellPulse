@@ -59,85 +59,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          src = Path('powder/wp2_p7b_r3_execute.sh').read_text(encoding='utf-8')
-          src = src.replace(
-              'SOURCE_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"',
-              "SOURCE_SHA='b174ca46fe3af2dae4e50b68bd489ce09a271ea9'",
-              1,
-          )
-          start = "  bar 5 'Authority guards + no-active-P7B check'; echo\n"
-          end = '  portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json" || fail MANIFEST_FETCH 8\n'
-          assert src.count(start) == 1, 'RESCUE_PATCH_START_MARKER'
-          assert src.count(end) == 1, 'RESCUE_PATCH_END_MARKER'
-          i = src.index(start)
-          j = src.index(end, i) + len(end)
-          replacement = r'''  bar 5 'Same-reservation identity + degraded-control-plane corroboration'; echo
-  EXPID='12b39276-af0f-4e34-8dfd-685b006dd6bd'
-  EXP_NAME='wp7brq19810043'
-  set_output experiment_id "$EXPID"
-  set_output experiment_name "$EXP_NAME"
-  printf 'EXPID=%q\nEXP_NAME=%q\nPREPARE_GATE=SAME_RESERVATION_RESCUE\n' "$EXPID" "$EXP_NAME" > "$STATE"
-
-  LIST_OK=0
-  for i in 1 2 3; do
-    set +e
-    portal-cli experiment list > "$TMP/list-existing.json" 2>"$TMP/list-existing.err"
-    lrc=$?
-    set -e
-    if [[ "$lrc" -eq 0 ]]; then LIST_OK=1; break; fi
-    echo "RESCUE_LIST_${i}=ERROR:rc=$lrc"
-    sleep 2
-  done
-  EXPIRES=''
-  if [[ "$LIST_OK" -eq 1 ]]; then
-    python3 - "$TMP/list-existing.json" "$EXPID" "$EXP_NAME" > "$TMP/existing.env" <<'PY2'
-import json,shlex,sys
-obj=json.load(open(sys.argv[1])); expid=sys.argv[2]; name=sys.argv[3]
-xs=obj if isinstance(obj,list) else obj.get('experiments',[])
-rows=[x for x in xs if isinstance(x,dict) and str(x.get('id',''))==expid and str(x.get('name',''))==name and x.get('project')=='WellPulse']
-if len(rows)!=1:
-    raise SystemExit(f'EXACT_RESERVATION_MATCH_COUNT={len(rows)}')
-x=rows[0]; status=str(x.get('status','unknown')).lower()
-if status in {'terminated','destroyed','failed','error'}:
-    raise SystemExit('RESERVATION_TERMINAL:'+status)
-expires=str(x.get('expires_at') or x.get('expires') or x.get('expiration') or '')
-print('LIST_STATUS='+shlex.quote(status))
-print('LIST_EXPIRES='+shlex.quote(expires))
-PY2
-    source "$TMP/existing.env"
-    EXPIRES="${LIST_EXPIRES:-}"
-    echo "SAME_RESERVATION_LIST_GATE=PASS:$LIST_STATUS"
-  else
-    echo 'SAME_RESERVATION_LIST_GATE=DEGRADED_UNAVAILABLE'
-  fi
-  if [[ -z "$EXPIRES" ]]; then
-    EXPIRES='2026-08-27T23:47:00Z'
-    echo "EXPIRY_SOURCE=CONSERVATIVE_UI_DERIVED:$EXPIRES"
-  else
-    echo "EXPIRY_SOURCE=PORTAL_LIST:$EXPIRES"
-  fi
-  python3 scripts/wp2_prelaunch_time_guard.py --now-utc "$(utc)" --expires-utc "$EXPIRES" --min-remaining-s 3000 | tee "$TMP/time-gate.txt"
-  grep -q '^PRELAUNCH_TIME_GATE=PASS$' "$TMP/time-gate.txt" || fail PRELAUNCH_TIME 7
-
-  MOK=0
-  for i in 1 2 3 4; do
-    set +e
-    portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json" 2>"$TMP/manifests.err"
-    mrc=$?
-    set -e
-    if [[ "$mrc" -eq 0 ]]; then MOK=1; echo "RESCUE_MANIFEST_${i}=PASS"; break; fi
-    echo "RESCUE_MANIFEST_${i}=ERROR:rc=$mrc"
-    tail -c 400 "$TMP/manifests.err" 2>/dev/null || true; echo
-    sleep 3
-  done
-  [[ "$MOK" -eq 1 ]] || fail MANIFEST_FETCH_DEGRADED_CONTROL_PLANE 8
-'''
-          out = src[:i] + replacement + src[j:]
-          assert 'portal-cli experiment create' not in out, 'NEW_RESERVATION_PATH_SURVIVED'
-          Path('/tmp/wp2_p7b_r3_same_reservation.sh').write_text(out, encoding='utf-8')
-          PY
+          python3 scripts/wp2_p7b_r3_build_same_reservation_controller.py \
+            --output /tmp/wp2_p7b_r3_same_reservation.sh \
+            --experiment-id "$TARGET_EXPID" \
+            --experiment-name "$TARGET_NAME" \
+            --source-sha "$AUTHORIZED_SOURCE_SHA" \
+            --fallback-expiry "$CONSERVATIVE_EXPIRY_UTC"
           chmod 700 /tmp/wp2_p7b_r3_same_reservation.sh
           bash -n /tmp/wp2_p7b_r3_same_reservation.sh
           test "$(grep -c --fixed-strings 'portal-cli experiment create' /tmp/wp2_p7b_r3_same_reservation.sh || true)" = 0
@@ -184,7 +111,8 @@ PY2
           TAR="$(find /tmp/wp2-p7b-r3-rescue-roundtrip -type f -name '*.tar' | head -1)"
           test -s "$TAR"
           test "$(sha256sum "$TAR" | awk '{print $1}')" = "$EXPECTED_SHA"
-          rm -rf /tmp/wp2-p7b-r3-rescue-verified; mkdir -p /tmp/wp2-p7b-r3-rescue-verified
+          rm -rf /tmp/wp2-p7b-r3-rescue-verified
+          mkdir -p /tmp/wp2-p7b-r3-rescue-verified
           tar -C /tmp/wp2-p7b-r3-rescue-verified -xf "$TAR"
           (cd /tmp/wp2-p7b-r3-rescue-verified/ue/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
           (cd /tmp/wp2-p7b-r3-rescue-verified/core/raw && sha256sum -c ../SOURCE_SHA256SUMS >/dev/null)
