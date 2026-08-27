@@ -1,0 +1,80 @@
+{
+  "schema_version": "wp2-p7b-target-runtime-probe-v1",
+  "checked_utc": "2026-08-27T22:33:55Z",
+  "experiment_id": "12b39276-af0f-4e34-8dfd-685b006dd6bd",
+  "experiment_name": "wp7brq19810043",
+  "node_run_id": "wp2-p7b-r3-33121695880-20260827T222035Z",
+  "evidence_class": "READ_ONLY_TARGET_RUNTIME_PROBE_AND_FAILED_NON_SCORED_QUALIFICATION_SALVAGE",
+  "github_run_id": 33122959614,
+  "github_artifact_id": 9667196190,
+  "github_artifact_digest": "sha256:afd9d3a37a4bb428eaa0a91c3eac2d09e94307d308e4022697d445311b792918",
+  "raw_tar_sha256": {
+    "ue": "2eb509ce82a00af419c292100243b43670ecd4049377e55555a96758414c3607",
+    "core": "14253f82c8c528b5d3ad91eed438514e22a7144e21338acc60315b14035b267a"
+  },
+  "ue": {
+    "kernel": "Linux 4.15.0-91-lowlatency x86_64",
+    "system_python": "3.6.9",
+    "pinned_python": "3.11.13",
+    "bash": "4.4.19",
+    "java": "11.0.19",
+    "mosquitto_daemon": "ABSENT",
+    "mosquitto_pub": "PRESENT",
+    "openssl": "1.1.1",
+    "gnu_tar": "1.29",
+    "coreutils_sha256sum": "8.28",
+    "findutils": "4.7.0-git",
+    "sed": "4.4",
+    "awk": "mawk 1.3.3",
+    "tmux": "2.6",
+    "procps": "3.3.12",
+    "proj_wellpulse_present": true,
+    "proj_wellpulse_writable": true
+  },
+  "core": {
+    "kernel": "Linux 4.15.0-91-lowlatency x86_64",
+    "system_python": "3.6.9",
+    "pinned_python": "3.11.13",
+    "bash": "4.4.19",
+    "java": "ABSENT",
+    "mosquitto_daemon": "1.4.15",
+    "mosquitto_pub": "PRESENT",
+    "openssl": "1.1.1",
+    "gnu_tar": "1.29",
+    "coreutils_sha256sum": "8.28",
+    "findutils": "4.7.0-git",
+    "sed": "4.4",
+    "awk": "mawk 1.3.3",
+    "tmux": "2.6",
+    "procps": "3.3.12",
+    "proj_wellpulse_present": true,
+    "proj_wellpulse_writable": true
+  },
+  "attenuator_cli_observation": {
+    "command_all": "/usr/local/etc/emulab/tmcc attenuator",
+    "output_all": "invalid attenuator ID",
+    "command_id_only_outputs": {
+      "1": "changing attenuation",
+      "33": "changing attenuation",
+      "2": "changing attenuation",
+      "34": "changing attenuation"
+    },
+    "failed_run_set_evidence": [
+      "SET id=1 db=0 rc=0 output=changing attenuation",
+      "SET id=33 db=0 rc=0 output=changing attenuation",
+      "SET id=2 db=0 rc=0 output=changing attenuation",
+      "SET id=34 db=0 rc=0 output=changing attenuation"
+    ],
+    "conclusion": "NO_MACHINE_PARSEABLE_ATTENUATION_READBACK_INTERFACE_OBSERVED_VIA_TMCC_ATTENUATOR",
+    "physical_db_readback_claim_authorized": false
+  },
+  "confirmed_failure_modes": [
+    "SYSTEM_PYTHON_3_6_9_INCOMPATIBLE_WITH_FROM_FUTURE_ANNOTATIONS",
+    "TMCC_ATTENUATOR_READBACK_ASSUMPTION_FALSE",
+    "GITHUB_ACTIONS_SSH_AGENT_STATE_DOES_NOT_PERSIST_ACROSS_STEPS",
+    "PORTAL_GET_TRANSIENT_ERRORS_OBSERVED",
+    "POWDER_APT_REPOSITORY_GPG_KEY_WARNING_OBSERVED",
+    "ROLE_SPECIFIC_TOOL_AVAILABILITY_DIFFERS_BETWEEN_UE_AND_CORE"
+  ],
+  "claim_boundary": "runtime/interface evidence only; no completed P7B cell and no scored scientific claim"
+}
