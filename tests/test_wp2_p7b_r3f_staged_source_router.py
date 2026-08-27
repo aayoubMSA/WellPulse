@@ -2,6 +2,7 @@ import pathlib
 import unittest
 
 
+# R3F regression gate: re-run after temporary live-surface retirement.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 R2 = ROOT / "scripts/wp2_p7b_c_node_r2.py"
 
