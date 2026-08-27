@@ -17,6 +17,7 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -106,7 +107,14 @@ public final class P7BRemoteB2Gateway {
                 try {
                     if (!client.isConnected()) {
                         event(eventLog, "b2_connect_attempt", "paho=" + PAHO_VERSION);
-                        client.connect(options).waitForCompletion(10000);
+                        IMqttToken token = client.connect(options);
+                        token.waitForCompletion(10000);
+                        event(
+                            eventLog,
+                            "b2_connack",
+                            "session_present=" + token.getSessionPresent()
+                                + ";buffered_count=" + client.getBufferedMessageCount()
+                        );
                     }
                 } catch (Exception exc) {
                     event(eventLog, "b2_connect_retry", exc.getClass().getSimpleName());
@@ -142,7 +150,11 @@ public final class P7BRemoteB2Gateway {
         client.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
-                event(eventLog, "b2_connect", "server=" + serverURI);
+                event(
+                    eventLog,
+                    "b2_connect",
+                    "server=" + serverURI + ";buffered_count=" + client.getBufferedMessageCount()
+                );
             }
 
             @Override
@@ -162,7 +174,12 @@ public final class P7BRemoteB2Gateway {
             @Override
             public void deliveryComplete(IMqttDeliveryToken token) {
                 try {
-                    event(eventLog, "b2_delivery_complete", "mid=" + token.getMessageId());
+                    event(
+                        eventLog,
+                        "b2_delivery_complete",
+                        "mid=" + token.getMessageId()
+                            + ";buffered_count=" + client.getBufferedMessageCount()
+                    );
                 } catch (Exception exc) {
                     event(eventLog, "b2_delivery_complete", "mid=unavailable");
                 }
@@ -171,7 +188,12 @@ public final class P7BRemoteB2Gateway {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             STOP.set(true);
-            event(eventLog, "b2_gateway_shutdown", "pid=" + ProcessHandle.current().pid());
+            event(
+                eventLog,
+                "b2_gateway_shutdown",
+                "pid=" + ProcessHandle.current().pid()
+                    + ";buffered_count=" + client.getBufferedMessageCount()
+            );
             try {
                 if (client.isConnected()) {
                     client.disconnect().waitForCompletion(5000);
