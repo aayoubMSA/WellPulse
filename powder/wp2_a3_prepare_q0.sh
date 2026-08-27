@@ -102,7 +102,7 @@ printf "UE_PREMUTATION=PASS\n"' || fail UE_PREMUTATION 6
 
 bar 32 'Stopping stale UE state'; echo
 ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'set -u
-tmux kill-session -t srs-ue >/dev/null 2>&1 || true
+tmux kill-session -t ue >/dev/null 2>&1 || true
 sudo killall srsue >/dev/null 2>&1 || true
 sudo ip link del tun_srsue >/dev/null 2>&1 || true
 sleep 2
@@ -110,8 +110,7 @@ sleep 2
 
 bar 42 'Stopping stale EPC/eNB state'; echo
 ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'set -u
-tmux kill-session -t srs-epc >/dev/null 2>&1 || true
-tmux kill-session -t srs-enb >/dev/null 2>&1 || true
+tmux kill-session -t enb >/dev/null 2>&1 || true
 sudo killall srsenb srsepc >/dev/null 2>&1 || true
 sleep 2
 ! pgrep -x srsepc >/dev/null 2>&1
@@ -121,23 +120,27 @@ bar 54 'Starting clean EPC/eNB through profile start.sh'; echo
 ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'cd /local/repository && set +e; bash bin/start.sh > /tmp/wp2-a3-q0-core.console 2>&1; rc=$?; printf "%s\n" "$rc" > /tmp/wp2-a3-q0-core.start_rc; exit 0' || fail CORE_START_TRANSPORT 9
 CORE_READY=0
 for i in $(seq 1 45); do
-  if ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null'; then CORE_READY=1; break; fi
+  if ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'tmux has-session -t enb 2>/dev/null && pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null'; then CORE_READY=1; break; fi
   printf '\rCORE_READY_WAIT=%02d/45' "$i"; sleep 2
 done
 echo
 [[ "$CORE_READY" -eq 1 ]] || fail CORE_NOT_READY 9
 sleep 10
-ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null' || fail CORE_NOT_STABLE 9
+ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'tmux has-session -t enb 2>/dev/null && pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null' || fail CORE_NOT_STABLE 9
+CORE_START_RC="$(ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'cat /tmp/wp2-a3-q0-core.start_rc 2>/dev/null || echo unknown')"
+echo "CORE_PROFILE_START_RC=$CORE_START_RC"
 
 bar 70 'Starting fresh UE through profile start.sh'; echo
 ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'cd /local/repository && set +e; bash bin/start.sh > /tmp/wp2-a3-q0-ue.console 2>&1; rc=$?; printf "%s\n" "$rc" > /tmp/wp2-a3-q0-ue.start_rc; exit 0' || fail UE_START_TRANSPORT 10
 UE_READY=0
 for i in $(seq 1 60); do
-  if ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'pgrep -x srsue >/dev/null && ip link show tun_srsue >/dev/null 2>&1 && ip -4 addr show dev tun_srsue | grep -q "inet "'; then UE_READY=1; break; fi
+  if ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'tmux has-session -t ue 2>/dev/null && pgrep -x srsue >/dev/null && ip link show tun_srsue >/dev/null 2>&1 && ip -4 addr show dev tun_srsue | grep -q "inet "'; then UE_READY=1; break; fi
   printf '\rUE_READY_WAIT=%02d/60' "$i"; sleep 2
 done
 echo
 [[ "$UE_READY" -eq 1 ]] || fail UE_TUN_NOT_READY 10
+UE_START_RC="$(ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'cat /tmp/wp2-a3-q0-ue.start_rc 2>/dev/null || echo unknown')"
+echo "UE_PROFILE_START_RC=$UE_START_RC"
 
 bar 86 'Verifying Q0 user plane 5/5'; echo
 ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'set -eu
