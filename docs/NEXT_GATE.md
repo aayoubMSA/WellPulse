@@ -1,6 +1,6 @@
 # WellPulse — Next Gate
 
-Status date: 2026-08-27 after **P7B-R1 receiver-path repair + observability regression QA PASS**.
+Status date: 2026-08-27 after **P7B-R2 one-replacement requalification contract freeze PASS**.
 
 ## Current frontier
 
@@ -12,6 +12,10 @@ Status date: 2026-08-27 after **P7B-R1 receiver-path repair + observability regr
 - `WP2_P7B_D=BLOCKED_STRICT_COMPLETENESS_RECEIVER_EVENT_LEDGER_NOT_RECOVERED`
 - `WP2_P7B_E=PASS_CANONICAL_BLOCKED_CLOSURE`
 - `WP2_P7B_R1=PASS_OFFLINE_RECEIVER_PATH_OBSERVABILITY_QA`
+- `WP2_P7B_R2=PASS_ONE_REPLACEMENT_CONTRACT_FREEZE`
+- `REQUALIFICATION_DECISION=GO_ONE_REPLACEMENT_NON_SCORED`
+- `P7B_RQ1_AUTHORITY_CONTRACT=FROZEN`
+- `P7B_RQ1_LIVE_AUTHORIZED=false`
 - successful P7B physical-qualification credit: **40/100** from A+B only
 - `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`
 - `scored_runs_authorized=false`
@@ -19,90 +23,103 @@ Status date: 2026-08-27 after **P7B-R1 receiver-path repair + observability regr
 - WP2 management/readiness: **95/100**
 - scientific weighted completion: **20%**
 
-Canonical R1 closure:
+Canonical R2 closure:
 
-`docs/WP2_P7B_R1_RECEIVER_PATH_OBSERVABILITY_CLOSURE_2026-08-27.md`
+`docs/WP2_P7B_R2_REQUALIFICATION_CONTRACT_FREEZE_2026-08-27.md`
 
-Retained live provenance:
+Machine-readable R2 contract:
+
+`experiments/WP-PWD01/p7b-requalification-r2-contract.json`
+
+Retained first-attempt provenance remains unchanged in:
 
 - `docs/WP2_P7B_E_CANONICAL_BLOCKED_CLOSURE_2026-08-27.md`
 - `evidence/powder/wp2-p7b-c-live-status.md`
 - `evidence/powder/wp2-p7b-d-live-status.md`
 
-## What R1 closed
+## What R2 froze
 
-The single authorized P7B-C reservation had already established that Portal/SSH/profile identity, B1 Q0 LTE route, five zero-loss user-plane probes and TLS/MQTT readiness all passed. Broker evidence also established that the B1 receiver connected, received CONNACK, subscribed to the exact topic and remained alive. The controller timed out because its expected event-ledger path did not match the receiver writer path.
+The original P7B contract remains unchanged and its one allowed reservation remains consumed. R2 prospectively permits **at most one replacement authority ID `P7B-RQ1`**, but does not authorize it live.
 
-R1 repaired that defect offline without changing scientific controls:
+Frozen replacement rules:
 
-- absolute remote-path contract rejects literal `$HOME`/`~` paths;
-- receiver writer and watcher derive the same event-ledger path;
-- receiver startup fails fast if its process exits;
-- timeout/early-exit failures emit bounded receiver/broker/route/Q0/TLS/runtime diagnostics directly in the execution log;
-- preservation helpers now require validated absolute source/destination paths and hash-verify copies;
-- no live workflow or reservation authority was introduced.
+1. maximum new reservations = **1**;
+2. automatic retry = **NO**;
+3. automatic new reservation = **NO**;
+4. second replacement = **NO**;
+5. separate explicit live authorization = **REQUIRED**;
+6. only node entrypoint = `scripts/wp2_p7b_c_node_r1.py`;
+7. historical `scripts/wp2_p7b_c_node.py` is prohibited for the replacement;
+8. receiver/preservation paths must be resolved absolute paths;
+9. cell order remains `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
+10. Q0/Q3/timing/H_app/scientific semantics remain unchanged;
+11. bounded root-cause diagnostics must precede a generic final failure presentation;
+12. raw evidence must be persisted, pulled, independently read back and hash-verified before teardown;
+13. if evidence survival fails, leave the experiment live and STOP.
 
-Accepted Local Unit Tests:
+R2 also added `scripts/wp2_p7b_r2_validate_controller.py`. The retired historical controller fails this static gate. A synthetic compliant future controller passes it.
 
-- run `33116073295`;
-- job `98670934415`;
-- SHA `695b31cba6c0256b3637223abdfef4f4b11bf6ca`;
+Accepted R2 Local Unit Tests:
+
+- run `33117108893`;
+- job `98674462071`;
+- SHA `b77609bfb9256a0eb189c0e5dd29a2f1f68c3bc2`;
 - Python `3.12.14`;
 - `paho-mqtt==2.1.0`;
-- **65/65 PASS**.
+- **73/73 PASS**.
 
-R1 recommendation:
+R2 contacted no POWDER system and created no workflow, trigger, reservation, SSH session, scientific run or scored run.
 
-`FUTURE_PHYSICAL_REQUALIFICATION_RECOMMENDATION=GO_CONDITIONAL`
+## Exact next bounded patch — LIVE, NOT AUTHORIZED
 
-This is not live authority. The original contract allowed one reservation and prohibited automatic replacement; that reservation has already been consumed.
+`WP2-P7B-R3 — ONE REPLACEMENT NON-SCORED PHYSICAL REQUALIFICATION + EVIDENCE SURVIVAL`
 
-## Exact next bounded patch — offline only
+Status:
 
-`WP2-P7B-R2 — REQUALIFICATION AUTHORITY + CONTRACT FREEZE`
+`P7B_RQ1_LIVE_AUTHORIZED=false`
 
-Status: **NOT STARTED / OFFLINE ONLY**.
+R3 requires **separate explicit live authorization**. R2 GO does not itself authorize POWDER contact.
 
-R2 may only decide/freeze whether one replacement non-scored qualification reservation is justified because the first reservation stopped before scientific measurement on a concrete operational defect.
+If separately authorized, R3 may:
 
-If R2 issues GO, it must freeze all of the following before any live workflow exists:
+1. create exactly one replacement reservation under authority ID `P7B-RQ1`;
+2. execute only `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
+3. fail closed before each cell on the frozen Q0/readiness contract;
+4. stop later cells after any cell failure;
+5. use only `scripts/wp2_p7b_c_node_r1.py` for node execution;
+6. emit bounded raw diagnostics on first failure;
+7. preserve complete raw evidence to `/proj`, pull it off POWDER, upload/read back the artifact and verify hashes;
+8. authorize teardown only after `EVIDENCE_ESCROW_GATE=PASS` and `CONTROLLER_OFFPOWDER_GATE=PASS`;
+9. leave the experiment live if the evidence gate does not pass;
+10. create no retry or second replacement.
 
-1. original P7B-C/D evidence remains immutable and is never relabelled;
-2. exactly one named replacement qualification reservation may be allowed; no automatic retry and no second replacement;
-3. repaired node entrypoint is exactly `scripts/wp2_p7b_c_node_r1.py`;
-4. authority-bearing controller must prove it invokes that repaired entrypoint rather than the historical `wp2_p7b_c_node.py`;
-5. preservation uses already-resolved absolute paths and strict hash/read-back gates;
-6. cell order remains `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
-7. Q0/Q3/timing/H_app/restart/scientific semantics remain frozen;
-8. bounded raw root-cause diagnostics are emitted before any final generic `exit code 1` presentation;
-9. the temporary live workflow/trigger, if later explicitly authorized, must be one-shot and retired after terminal evidence;
-10. R2 must STOP again before any live contact.
+After terminal R3 evidence, STOP for an offline closure/snapshot decision. R3 itself never sets `scored_runs_authorized=true`.
 
 ## P7B ledger
 
-| Patch | Weight/role | Status | Result |
-|---|---:|---|---|
-| P7B-A — design/contract freeze | 20% | **PASS** | contract + offline QA |
-| P7B-B — implementation/premutation QA | 20% | **PASS** | implementation/reconstruction + B2 semantics QA |
-| P7B-C — first physical qualification | 35% | **BLOCKED** | B1 readiness orchestration defect; no measurement; W1/B2 not started |
-| P7B-D — first evidence survival + teardown | 15% | **BLOCKED STRICT COMPLETENESS** | declared roots preserved/read back; receiver event ledger unrecovered; teardown complete |
-| P7B-E — canonical blocked closure | 10% admin | **PASS CLOSURE** | blocked result frozen without relabelling |
-| P7B-R1 — repair/observability QA | repair only | **PASS OFFLINE** | path contract + fail-fast + diagnostics + 65/65 tests |
+| Patch | Role | Status | Result |
+|---|---|---|---|
+| P7B-A | design/contract freeze | **PASS** | original contract + offline QA |
+| P7B-B | implementation/premutation QA | **PASS** | implementation/reconstruction + B2 semantics QA |
+| P7B-C | first physical qualification | **BLOCKED** | pre-measurement receiver path orchestration defect |
+| P7B-D | first evidence survival + teardown | **BLOCKED STRICT COMPLETENESS** | declared roots verified; receiver event ledger unrecovered; teardown complete |
+| P7B-E | canonical blocked closure | **PASS CLOSURE** | blocked result frozen without relabelling |
+| P7B-R1 | repair/observability QA | **PASS OFFLINE** | path repair + fail-fast + diagnostics + 65/65 |
+| P7B-R2 | replacement authority contract | **PASS OFFLINE** | one replacement frozen + static controller gate + 73/73 |
 
-R1 repair does not convert blocked C/D into physical qualification credit. Successful qualification credit remains **40/100**.
+R1/R2 create no physical-qualification credit. Successful qualification credit remains **40/100**.
 
 ## Authority boundary
 
-Until R2 closes and a later separate explicit live authorization is granted:
+Until the user separately authorizes R3:
 
 - no POWDER contact, reservation or SSH;
-- no replacement P7B reservation;
-- no new Golden or H calibration;
-- no RF recalibration;
-- no physical B1/W1/B2 run;
+- no `P7B-RQ1` reservation;
+- no physical B1/W1/B2 requalification;
+- no Golden/H/RF recalibration;
 - no scored B1/W1/B2;
 - no OTA replication or WP3;
 - no `scored_runs_authorized=true`;
-- no immutable pre-score snapshot claiming readiness.
+- no immutable pre-score snapshot claiming physical readiness.
 
-**STOP — NEXT PATCH IS OFFLINE P7B-R2 ONLY.**
+**STOP — R2 PASS; P7B-R3 LIVE NOT AUTHORIZED.**
