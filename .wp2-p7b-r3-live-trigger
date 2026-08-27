@@ -1,0 +1,6 @@
+execute=WP2_P7B_R3_LIVE_ONCE
+authority_id=P7B-RQ1
+reservation_limit=1
+automatic_retry=NO
+second_replacement=NO
+scored=NO
