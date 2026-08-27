@@ -17,23 +17,72 @@ EVDIR="${WP_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID}"
 CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core}"
 PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
 RECEIVER_LAUNCH_TIMEOUT_S="${WP_RECEIVER_LAUNCH_TIMEOUT_S:-15}"
+HARD_EXPIRY_UTC="${WP_HARD_EXPIRY_UTC:-}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 RUN_DIGEST="$(printf '%s' "$RUN_ID" | sha256sum | awk '{print substr($1,1,16)}')"
 MQTT_TOPIC="wellpulse/wp-pwd01/gold/${RUN_DIGEST}/records"
 SENDER_PID=""
 RECEIVER_STARTED=0
+GIT_SHA=""
 
 mkdir -p "$EVDIR"/{sender,receiver,substrate,runtime,orchestration,analysis,escrow}
 CONSOLE="$EVDIR/orchestration/golden_console.txt"
 GATES="$EVDIR/orchestration/gate_events.jsonl"
+HCI_EVENTS="$EVDIR/orchestration/hci_events.jsonl"
 exec > >(tee -a "$CONSOLE") 2>&1
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
 bar(){ local p="$1" m="$2" n; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-52s' "$p" "$m"; }
-gate(){ "$PY" - "$1" "$2" "$3" <<'PY' >> "$GATES"
+
+# Non-authoritative observer only. It consumes orchestrator-owned state already
+# available locally and NEVER issues SSH/API/tmcc/probe/control operations.
+# Any HCI emission failure is explicitly degraded-but-non-fatal and must not
+# alter scientific execution, evidence validity, or teardown interlocks.
+hci_emit(){
+  local g="$1" s="$2" p phase evidence persistent off teardown
+  evidence=NOT_STARTED
+  persistent=NOT_STARTED
+  off=NOT_STARTED
+  teardown=NO
+  case "$g" in
+    G0)  p=5;  phase=PREP ;;
+    G1)  p=10; phase=PREP ;;
+    G2)  p=22; phase=BASELINE ;;
+    G3)  p=28; phase=RF_OUTAGE ;;
+    G4)  p=38; phase=RESTORE ;;
+    G5)  p=48; phase=RESTORE ;;
+    G6)  p=58; phase=SERVICE_READY ;;
+    G7)  p=66; phase=APPLICATION_HORIZON ;;
+    G8)  p=82; phase=RECONSTRUCTION ; evidence=RAW_RECONSTRUCTED ;;
+    G9)  p=92; phase=ESCROW; evidence=PERSISTENT_VERIFIED_CONTROLLER_REQUIRED; persistent=VERIFIED; off=PENDING ;;
+    G10) p=96; phase=ESCROW; evidence=PENDING_CONTROLLER_FINALIZATION; persistent=VERIFIED; off=PENDING ;;
+    *)   p=0; phase=PREP ;;
+  esac
+  if ! "$PY" "$REPO/scripts/wp2_golden_hci_emit.py" \
+      --output "$HCI_EVENTS" \
+      --run-id "$RUN_ID" \
+      --experiment-id "$EXPERIMENT_ID" \
+      --gate "$g" \
+      --phase "$phase" \
+      --status "$s" \
+      --progress-pct "$p" \
+      --code-commit "$GIT_SHA" \
+      --hard-expiry-utc "$HARD_EXPIRY_UTC" \
+      --evidence-state "$evidence" \
+      --persistent-copy-state "$persistent" \
+      --off-powder-copy-state "$off" \
+      --teardown-authorized "$teardown"; then
+    printf 'HCI_OBSERVER=DEGRADED_NON_AUTHORITATIVE gate=%s\n' "$g" >&2
+  fi
+  return 0
+}
+
+gate(){
+  "$PY" - "$1" "$2" "$3" <<'PY' >> "$GATES"
 import json,sys,datetime
 print(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'gate':sys.argv[1],'status':sys.argv[2],'detail':sys.argv[3]},sort_keys=True,separators=(',',':')))
 PY
+  hci_emit "$1" "$2"
 }
 fail(){ echo; gate "$1" FAIL "$2"; echo "GOLDEN_E2E=FAIL_$1:$2"; [[ "$1" == G9 ]] && echo 'STOP_DO_NOT_TERMINATE=1'; exit 70; }
 ssh_core(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST" "$@"; }
@@ -62,6 +111,7 @@ echo "CORE_HOST=$CORE_HOST"
 echo "UE_HOST=$UE_HOST"
 echo "MQTT_TOPIC=$MQTT_TOPIC"
 echo "PERSIST_ROOT=$PERSIST_ROOT"
+echo "HCI_CONTROL_ACTIONS_ENABLED=false"
 echo "START_UTC=$(utc)"
 
 bar 5 'G0 environment identity'; echo
@@ -166,6 +216,7 @@ PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
 printf 'run_id=%s\nexperiment_id=%s\npersistent_dir=%s\nutc=%s\n' \
   "$RUN_ID" "$EXPERIMENT_ID" "$PDIR" "$(utc)" > "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED"
 gate G9 PASS PERSISTENT_VERIFIED_CONTROLLER_COPY_REQUIRED
+hci_emit G10 PENDING
 
 bar 100 'Node phase safely complete; controller escrow required'; echo
 printf 'GOLDEN_NODE_PHASE=PASS_PERSISTENT_ESCROW\n'
