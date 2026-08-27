@@ -1,0 +1,119 @@
+name: WP2 A3 Runtime Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "powder/wp2-a3-runtime-diag.trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      EXPID: 357f3275-403d-491a-906f-99677bdf454f
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Portal and SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://gitlab.flux.utah.edu/emulab/portal-api.git /tmp/portal-api >/dev/null 2>&1
+          python -m pip install --quiet '/tmp/portal-api[cli]'
+          umask 077
+          mkdir -p "$HOME/.ssh"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/askpass
+          export SSH_ASKPASS=/tmp/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          portal-cli experiment manifests get --experiment-id "$EXPID" >/tmp/manifest.json
+          python3 - <<'PY' >/tmp/logins.tsv
+          import json,xml.etree.ElementTree as ET
+          obj=json.load(open('/tmp/manifest.json')); xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and 'rspec' in x.lower(): xmls.append(x)
+          walk(obj)
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for node in root.iter():
+                  if node.tag.rsplit('}',1)[-1]!='node': continue
+                  cid=node.attrib.get('client_id','')
+                  if cid not in {'enb1','rue1'}: continue
+                  for ch in node.iter():
+                      if ch.tag.rsplit('}',1)[-1]=='login' and ch.attrib.get('hostname'):
+                          print('\t'.join([cid,ch.attrib.get('username','aayoub'),ch.attrib['hostname'],ch.attrib.get('port','22')]))
+                          break
+          PY
+      - name: Collect read-only runtime facts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/powder
+          OUT=evidence/powder/wp2-a3-runtime-diag.md
+          {
+            echo '# WP2 A3 runtime diagnostic'
+            echo
+            echo '- Experiment: `357f3275-403d-491a-906f-99677bdf454f`'
+            echo '- Mutation executed: **NO**'
+            echo
+          } > "$OUT"
+          while IFS=$'\t' read -r CID USER HOST PORT; do
+            echo "## $CID" >> "$OUT"
+            echo '```text' >> "$OUT"
+            ssh -A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -p "$PORT" "$USER@$HOST" '
+              set +e
+              echo HOST=$(hostname)
+              uname -a
+              for p in python3 python3.6 python3.7 python3.8 python3.9 python3.10 python3.11; do
+                if command -v "$p" >/dev/null 2>&1; then echo "$p=$($p --version 2>&1) path=$(command -v $p)"; fi
+              done
+              echo "pip3=$(pip3 --version 2>&1 || true)"
+              python3 -m pip --version 2>&1 || true
+              python3 - <<"PY"
+import ssl,sys
+print("python_executable=",sys.executable)
+print("python_version=",sys.version.replace("\n"," "))
+print("openssl=",ssl.OPENSSL_VERSION)
+PY
+              curl -fsSI --max-time 10 https://pypi.org/simple/paho-mqtt/ | head -n 1 || true
+              python3 -m pip index versions paho-mqtt 2>&1 | head -n 20 || true
+            ' >> "$OUT" 2>&1
+            echo '```' >> "$OUT"
+            echo >> "$OUT"
+          done </tmp/logins.tsv
+          cat "$OUT"
+      - name: Commit diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/wp2-a3-runtime-diag.md
+          git commit -m 'Record A3 Python runtime diagnostic' || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
