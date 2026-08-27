@@ -1,0 +1,161 @@
+{
+  "schema_version": "wp2-p7b-executable-contract-v2",
+  "status": "OFFLINE_CONTRACT_REPAIR_NOT_LIVE_AUTHORITY",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "scored": false,
+  "scored_runs_authorized": false,
+  "live_authorized": false,
+  "authority": {
+    "future_patch": "WP2-P7B-R3",
+    "authority_id": "P7B-RQ1",
+    "maximum_new_reservations": 1,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "second_replacement_authorized": false,
+    "requires_fresh_explicit_live_authorization_after_r3b": true
+  },
+  "profile": {
+    "name": "PowderProfiles/srslte-controlled-rf",
+    "revision": "a6da96560b6526dc6816761282722c996418fd8c",
+    "hardware_type": "nuc5300",
+    "image": "urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1",
+    "bindings": {"enb_node": "nuc1", "ue_node": "nuc2", "ue_type": "srsue"},
+    "attenuator_ids": [1, 33, 2, 34],
+    "q0_db": 0,
+    "q1_db": 40,
+    "q2_db": 52,
+    "q3_db": 55
+  },
+  "schedule": {
+    "pre_impairment_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "cohort_cutoff": "t_rf_restore",
+    "cell_sequence": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"]
+  },
+  "transport": {
+    "broker_host": "172.16.0.1",
+    "broker_port": 8883,
+    "protocol": "MQTTv311",
+    "qos": 1,
+    "tls": true,
+    "clean_session": false,
+    "keepalive_s": 60
+  },
+  "b1_w1_runtime": {
+    "paho_mqtt_version": "2.1.0",
+    "reconnect_min_delay_s": 1,
+    "reconnect_max_delay_s": 8,
+    "max_queued_messages": 4096,
+    "max_inflight_messages": 20,
+    "only_intended_difference": "W1 application-level SQLite durability and reconciliation"
+  },
+  "b2_runtime": {
+    "implementation": "Eclipse Paho Java 1.2.5",
+    "jar_sha256": "59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185",
+    "automatic_reconnect": false,
+    "connection_timeout_s": 5,
+    "persistence": "MqttDefaultFilePersistence",
+    "disconnected_buffer": {"enabled": true, "size": 4096, "persist": true, "delete_oldest": false}
+  },
+  "restart_domain": {
+    "telemetry_generator_outside_restart_domain": true,
+    "generation_rate_hz": 1,
+    "gateway_client_process_only": true,
+    "node_reboot_prohibited": true,
+    "generator_pid_unchanged_required": true,
+    "gateway_pid_change_required": true,
+    "same_intra_run_client_identity_required": true,
+    "source_sequence_continuity_required": true,
+    "utc_and_monotonic_timestamps_required": true
+  },
+  "readiness": {
+    "five_probe_count": 5,
+    "required_zero_packet_loss_pct": 0.0,
+    "initial_session_present": false,
+    "q0_radio_envelope_when_exposed": {"rsrp_dbm_min": -75, "rsrp_dbm_max": -45, "dl_snr_db_min": 25, "dl_snr_db_max": 60}
+  },
+  "cells": [
+    {"order": 1, "id": "P7B-B1-S3", "architecture": "B1_MQTT_QOS1", "scenario": "S3_OUTAGE_RESTART"},
+    {"order": 2, "id": "P7B-W1-S3", "architecture": "W1_OFFLINE_FIRST", "scenario": "S3_OUTAGE_RESTART"},
+    {"order": 3, "id": "P7B-B2-S3", "architecture": "B2_MQTT_DURABLE_CLIENT", "scenario": "S3_OUTAGE_RESTART"}
+  ],
+  "evidence_layout": {
+    "roots": {
+      "ue": "{ue_home}/wellpulse-powder-evidence/p7b/{run_id}",
+      "core": "{core_home}/wellpulse-powder-evidence/p7b/{run_id}-core",
+      "escrow": "/proj/WellPulse/evidence-escrow/{experiment_id}/{run_id}"
+    },
+    "reservation_required_nonempty": [
+      "ue:p7b_c_status.json",
+      "ue:orchestration/p7b_c_events.jsonl",
+      "ue:orchestration/management_alias_gate.txt",
+      "ue:orchestration/broker_start.txt",
+      "ue:runtime/ca.crt",
+      "ue:runtime/broker_public.json",
+      "ue:runtime/paho.jar",
+      "ue:analysis/p7b_reconstruction.json",
+      "ue:analysis/p7b_reconstruction.md"
+    ],
+    "per_cell_required_nonempty": [
+      "ue:cells/{cell}/receiver_path_contract.json",
+      "ue:cells/{cell}/readiness_observation.json",
+      "ue:cells/{cell}/readiness_verdict.json",
+      "ue:cells/{cell}/runtime_manifest.json",
+      "ue:cells/{cell}/telemetry_generated.csv",
+      "ue:cells/{cell}/generator_events.jsonl",
+      "ue:cells/{cell}/restart_proof.json",
+      "ue:cells/{cell}/attenuator_q0_set.txt",
+      "ue:cells/{cell}/attenuator_q0_readback.txt",
+      "ue:cells/{cell}/q0_user_plane_probes.txt",
+      "ue:cells/{cell}/tls_mqtt_probe.txt",
+      "ue:cells/{cell}/q0_radio_capture.txt",
+      "ue:cells/{cell}/attenuator_q3_set.txt",
+      "ue:cells/{cell}/attenuator_restore_q0_set.txt",
+      "ue:cells/{cell}/t_rf_restore.txt",
+      "ue:cells/{cell}/t_service_ready.txt",
+      "ue:cells/{cell}/service_ready_probe.txt",
+      "ue:cells/{cell}/t_app_complete.txt",
+      "core:cells/{cell}/receiver/receiver_events.jsonl",
+      "core:cells/{cell}/receiver/telemetry_received.csv"
+    ],
+    "per_cell_required_exists": ["core:cells/{cell}/receiver/console.txt"],
+    "architecture_required_nonempty": {
+      "P7B-B1-S3": [
+        "ue:cells/P7B-B1-S3/mqtt_events.jsonl",
+        "ue:cells/P7B-B1-S3/pre_restart_transport_snapshot.json"
+      ],
+      "P7B-W1-S3": [
+        "ue:cells/P7B-W1-S3/w1_queue.sqlite",
+        "ue:cells/P7B-W1-S3/w1_durability_proof.json"
+      ],
+      "P7B-B2-S3": [
+        "ue:cells/P7B-B2-S3/b2_events.jsonl",
+        "ue:cells/P7B-B2-S3/b2_pre_restart_persistence_inventory.json",
+        "ue:cells/P7B-B2-S3/b2_post_restart_persistence_inventory.json",
+        "ue:cells/P7B-B2-S3/b2_horizon_persistence_inventory.json",
+        "ue:cells/P7B-B2-S3/b2_durability_proof.json"
+      ]
+    },
+    "conditional": [
+      {"path": "ue:cells/P7B-W1-S3/w1_queue.sqlite-wal", "rule": "required_if_present_at_evidence_freeze"}
+    ]
+  },
+  "evidence_survival": {
+    "resolved_absolute_paths_only": true,
+    "literal_home_or_tilde_tokens_prohibited": true,
+    "chain": ["node_raw", "proj_persistent_escrow", "controller_pull", "github_actions_artifact", "independent_controller_readback", "outer_and_internal_sha256"],
+    "teardown_requires": ["EVIDENCE_CONTRACT_GATE=PASS", "EVIDENCE_ESCROW_GATE=PASS", "CONTROLLER_OFFPOWDER_GATE=PASS"],
+    "on_failure": "LEAVE_EXPERIMENT_LIVE_AND_STOP"
+  },
+  "execution": {
+    "only_authoritative_node_entrypoint": "scripts/wp2_p7b_c_node_r2.py",
+    "legacy_entrypoints_prohibited": ["scripts/wp2_p7b_c_node.py", "scripts/wp2_p7b_c_node_r1.py"],
+    "contract_loader": "src/wellpulse/p7b_contract_v2.py",
+    "evidence_validator": "scripts/wp2_p7b_evidence_gate_v2.py",
+    "reconstruction": "scripts/reconstruct_wp2_p7b_v2.py"
+  },
+  "claim_boundary": "qualification mechanics only; no scored or cross-cell scientific claim"
+}
