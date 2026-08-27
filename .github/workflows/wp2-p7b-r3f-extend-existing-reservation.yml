@@ -1,0 +1,93 @@
+name: WP2 P7B-R3F Extend Existing Reservation
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-r3f-extend-existing-reservation-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  extend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      TARGET_EXPID: 12b39276-af0f-4e34-8dfd-685b006dd6bd
+      TARGET_NAME: wp7brq19810043
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Freeze extension authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-r3f-extend-existing-reservation-trigger)" = 'AUTHORITY=EXTEND_EXISTING_WP7BRQ19810043_BY_2H_ONCE'
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+(create|terminate)' .github/workflows/wp2-p7b-r3f-extend-existing-reservation.yml
+          echo 'NEW_RESERVATION=NO'
+          echo 'EXTEND_BY_HOURS=2'
+          echo 'RF_MUTATION=NO'
+          echo 'CELLS=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
+      - name: Extend exact existing reservation and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/wp2-r3f-extension
+          mkdir -p "$OUT"
+          bash scripts/wp2_portal_client_bootstrap.sh "$OUT/portal-api" | tee "$OUT/portal-pin.txt"
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' "$OUT/portal-pin.txt"
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > "$OUT/before.json"
+          python3 - "$OUT/before.json" "$TARGET_EXPID" "$TARGET_NAME" <<'PY'
+          import json,sys
+          o=json.load(open(sys.argv[1])); eid,name=sys.argv[2:4]
+          assert o.get('id')==eid, (o.get('id'),eid)
+          assert o.get('name')==name, (o.get('name'),name)
+          assert o.get('project')=='WellPulse', o.get('project')
+          assert str(o.get('status','')).lower()=='ready', o.get('status')
+          print('PRE_EXTENSION_IDENTITY=PASS')
+          print('PRE_EXTENSION_EXPIRES_AT='+str(o.get('expires_at') or o.get('expires') or 'UNKNOWN'))
+          PY
+          portal-cli experiment extend \
+            --experiment-id "$TARGET_EXPID" \
+            --extend-by 2 \
+            --reason 'Complete one authorized non-scored WellPulse P7B B1-W1-B2 physical qualification and immutable evidence preservation/read-back under the R3E-passed contract; no new reservation, no scored runs, no automatic retry.' \
+            | tee "$OUT/extend.txt"
+          OK=0
+          for i in 1 2 3 4 5 6; do
+            set +e
+            portal-cli experiment get --experiment-id "$TARGET_EXPID" > "$OUT/after.json" 2>"$OUT/after.err"
+            rc=$?
+            set -e
+            if [[ "$rc" -eq 0 ]]; then OK=1; break; fi
+            sleep 2
+          done
+          test "$OK" = 1
+          python3 - "$OUT/before.json" "$OUT/after.json" "$TARGET_EXPID" "$TARGET_NAME" <<'PY'
+          import json,sys
+          from datetime import datetime,timezone
+          b=json.load(open(sys.argv[1])); a=json.load(open(sys.argv[2])); eid,name=sys.argv[3:5]
+          assert a.get('id')==eid
+          assert a.get('name')==name
+          assert a.get('project')=='WellPulse'
+          assert str(a.get('status','')).lower()=='ready'
+          def dt(o):
+              v=o.get('expires_at') or o.get('expires')
+              if not v: return None
+              return datetime.fromisoformat(str(v).replace('Z','+00:00')).astimezone(timezone.utc)
+          before,after=dt(b),dt(a)
+          assert after is not None, 'POST_EXTENSION_EXPIRY_MISSING'
+          if before is not None:
+              delta=(after-before).total_seconds()
+              assert delta >= 7000, f'EXTENSION_TOO_SMALL:{delta}'
+              print(f'EXTENSION_DELTA_S={delta:.0f}')
+          remaining=(after-datetime.now(timezone.utc)).total_seconds()
+          assert remaining >= 6000, f'POST_EXTENSION_REMAINING_TOO_SMALL:{remaining}'
+          print('POST_EXTENSION_IDENTITY=PASS')
+          print('POST_EXTENSION_EXPIRES_AT='+after.isoformat())
+          print(f'POST_EXTENSION_REMAINING_S={remaining:.0f}')
+          print('WP2_P7B_R3F_EXTENSION=PASS_SAME_RESERVATION_PLUS_2H')
+          PY
