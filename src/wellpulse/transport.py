@@ -235,6 +235,8 @@ class PahoQoS1Session:
                 "accepted_publish_calls": self._accepted_publish_calls,
                 "puback_callbacks": self._acked_calls,
                 "unacked_accepted_count": unacked,
+                "accepted_unacked_mids": sorted(self._accepted_unacked_mids),
+                "exact_internal_queue_occupancy_claim": False,
                 # Backward-compatible key. Semantics are accepted-but-unacked,
                 # not exact Paho internal queue occupancy.
                 "outstanding_mid_count": unacked,
