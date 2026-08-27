@@ -32,21 +32,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(cat .wp2-p7b-r3d-target-native-preflight-trigger)" = 'AUTHORITY=R3D_TARGET_NATIVE_PREFLIGHT_EXISTING_RESERVATION_ONLY'
           python3 - <<'PY'
           import json
           from pathlib import Path
-          p=Path('experiments/WP-PWD01/p7b-target-runtime-contract-v2.json')
-          c=json.loads(p.read_text())
+          lines=Path('.wp2-p7b-r3d-target-native-preflight-trigger').read_text().splitlines()
+          assert lines == ['AUTHORITY=R3D_TARGET_NATIVE_PREFLIGHT_EXISTING_RESERVATION_ONLY','ATTEMPT=2']
+          c=json.loads(Path('experiments/WP-PWD01/p7b-target-runtime-contract-v2.json').read_text())
           assert c['schema_version']=='wp2-p7b-target-runtime-contract-v2'
           assert c['live_authorized'] is False
           assert c['scored_runs_authorized'] is False
-          assert c['efcc']['gate_required_before_live_execution'] is True
-          assert c['observed_target']['os_id']=='ubuntu'
-          assert c['observed_target']['os_version']=='18.04'
-          assert c['observed_target']['system_python']=='3.6.9'
-          assert c['observed_target']['pinned_python']=='3.11.13'
-          assert c['observed_target']['paho_mqtt']=='2.1.0'
+          assert c['efcc_gate']['target_runtime_is_compatibility_baseline'] is True
+          assert c['target_image']['os_id']=='ubuntu'
+          assert c['target_image']['os_version']=='18.04'
+          for role in ('core','ue'):
+              assert c['roles'][role]['system_python_observed']=='3.6.9'
+              assert c['roles'][role]['project_python_exact']=='3.11.13'
+              assert c['roles'][role]['paho_mqtt_exact']=='2.1.0'
+          assert c['roles']['ue']['java_major']==11
+          assert c['roles']['core']['mosquitto_version_observed']=='1.4.15'
           print('R3D_PREFLIGHT_CONTRACT_FREEZE=PASS')
           PY
           bash -n scripts/wp2_p7b_target_node_preflight.sh
@@ -118,8 +121,7 @@ jobs:
           stage_node core "$CORE_USER" "$CORE_HOST" "$CORE_PORT"
           stage_node ue "$UE_USER" "$UE_HOST" "$UE_PORT"
 
-          # Contract is parsed with the pinned interpreter on the target itself.
-          remote_contract_check='import json,sys; c=json.load(open(sys.argv[1])); assert c["schema_version"]=="wp2-p7b-target-runtime-contract-v2"; assert c["live_authorized"] is False; assert c["scored_runs_authorized"] is False; assert c["observed_target"]["pinned_python"]=="3.11.13"; assert c["observed_target"]["paho_mqtt"]=="2.1.0"; print("TARGET_RUNTIME_CONTRACT_V2=PASS")'
+          remote_contract_check='import json,sys; c=json.load(open(sys.argv[1])); assert c["schema_version"]=="wp2-p7b-target-runtime-contract-v2"; assert c["live_authorized"] is False; assert c["scored_runs_authorized"] is False; assert c["efcc_gate"]["target_runtime_is_compatibility_baseline"] is True; assert c["target_image"]["os_id"]=="ubuntu"; assert c["target_image"]["os_version"]=="18.04"; print("TARGET_RUNTIME_CONTRACT_V2=PASS")'
 
           echo '=== CORE TARGET-NATIVE PREFLIGHT ===' | tee "$OUT/core.txt"
           ssh "${SSH_OPTS[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" \
