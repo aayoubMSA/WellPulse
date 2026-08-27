@@ -1,7 +1,18 @@
 # WellPulse Live Experiment HCI and Raw-Evidence Architecture
 
-**Status:** WP2-P5 CONTRACT FROZEN / IMPLEMENTED OFFLINE / CURRENT QA REQUIRED BEFORE GATE PASS  
+**Status:** WP2-P5 PASS / FROZEN  
+**Closure record:** `docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`  
 **Purpose:** let the PI follow the experiment clearly in real time without contaminating the scientific run, while preserving complete raw evidence independently of the HCI.
+
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
+
+`HCI_CONTROL_ACTIONS_ENABLED=false`
+
+`REBOOK_GOLDEN=false`
+
+`scored_runs_authorized=false`
+
+Passing this design/implementation gate does not authorize Golden. A separate explicit user continuation is required before the advisory POWDER resource preflight or any reservation.
 
 ## 1. Separation of planes
 
@@ -198,24 +209,27 @@ The authoritative filename/signal inventory is:
 
 HCI material is not part of this scientific-completeness predicate.
 
-## 8. Offline acceptance tests for WP2-P5
+## 8. WP2-P5 offline acceptance
 
-The bounded offline gate must verify:
+The bounded P5 checks passed without POWDER or Drive contact. Accepted checks cover:
 
-1. HCI emitter is dependency-minimal and has no SSH/API/network/probe/control implementation;
-2. orchestrator marks `HCI_CONTROL_ACTIONS_ENABLED=false`;
-3. HCI observer failure is explicitly non-fatal/non-authoritative;
-4. HCI emits `wp2-hci-v1` JSONL and stdout fallback from synthetic local state;
-5. HCI event contains no arbitrary raw/gate detail;
-6. HCI file is conditional, not required scientific evidence;
-7. mandatory raw inventory remains exact and independent of HCI;
-8. reconstruction still derives `completeness_300` from raw evidence;
+1. dependency-minimal passive HCI emitter with no SSH/API/network/probe/control implementation;
+2. `HCI_CONTROL_ACTIONS_ENABLED=false` in the orchestrator;
+3. observer failure explicitly non-fatal/non-authoritative;
+4. valid `wp2-hci-v1` JSONL and stdout fallback from synthetic local state;
+5. no arbitrary raw/gate detail in HCI events;
+6. HCI classified conditional rather than required scientific evidence;
+7. mandatory raw inventory complete independently of HCI;
+8. reconstruction remains raw-evidence based;
 9. persistent `/proj` escrow remains fail-closed with controller handoff required;
-10. independent controller artifact round-trip still verifies outer and internal hashes;
-11. outer-hash and internal-raw corruption both fail closed;
-12. QA logs `POWDER_CONTACT=NO`, `DRIVE_CONTACT=NO`, `SCIENTIFIC_RUN=NO`.
+10. controller outer/internal hash round-trip contract remains intact;
+11. teardown remains prohibited before controller verification.
 
-The active QA implementation is:
+Canonical closure evidence:
+
+`docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+
+The active offline QA implementation is:
 
 `scripts/wp2_golden_offline_qa.sh`
 
@@ -223,16 +237,14 @@ and workflow:
 
 `.github/workflows/wp2-golden-offline-qa.yml`
 
-## 9. Gate rule
+## 9. Gate state and STOP
 
 `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
-may be issued only after the current implementation passes the bounded offline acceptance tests above and the canonical closure/handover is updated.
+`REBOOK_GOLDEN=false`
 
-Passing this design gate does **not** authorize Golden by itself.
+`scored_runs_authorized=false`
 
-After PASS:
+No POWDER contact, reservation, SSH, Golden or scored run was used to close WP2-P5.
 
-- `REBOOK_GOLDEN=false` remains until a separate explicit user continuation;
-- `scored_runs_authorized=false` remains;
-- no POWDER reservation/contact/SSH is performed by this closure patch.
+The project stops here. Only after a **separate explicit user continuation** may the project perform the advisory `resinfo.php` preflight and attempt one clean non-scored Golden.
