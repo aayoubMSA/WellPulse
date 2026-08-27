@@ -1,16 +1,16 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after **WP2-P6 short QA PASS and explicit one-shot Golden authorization**.
+Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization BLOCKED**.
 
 ## Executive state
 
 - Canonical repository: `aayoubMSA/WellPulse`, branch `main`.
-- Last accepted checkpoint: **WP2-P5 PASS / P6 SHORT QA PASS / P6 ACTIVE**.
+- Last accepted checkpoint: **WP2-P7 CLOSED / STOPPED**.
 - Scientific weighted completion: **20%**.
-- WP2 management/readiness before P6 result: **80/100**; no partial scientific credit.
+- WP2 management/readiness: **95/100**; no partial scientific credit.
 - WP0: **PASS**, 8/8.
 - WP1: **PASS / FROZEN**, 12/12.
-- WP2: **ACTIVE** — P1-P5 closed; P6 authorized/active; P7 remains blocked.
+- WP2: **ACTIVE / PRE-SCORE BLOCKED**.
 - WP3: **BLOCKED ON WP2**, 0/30.
 - WP4: **BLOCKED**, 0/15.
 - WP5: **PREPARED / NOT EXECUTED**, 0/20.
@@ -21,126 +21,174 @@ Last updated: 2026-08-27 after **WP2-P6 short QA PASS and explicit one-shot Gold
 - `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`.
 - `AUDIT_R1=PASS`.
 - `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`.
-- `P6_SHORT_QA=PASS`.
-- `HCI_CONTROL_ACTIONS_ENABLED=false`.
-- `REBOOK_GOLDEN=true` **for exactly one non-scored WP2-P6 reservation/run only**.
+- `WP2_P6=PASS_RECOVERED_SINGLE_RUN`.
+- `WP2_P7_HARDENING_QA=PASS`.
+- `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`.
 - `scored_runs_authorized=false`.
+- `HCI_CONTROL_ACTIONS_ENABLED=false`.
 
-## Current bounded work package
+## P6 — final non-scored Golden state
 
-`WP2-P6 — ONE CLEAN NON-SCORED GOLDEN REHEARSAL`
+Canonical detailed record:
 
-The user's explicit continuation on 2026-08-27 authorizes P6 after a short QA cycle. P6 is the only live work authorized by this handover.
+`docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
 
-Canonical P6 QA:
+Final P6 experiment:
 
-`docs/WP2_P6_SHORT_QA_2026-08-27.md`
+- UUID: `5579cf25-dbb1-4d04-87e3-ff558e3be2af`;
+- name: `wpg7498036`;
+- profile: `PowderProfiles/srslte-controlled-rf`;
+- profile repository revision: `a6da96560b6526dc6816761282722c996418fd8c`;
+- bindings: `enb_node=nuc1`, `ue_node=nuc2`, `ue_type=srsue`;
+- original authorized source SHA: `bd1b5e12f3d2eca27ec81ccadbeec5afaa2f2159`;
+- valid scientific run: `wp2-p6r-33099648133-20260827T174149Z`;
+- scored: **NO**;
+- scientific rerun: **NO**;
+- second reservation: **NO**.
 
-Live workflow:
+P6 scientific reconstruction:
 
-`.github/workflows/wp2-p6-golden.yml`
+- `t_rf_restore=2026-08-27T17:45:06.913285Z`;
+- `t_service_ready=2026-08-27T17:45:32.001525Z`;
+- `T_service=25.088240 s`;
+- `t_app_complete=2026-08-27T17:45:37.295360Z`;
+- `T_app=5.293835 s`;
+- `T_total=30.382075 s`;
+- primary cohort `181`;
+- valid by the 300 s horizon `181/181`;
+- `completeness_300=1.0`;
+- primary-cohort missing/checksum/duplicate/late = `0/0/0/0`.
 
-Execution controller:
+Evidence survival/finalization:
 
-`powder/wp2_p6_golden_execute.sh`
+- `RAW_EVIDENCE_COMPLETE=PASS`;
+- persistent `/proj` escrow PASS;
+- controller pull PASS;
+- deterministic TAR SHA-256 `ff72a50fd11db1d308f4049b49fffa317c8220c9290845434dbadc8dbef847cf`;
+- GitHub artifact ID `9658678808`;
+- independent artifact read-back + outer/internal SHA-256 PASS;
+- teardown confirmed `2026-08-27T18:04:31Z`.
 
-Current live/status evidence path:
+P6 Attempt 1 and later G8/escrow salvage failures remain preserved as infrastructure/provenance evidence. They did not create a second scientific measurement or a second reservation.
 
-`evidence/powder/wp2-p6-live-status.md`
+## P7 — hardening and authorization decision
 
-## P6 execution contract
+Canonical decision:
 
-1. Premutation offline QA must PASS in the same workflow.
-2. Immediately before booking, perform advisory `https://www.powderwireless.net/resinfo.php` check and record `PASS|DEFER|UNKNOWN`. If the page is ambiguous/unparseable, record `UNKNOWN` and rely on authoritative Portal gates; never infer availability or change the frozen design.
-3. Create exactly one reservation using:
-   - project `WellPulse`;
-   - profile `PowderProfiles/srslte-controlled-rf`;
-   - exact profile repository revision target `a6da96560b6526dc6816761282722c996418fd8c`;
-   - bindings `enb_node=nuc1`, `ue_node=nuc2`, `ue_type=srsue`;
-   - expected hardware `nuc5300`;
-   - expected image `urn:publicid:IDN+emulab.net+image+PowderProfiles:U18LL-SRSLTE:1`.
-4. Require authoritative Portal READY/identity/expiry/time gate, exact manifest identity, SSH reachability, profile revision and writable `/proj/WellPulse` before science.
-5. Establish clean Q0 5/5 user-plane baseline before protected science.
-6. Execute exactly one non-scored Golden G0-G10 using the frozen orchestrator and passive HCI only.
-7. Frozen science remains:
-   - Q0/Q1/Q2/Q3 = `0/40/52/55 dB`;
-   - attenuation IDs `1 33 2 34` coupled;
-   - `t_rf_restore`, `t_service_ready`, `t_app_complete` distinct;
-   - primary cohort cutoff `t_rf_restore`;
-   - `H_app=300 s from t_service_ready`;
-   - primary endpoint `completeness_300`;
-   - `T_service`, `T_app`, `T_total` preserved;
-   - no outcome-derived H changes.
-8. Protected G3-G7 science has no background `/proj` checkpoint. After G8 reconstruction, G9 freezes/hashes/copies to `/proj/WellPulse`.
-9. Node/persistent phase must end with `RAW_EVIDENCE_COMPLETE=PASS`, `PERSISTENT_ESCROW_GATE=PASS`, controller handoff required, and `TEARDOWN_AUTHORIZED=NO`.
-10. Controller pulls the verified persistent evidence, builds deterministic TAR and SHA-256, uploads via pinned GitHub artifact action, independently downloads/read-backs, and verifies outer + internal SHA-256.
-11. Only controller finalization may emit `CONTROLLER_OFFPOWDER_GATE=PASS`, `EVIDENCE_ESCROW_GATE=PASS`, `TEARDOWN_AUTHORIZED=YES`.
-12. Only after that may Portal teardown be requested and confirmed.
-13. STOP after P6. WP2-P7 formal scientific closure/scored authorization is a separate decision.
+`docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
 
-## Fail-closed rules
+P7 changed no frozen RF/scientific semantics and contacted no POWDER resource. Accepted reusable-path hardening:
 
-- Failure before protected science begins: bounded reservation cleanup is allowed.
-- Failure after protected science begins without verified final evidence closure: automatic teardown is prohibited; preserve the experiment live for evidence recovery.
-- HCI failure alone is non-authoritative/non-fatal.
-- Negative/null/unfavorable application outcome remains valid scientific evidence and never justifies rerun/protocol drift.
-- P6 does not authorize B1/W1/B2 scored work.
+1. management aliases `enb1/rue1` are now manifest-derived and SSH-proven before G0;
+2. G8 receiver evidence uses the live-qualified tar-stream transfer instead of `scp .../receiver/.`;
+3. planned post-cohort generated traffic is separated from truly unexpected record identities;
+4. clock-authority/post-cohort/transport/retirement regressions are executable under the actual `unittest discover` gate.
 
-## Frozen prior evidence
+Bounded P7 offline closure evidence:
 
-### H1
+- GitHub run `33103997677`;
+- job `98628861177`;
+- result **SUCCESS**;
+- **36/36 tests PASS**;
+- Golden offline reconstruction/escrow/interlock QA PASS;
+- outer-hash corruption fails closed;
+- internal raw-hash corruption fails closed;
+- `POWDER_CONTACT=NO`;
+- `POWDER_MUTATION=NO`;
+- `SCIENTIFIC_RUN=NO`;
+- `SCORED_RUN=NO`.
 
-- experiment `WP-HCAL-E`;
-- UUID `9153e16a-1eb1-45f5-88bf-303636a9d1ec`;
-- run `wp2h1-a1-20260826-001`;
-- profile revision `a6da96560b6526dc6816761282722c996418fd8c`;
-- mapping `enb1 -> nuc1`, `rue1 -> nuc2`;
-- deployed WellPulse commit `95ba9a57bef159450b00b8a439d393d22e1c0519`;
-- classification `VALID_W1_RECOVERY_FAILURE`;
-- scored: NO;
-- original node-local raw bundles were not recovered after teardown.
+Temporary P7 workflow/trigger were deleted after PASS. Current workflow surface is back to the six standing offline/static workflows and four standing root sentinels documented in `docs/WORKFLOW_REGISTRY.md`.
 
-Do not reopen H1 salvage or use H1 to select/re-estimate H.
+## Current pre-score blockers
 
-### K1-K8
+P7 deliberately did **not** convert offline hardening PASS into scored authorization. Mandatory physical qualification remains open for:
 
-K1-K8 remain PASS/CLOSED. Decisive compatibility evidence:
+1. B1 accepted/unacknowledged instrumentation on the real remote path;
+2. B1/W1 matched runtime/config proof on POWDER;
+3. S3 process-restart-domain separation non-scored proof;
+4. B2 Eclipse Paho Java 1.2.5 remote runtime/path/restart qualification;
+5. full inter-run washout/readiness enforcement for B1/W1/B2;
+6. immutable pre-score reproducibility snapshot only after items 1-5 PASS.
 
-- Actions run `33085406598`;
-- experiment `fc7c2187-2376-4a92-8de1-4665a06ea943`;
-- classification `INFRASTRUCTURE_ONLY_NON_SCORED`.
+Older OPEN labels in `experiments/WP-PWD01/run-matrix.yaml` for remote Paho reproduction, LTE/MQTT path, run/session isolation, W1 physical checksum preservation, clock alignment, deterministic non-scored reconstruction, controller SSH path and evidence-survival transport are superseded by the later physical/non-scored evidence summarized in the P7 decision. **Only the gate-status bookkeeping is superseded; the scientific design, schedules, endpoint definitions, freeze requirements and all still-open gates in the run matrix remain authoritative.**
 
-Do not reopen K1-K8 absent a material interface change.
+Do not set `scored_runs_authorized=true` until every still-open mandatory gate closes and the immutable pre-score snapshot is frozen.
 
-## Workflow governance during P6
+## Frozen scientific controls
 
-The active workflow surface is temporarily **7 workflows**: the six P5-era offline/static workflows plus one bounded live workflow `wp2-p6-golden.yml`. Its only authorized trigger is `.wp2-p6-golden-trigger`, and that trigger is single-use for this P6 run. Historical K/A3 workflows remain retired.
+- Q0/Q1/Q2/Q3 = `0/40/52/55 dB`.
+- attenuation IDs `1 33 2 34` remain coupled.
+- primary cohort cutoff = `t_rf_restore`.
+- `t_rf_restore`, `t_service_ready`, `t_app_complete` remain distinct.
+- `H_app=300 s from t_service_ready`.
+- primary endpoint = `completeness_300` at `t_service_ready + 300 s`.
+- preserve `T_service`, `T_app`, `T_total`.
+- no outcome-derived/W1-derived/Golden-derived/scored-derived H re-estimation.
+- S2/S3 clean restore order remains frozen.
+- H1 remains valid adverse non-scored evidence and is not reopened.
+- K1-K8 remain closed absent material interface change.
+- negative/null/unfavorable outcomes remain valid evidence and never justify protocol drift.
 
-After P6 reaches a terminal verdict, remove live P6 authority during canonical closure.
+## Exact next bounded patch — DO NOT START YET
 
-## Mandatory read order
+`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
+
+Status: **BLOCKED / NOT STARTED pending explicit continuation**.
+
+The shortest defensible design is one minimum-information reservation intended to close the five remaining physical/enforcement groups together:
+
+1. B1 instrumentation + B1/W1 matched low-level transport/runtime;
+2. S3 restart-domain mechanics;
+3. B2 remote durable-client runtime/path/restart mechanics;
+4. complete per-run washout/readiness enforcement;
+5. evidence capture sufficient to decide the above without using observed application direction for tuning.
+
+If P7B PASS, STOP after verified evidence survival/teardown. Then create the immutable pre-score snapshot offline and issue a separate scored-authorization decision. Only an explicit PASS may open WP3.
+
+If P7B fails, preserve it as pre-score qualification evidence and return to a decision gate. Do not automatically create another reservation or relax the protocol.
+
+## Prohibited before explicit P7B continuation
+
+- no POWDER contact/reservation/mutation;
+- no SSH to POWDER;
+- no Golden rerun;
+- no H calibration;
+- no RF recalibration;
+- no B1/W1/B2 scored work;
+- no OTA replication;
+- no WP3 execution;
+- no `scored_runs_authorized=true`;
+- no pre-score snapshot claiming authorization while physical gates are open.
+
+## Mandatory read order for next agent
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P6_SHORT_QA_2026-08-27.md`
-3. `docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
-4. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-5. `docs/PROJECT_AUDIT_HANDOVER_2026-08-27.md`
-6. `docs/AUDIT_R1_SUPERSESSION_MAP_2026-08-27.md`
-7. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
-8. `experiments/WP-PWD01/protocol.md`
-9. `docs/NEXT_GATE.md`
-10. `docs/MILESTONE_STATUS.md`
-11. `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
-12. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-13. `experiments/WP-PWD01/evidence_inventory_golden_v1.txt`
-14. `scripts/wp2_golden_hci_emit.py`
-15. `scripts/wp2_golden_orchestrator.sh`
-16. `scripts/wp2_golden_evidence_escrow.sh`
-17. `scripts/wp2_controller_pull_persistent_escrow.sh`
-18. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
-19. `powder/wp2_p6_golden_execute.sh`
-20. `.github/workflows/wp2-p6-golden.yml`
-21. `docs/WORKFLOW_REGISTRY.md`
-22. `AGENTS.md`
+2. `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
+3. `docs/NEXT_GATE.md`
+4. `docs/MILESTONE_STATUS.md`
+5. `docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
+6. `evidence/powder/wp2-p6-live-status.md`
+7. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
+8. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
+9. `experiments/WP-PWD01/run-matrix.yaml`
+10. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
+11. `experiments/WP-PWD01/protocol.md`
+12. `evidence/powder/wp2-pre-h-runtime-path-qualification-2026-08-26.md`
+13. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
+14. `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
+15. `docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+16. `scripts/wp2_golden_prepare_management_aliases.sh`
+17. `scripts/wp2_golden_orchestrator.sh`
+18. `scripts/reconstruct_wp2_golden.py`
+19. `scripts/wp2_golden_evidence_escrow.sh`
+20. `scripts/wp2_controller_pull_persistent_escrow.sh`
+21. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
+22. `docs/WORKFLOW_REGISTRY.md`
+23. `AGENTS.md`
 
-**CURRENT ACTION: execute the single-use P6 trigger, then follow the fail-closed terminal verdict.**
+## Shortest path
+
+`P6 PASS -> P7 hardening PASS / scored auth BLOCKED -> STOP -> explicit P7B resume -> one non-scored physical qualification -> if PASS, immutable snapshot + scored authorization -> WP3 -> WP4 -> WP5`
+
+**STOP / HANDOVER READY.**
