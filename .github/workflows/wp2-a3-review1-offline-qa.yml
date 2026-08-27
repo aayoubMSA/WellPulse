@@ -1,0 +1,69 @@
+name: WP2 A3 Review1 Offline QA
+
+on:
+  push:
+    branches:
+      - wp2-a3-adoption-hardening-20260827
+    paths:
+      - 'powder/wp2-a3-review1.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp2-a3-review1-offline-qa
+  cancel-in-progress: false
+
+jobs:
+  review1-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout audited branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install QA-only dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rsync rclone
+
+      - name: Bash syntax gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/wp2_golden_orchestrator.sh
+          bash -n scripts/wp2_golden_service_restore.sh
+          bash -n scripts/wp2_golden_service_ready_probe.sh
+          bash -n scripts/wp2_golden_evidence_escrow.sh
+          bash -n scripts/wp2_golden_offpowder_rclone.sh
+          bash -n scripts/wp2_golden_teardown_guard_rclone.sh
+          bash -n scripts/wp2_golden_offline_qa.sh
+          echo 'REVIEW1_BASH_SYNTAX=PASS'
+
+      - name: Python compile gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/wp_pwd01_golden_sender.py
+          python3 -m py_compile scripts/wp_pwd01_h_receiver.py
+          python3 -m py_compile scripts/reconstruct_wp2_golden.py
+          python3 -m py_compile scripts/wp2_golden_rclone_verify.py
+          python3 -m py_compile src/wellpulse/transport.py
+          echo 'REVIEW1_PYTHON_COMPILE=PASS'
+
+      - name: Production-path offline contract QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/wp2_golden_offline_qa.sh
+
+      - name: Review 1 verdict
+        shell: bash
+        run: |
+          echo 'WP2_A3_REVIEW1_QA=PASS'
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          echo 'SCORED_RUN_EXECUTED=NO'
