@@ -1,0 +1,167 @@
+name: WP2 P7B-R3D Target-Native EFCC Preflight
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-r3d-target-native-preflight-trigger'
+
+permissions:
+  contents: read
+
+env:
+  TARGET_EXPID: 12b39276-af0f-4e34-8dfd-685b006dd6bd
+  TARGET_NAME: wp7brq19810043
+  CORE_USER: aayoub
+  CORE_HOST: nuc1.emulab.net
+  CORE_PORT: '22'
+  UE_USER: aayoub
+  UE_HOST: nuc2.emulab.net
+  UE_PORT: '22'
+  POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+  POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Freeze bounded preflight authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-r3d-target-native-preflight-trigger)" = 'AUTHORITY=R3D_TARGET_NATIVE_PREFLIGHT_EXISTING_RESERVATION_ONLY'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('experiments/WP-PWD01/p7b-target-runtime-contract-v2.json')
+          c=json.loads(p.read_text())
+          assert c['schema_version']=='wp2-p7b-target-runtime-contract-v2'
+          assert c['live_authorized'] is False
+          assert c['scored_runs_authorized'] is False
+          assert c['efcc']['gate_required_before_live_execution'] is True
+          assert c['observed_target']['os_id']=='ubuntu'
+          assert c['observed_target']['os_version']=='18.04'
+          assert c['observed_target']['system_python']=='3.6.9'
+          assert c['observed_target']['pinned_python']=='3.11.13'
+          assert c['observed_target']['paho_mqtt']=='2.1.0'
+          print('R3D_PREFLIGHT_CONTRACT_FREEZE=PASS')
+          PY
+          bash -n scripts/wp2_p7b_target_node_preflight.sh
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+(create|terminate)' .github/workflows/wp2-p7b-r3d-target-native-preflight.yml
+          ! grep -Eq '/usr/local/etc/emulab/tmcc[[:space:]]+attenuator' .github/workflows/wp2-p7b-r3d-target-native-preflight.yml
+          echo 'NEW_RESERVATION=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'CELLS=NO'
+          echo 'RESTART=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
+
+      - name: Stage current source and run target-native preflight over SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/wp2-r3d-target-native-preflight
+          STAGE=/tmp/wp2-r3d-preflight-${GITHUB_RUN_ID}
+          rm -rf "$OUT"; mkdir -p "$OUT" "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+
+          cat > "$OUT/source-list.txt" <<'EOF'
+          scripts/wp2_p7b_c_node.py
+          scripts/wp2_p7b_c_node_r1.py
+          scripts/wp2_p7b_c_node_r2.py
+          scripts/wp2_p7b_python_gateway.py
+          scripts/wp2_p7b_generator.py
+          scripts/wp_pwd01_h_receiver.py
+          scripts/wp2_p7b_b2_manifest.py
+          scripts/wp2_p7b_validate_readiness_v2.py
+          scripts/reconstruct_wp2_p7b_v2.py
+          scripts/wp2_p7b_preservation_helpers_v2.sh
+          scripts/wp2_p7b_target_node_preflight.sh
+          src/wellpulse/p7b.py
+          src/wellpulse/p7b_contract_v2.py
+          src/wellpulse/p7b_runtime_compat.py
+          experiments/WP-PWD01/p7b-executable-contract-v2.json
+          experiments/WP-PWD01/p7b-target-runtime-contract-v2.json
+          EOF
+          while read -r f; do test -s "$f" || { echo "STAGE_SOURCE_MISSING=$f"; exit 20; }; done < "$OUT/source-list.txt"
+          tar -cf "$OUT/current-source.tar" -T "$OUT/source-list.txt"
+          sha256sum "$OUT/current-source.tar" | tee "$OUT/current-source.sha256"
+
+          python3 - <<'PY'
+          import os,pathlib
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          pathlib.Path('/tmp/wp2-r3d-preflight.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 /tmp/wp2-r3d-preflight.key
+          cat > /tmp/wp2-r3d-preflight-askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp2-r3d-preflight-askpass
+          export SSH_ASKPASS=/tmp/wp2-r3d-preflight-askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          setsid -w ssh-keygen -y -f /tmp/wp2-r3d-preflight.key >/dev/null </dev/null
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add /tmp/wp2-r3d-preflight.key </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+
+          stage_node() {
+            local role=$1 user=$2 host=$3 port=$4
+            echo "STAGE_NODE=$role:$host:$port"
+            ssh "${SSH_OPTS[@]}" -p "$port" "$user@$host" "rm -rf '$STAGE' && mkdir -p '$STAGE'"
+            scp "${SSH_OPTS[@]}" -P "$port" "$OUT/current-source.tar" "$user@$host:$STAGE/current-source.tar"
+            ssh "${SSH_OPTS[@]}" -p "$port" "$user@$host" "tar -xf '$STAGE/current-source.tar' -C '$STAGE'"
+          }
+          stage_node core "$CORE_USER" "$CORE_HOST" "$CORE_PORT"
+          stage_node ue "$UE_USER" "$UE_HOST" "$UE_PORT"
+
+          # Contract is parsed with the pinned interpreter on the target itself.
+          remote_contract_check='import json,sys; c=json.load(open(sys.argv[1])); assert c["schema_version"]=="wp2-p7b-target-runtime-contract-v2"; assert c["live_authorized"] is False; assert c["scored_runs_authorized"] is False; assert c["observed_target"]["pinned_python"]=="3.11.13"; assert c["observed_target"]["paho_mqtt"]=="2.1.0"; print("TARGET_RUNTIME_CONTRACT_V2=PASS")'
+
+          echo '=== CORE TARGET-NATIVE PREFLIGHT ===' | tee "$OUT/core.txt"
+          ssh "${SSH_OPTS[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" \
+            "set -euo pipefail; PY=\"\$HOME/.wp2-golden-venv/bin/python\"; \"\$PY\" -c '$remote_contract_check' '$STAGE/experiments/WP-PWD01/p7b-target-runtime-contract-v2.json'; WP_REPO_ROOT='$STAGE' WP_PYTHON=\"\$PY\" bash '$STAGE/scripts/wp2_p7b_target_node_preflight.sh' core" \
+            2>&1 | tee -a "$OUT/core.txt"
+
+          echo '=== UE TARGET-NATIVE PREFLIGHT ===' | tee "$OUT/ue.txt"
+          ssh "${SSH_OPTS[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" \
+            "set -euo pipefail; PY=\"\$HOME/.wp2-golden-venv/bin/python\"; JAR=\$(find \"\$HOME/wellpulse-powder-evidence/p7b\" -type f -name paho.jar -print 2>/dev/null | while read -r f; do s=\$(sha256sum \"\$f\" | awk '{print \$1}'); if [ \"\$s\" = 59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185 ]; then printf '%s' \"\$f\"; break; fi; done); test -n \"\$JAR\"; \"\$PY\" -c '$remote_contract_check' '$STAGE/experiments/WP-PWD01/p7b-target-runtime-contract-v2.json'; WP_REPO_ROOT='$STAGE' WP_PYTHON=\"\$PY\" WP_B2_JAR_PATH=\"\$JAR\" bash '$STAGE/scripts/wp2_p7b_target_node_preflight.sh' ue" \
+            2>&1 | tee -a "$OUT/ue.txt"
+
+          grep -q '^WP2_P7B_TARGET_NODE_PREFLIGHT=PASS$' "$OUT/core.txt"
+          grep -q '^WP2_P7B_TARGET_NODE_PREFLIGHT=PASS$' "$OUT/ue.txt"
+          grep -q '^EFCC_RUNTIME_BINDING=PASS$' "$OUT/core.txt"
+          grep -q '^EFCC_RUNTIME_BINDING=PASS$' "$OUT/ue.txt"
+          {
+            echo "TARGET_EXPID=$TARGET_EXPID"
+            echo "TARGET_NAME=$TARGET_NAME"
+            echo "SOURCE_SHA=$GITHUB_SHA"
+            echo "CORE_HOST=$CORE_HOST"
+            echo "UE_HOST=$UE_HOST"
+            echo "NEW_RESERVATION=NO"
+            echo "RF_MUTATION=NO"
+            echo "CELLS=NO"
+            echo "RESTART=NO"
+            echo "TEARDOWN=NO"
+            echo "WP2_P7B_R3D_TARGET_NATIVE_PREFLIGHT=PASS"
+          } | tee "$OUT/verdict.txt"
+
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p7b-r3d-target-native-preflight-${{ github.run_id }}
+          path: /tmp/wp2-r3d-target-native-preflight
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Enforce preflight only
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^WP2_P7B_R3D_TARGET_NATIVE_PREFLIGHT=PASS$' /tmp/wp2-r3d-target-native-preflight/verdict.txt
+          echo 'LIVE_AUTHORIZATION=NOT_GRANTED_BY_THIS_WORKFLOW'
+          echo 'SCORED_AUTHORIZATION=BLOCKED'
