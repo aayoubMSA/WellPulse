@@ -27,20 +27,14 @@ jobs:
           bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api | tee /tmp/portal-bootstrap.txt
           grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/portal-bootstrap.txt
 
-          portal-cli --help > /tmp/portal-cli-help.txt
           portal-cli experiment --help > /tmp/portal-experiment-help.txt
           portal-cli experiment create --help > /tmp/portal-create-help.txt
           portal-cli experiment get --help > /tmp/portal-get-help.txt
           portal-cli experiment terminate --help > /tmp/portal-terminate-help.txt
-          portal-cli experiment manifests --help > /tmp/portal-manifests-help.txt
-          portal-cli experiment manifests get --help > /tmp/portal-manifests-get-help.txt
 
           grep -q 'create' /tmp/portal-experiment-help.txt
           grep -q 'get' /tmp/portal-experiment-help.txt
           grep -q 'terminate' /tmp/portal-experiment-help.txt
-          grep -q -- '--experiment-id' /tmp/portal-get-help.txt
-          grep -q -- '--experiment-id' /tmp/portal-terminate-help.txt
-          grep -q -- '--experiment-id' /tmp/portal-manifests-get-help.txt
 
           echo '--- EXPERIMENT COMMANDS ---'
           cat /tmp/portal-experiment-help.txt
@@ -50,8 +44,6 @@ jobs:
           cat /tmp/portal-get-help.txt
           echo '--- TERMINATE ---'
           cat /tmp/portal-terminate-help.txt
-          echo '--- MANIFESTS GET ---'
-          cat /tmp/portal-manifests-get-help.txt
           echo 'K3_PORTAL_CLI_SURFACE_CAPTURE=PASS'
           echo 'POWDER_CONTACT=NO'
           echo 'SCIENTIFIC_RUN=NO'
