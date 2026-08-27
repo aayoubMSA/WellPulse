@@ -1,9 +1,10 @@
-# WP-PWD01 Golden E2E mandatory evidence inventory v1.3
-# Format: CLASS|RELATIVE_PATH|NONEMPTY|DESCRIPTION
+# WP-PWD01 Golden E2E mandatory evidence inventory v1.4
+# Format: CLASS|RELATIVE_PATH_OR_SIGNAL|NONEMPTY|DESCRIPTION
 # CLASS:
-#   REQUIRED    = must exist before persistent Evidence Escrow starts
-#   CONDITIONAL = preserved when the platform exposes that exact file
-#   GENERATED   = produced by the escrow/verification stages; not checked as source prerequisites
+#   REQUIRED          = must exist before persistent Evidence Escrow starts
+#   CONDITIONAL       = preserved when the platform exposes that exact file
+#   GENERATED         = generated file inside the persistent/controller handoff bundle
+#   CONTROLLER_SIGNAL = mandatory controller stdout/result signal after off-POWDER transport/verification
 
 REQUIRED|sender/sender_summary.json|yes|Sender/run summary and frozen clocks
 REQUIRED|sender/golden_manifest.json|yes|Golden run/environment manifest
@@ -29,8 +30,17 @@ REQUIRED|orchestration/golden_console.txt|yes|Top-level progress-visible G0-G10 
 REQUIRED|orchestration/gate_events.jsonl|yes|Machine-readable gate transition/result ledger
 REQUIRED|analysis/golden_reconstruction.json|yes|Machine-readable reconstruction from escrowed raw evidence
 REQUIRED|analysis/golden_reconstruction.md|yes|Human-readable reconstruction report
-GENERATED|escrow/SOURCE_SHA256SUMS.txt|yes|Source-node admitted-artifact SHA-256 manifest
+GENERATED|escrow/SOURCE_SHA256SUMS.txt|yes|Source-node admitted-artifact SHA-256 manifest; internal hash authority
 GENERATED|escrow/PERSISTENT_SHA256SUMS.txt|yes|Verified persistent /proj manifest copy
 GENERATED|escrow/escrow_provenance.json|yes|Persistent run/experiment/source/destination provenance
 GENERATED|escrow/PERSISTENT_ESCROW_GATE.PASS|yes|Verified persistent-copy marker
-GENERATED|escrow/OFF_POWDER_RCLONE.PASS|yes|Remote Drive read-back verification marker
+GENERATED|escrow/CONTROLLER_OFFPOWDER_REQUIRED|yes|Fail-closed handoff marker requiring controller pull/artifact round-trip before teardown
+CONTROLLER_SIGNAL|CONTROLLER_PULL_GATE=PASS|yes|Controller successfully pulled persistent escrow and verified internal SOURCE_SHA256SUMS
+CONTROLLER_SIGNAL|CONTROLLER_BUNDLE_SHA256=<64hex>|yes|Outer SHA-256 of deterministic controller bundle before artifact upload
+CONTROLLER_SIGNAL|CONTROLLER_OFFPOWDER_GATE=PASS|yes|Independent controller artifact download/read-back verified
+CONTROLLER_SIGNAL|ROUNDTRIP_BUNDLE_SHA256=<same_64hex>|yes|Round-trip bundle SHA-256 must equal CONTROLLER_BUNDLE_SHA256
+CONTROLLER_SIGNAL|EVIDENCE_ESCROW_GATE=PASS|yes|Qualified off-POWDER evidence closure signal
+CONTROLLER_SIGNAL|TEARDOWN_AUTHORIZED=YES|yes|May be emitted only after controller round-trip outer and internal hash verification
+
+# Google Drive/rclone is optional secondary mirroring only and is intentionally
+# absent from the mandatory/generated teardown-critical inventory.
