@@ -11,7 +11,6 @@ POWDER_SSH_PRIVATE_KEY="${POWDER_SSH_PRIVATE_KEY:-}"
 POWDER_SSH_KEY_PASSPHRASE="${POWDER_SSH_KEY_PASSPHRASE:-}"
 RCLONE_CONFIG_B64="${RCLONE_CONFIG_B64:-}"
 TMP="/tmp/wp2-a3-adopt"
-REPO_LOCAL="$(pwd)"
 GIT_SHA="$(git rev-parse HEAD)"
 SSH_AGENT_STARTED=0
 
@@ -238,13 +237,36 @@ portal-cli experiment terminate --experiment-id "$A3_ID" > "$TMP/terminate.json"
 TERMINATED=0
 for i in $(seq 1 60); do
   set +e
-  portal-cli experiment get --experiment-id "$A3_ID" > "$TMP/postterm.json" 2>/dev/null
+  portal-cli experiment get --experiment-id "$A3_ID" > "$TMP/postterm.json" 2>"$TMP/postterm.err"
   grc=$?
   set -e
-  if [[ "$grc" -ne 0 ]]; then TERMINATED=1; break; fi
-  st="$(jq -r '.status // empty' "$TMP/postterm.json")"
-  printf '\rA3_TERMINATION_WAIT=%02d/60 STATUS=%-18s' "$i" "$st"
-  if [[ "$st" =~ ^(terminated|destroyed)$ ]]; then TERMINATED=1; break; fi
+  if [[ "$grc" -eq 0 ]]; then
+    st="$(jq -r '.status // empty' "$TMP/postterm.json")"
+    printf '\rA3_TERMINATION_WAIT=%02d/60 STATUS=%-18s' "$i" "$st"
+    if [[ "$st" =~ ^(terminated|destroyed)$ ]]; then TERMINATED=1; break; fi
+  else
+    # A missing experiment is accepted only when a fresh list call succeeds and proves A3 absent.
+    set +e
+    portal-cli experiment list > "$TMP/postterm-list.json" 2>"$TMP/postterm-list.err"
+    lrc=$?
+    set -e
+    if [[ "$lrc" -eq 0 ]]; then
+      if python3 - "$TMP/postterm-list.json" "$A3_ID" <<'PY'
+import json,sys
+raw=json.load(open(sys.argv[1]))
+xs=raw if isinstance(raw,list) else raw.get('experiments',[])
+for x in xs:
+    if isinstance(x,dict) and str(x.get('id','')) == sys.argv[2]:
+        raise SystemExit(1)
+raise SystemExit(0)
+PY
+      then
+        printf '\rA3_TERMINATION_WAIT=%02d/60 STATUS=%-18s' "$i" 'absent-from-list'
+        TERMINATED=1
+        break
+      fi
+    fi
+  fi
   sleep 5
 done
 echo
