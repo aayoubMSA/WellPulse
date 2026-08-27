@@ -88,7 +88,9 @@ ssh_core "cd '$REPO' && bash powder/wp2_h_epc_broker.sh /tmp/wellpulse-wp2-golde
 scp_core "/tmp/wellpulse-wp2-golden-broker/ca.crt" "$EVDIR/substrate/ca.crt" || fail G2 CA_COPY
 [[ -s "$EVDIR/substrate/ca.crt" ]] || fail G2 CA_EMPTY
 ping -I tun_srsue -c 5 -W 2 172.16.0.1 | tee "$EVDIR/substrate/q0_pre_ping.txt" || fail G2 Q0_PING
-openssl s_client -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null > "$EVDIR/substrate/q0_pre_tls.txt" 2>&1 || fail G2 Q0_TLS
+# -brief preserves verification evidence without persisting TLS session secrets.
+openssl s_client -brief -connect 172.16.0.1:8883 -CAfile "$EVDIR/substrate/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null > "$EVDIR/substrate/q0_pre_tls.txt" 2>&1 || fail G2 Q0_TLS
+grep -q 'Verification: OK' "$EVDIR/substrate/q0_pre_tls.txt" || fail G2 Q0_TLS_VERIFY
 gate G2 PASS READY
 
 bar 22 'G2 launching receiver on core node'; echo
