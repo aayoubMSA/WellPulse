@@ -1,5 +1,5 @@
 name: WP2 Golden Offline QA
-# Final A3 pre-launch audit stamp: 2026-08-27 review-2-complete
+# AUDIT-R1 reconciled offline-only acceptance gate: 2026-08-27
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - 'powder/wp2_a3_prepare_q0.sh'
       - 'scripts/wp2_a3_runtime_bootstrap.sh'
       - 'scripts/wp2_golden_*'
+      - 'scripts/wp2_controller_*'
       - 'scripts/reconstruct_wp2_golden.py'
       - 'scripts/wp_pwd01_golden_sender.py'
       - 'scripts/wp_pwd01_h_receiver.py'
@@ -31,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install QA dependencies
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq rsync
       - name: Bash syntax and A3 safety QA
         shell: bash
         run: |
@@ -43,10 +44,9 @@ jobs:
           bash -n scripts/wp2_golden_service_restore.sh
           bash -n scripts/wp2_golden_service_ready_probe.sh
           bash -n scripts/wp2_golden_evidence_escrow.sh
+          bash -n scripts/wp2_controller_pull_persistent_escrow.sh
+          bash -n scripts/wp2_controller_verify_artifact_roundtrip.sh
           bash -n scripts/wp2_golden_teardown_guard.sh
-          bash -n scripts/wp2_golden_offpowder_rclone.sh
-          bash -n scripts/wp2_golden_teardown_guard_rclone.sh
-          bash -n scripts/wp2_golden_rclone_preflight.sh
           bash -n scripts/wp2_golden_offline_qa.sh
           ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh
           ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh
@@ -60,12 +60,14 @@ jobs:
           python3 -m py_compile scripts/reconstruct_wp2_golden.py
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py
           python3 -m py_compile scripts/wp_pwd01_h_receiver.py
-          python3 -m py_compile scripts/wp2_golden_rclone_verify.py
           python3 -m py_compile src/wellpulse/transport.py
-      - name: Reconstruction, rclone escrow, and fail-closed interlock QA
+      - name: Reconstruction, controller escrow, and fail-closed interlock QA
         run: bash scripts/wp2_golden_offline_qa.sh
       - name: Canonical QA verdict
         run: |
           echo 'WP2_GOLDEN_CANONICAL_QA=PASS'
+          echo 'EVIDENCE_AUTHORITY=CONTROLLER_GITHUB_ARTIFACT_ROUNDTRIP'
+          echo 'POWDER_CONTACT=NO'
+          echo 'DRIVE_CONTACT=NO'
           echo 'POWDER_MUTATION_EXECUTED=NO'
           echo 'SCORED_RUN_EXECUTED=NO'
