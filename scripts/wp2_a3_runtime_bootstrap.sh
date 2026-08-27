@@ -4,13 +4,16 @@ set -euo pipefail
 REPO="${WP_REPO_ROOT:-$HOME/WellPulse}"
 VENV="${WP_A3_VENV:-$HOME/.wp2-golden-venv}"
 PYTHON_VERSION="${WP_A3_PYTHON_VERSION:-3.11.13}"
-RCLONE_URL="${WP_A3_RCLONE_URL:-https://downloads.rclone.org/rclone-current-linux-amd64.zip}"
+RCLONE_VERSION="${WP_A3_RCLONE_VERSION:-1.75.0}"
+RCLONE_URL="${WP_A3_RCLONE_URL:-https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip}"
+RCLONE_SHA256="${WP_A3_RCLONE_SHA256:-aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa}"
 
 bar(){ local p="$1" m="$2" n; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-52s' "$p" "$m"; }
 fail(){ echo; echo "A3_RUNTIME_BOOTSTRAP=FAIL:$1" >&2; exit 80; }
 
 [[ -f "$REPO/pyproject.toml" ]] || fail REPO_NOT_PRESENT
 command -v curl >/dev/null 2>&1 || fail CURL_MISSING
+command -v sha256sum >/dev/null 2>&1 || fail SHA256SUM_MISSING
 
 bar 10 'Installing uv in user space'; echo
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
@@ -46,18 +49,32 @@ print('PAHO_MQTT='+v)
 print('WELLPULSE_IMPORT=PASS')
 PY
 
-bar 82 'Installing rclone binary in user space if needed'; echo
-if ! command -v rclone >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/rclone" ]]; then
+bar 82 "Installing verified rclone v$RCLONE_VERSION"; echo
+mkdir -p "$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
+LOCAL_RCLONE="$HOME/.local/bin/rclone"
+NEED_RCLONE=1
+if [[ -x "$LOCAL_RCLONE" ]]; then
+  INSTALLED_RCLONE="$($LOCAL_RCLONE version 2>/dev/null | awk 'NR==1{gsub(/^rclone v/,""); print; exit}')"
+  [[ "$INSTALLED_RCLONE" == "$RCLONE_VERSION" ]] && NEED_RCLONE=0
+fi
+if [[ "$NEED_RCLONE" -eq 1 ]]; then
   rm -rf /tmp/wp2-a3-rclone /tmp/wp2-a3-rclone.zip
-  mkdir -p /tmp/wp2-a3-rclone "$HOME/.local/bin"
+  mkdir -p /tmp/wp2-a3-rclone
   curl -fsSLo /tmp/wp2-a3-rclone.zip "$RCLONE_URL" || fail RCLONE_DOWNLOAD
+  printf '%s  %s\n' "$RCLONE_SHA256" /tmp/wp2-a3-rclone.zip | sha256sum -c - >/tmp/wp2-a3-rclone-sha256.txt 2>&1 || {
+    cat /tmp/wp2-a3-rclone-sha256.txt >&2 || true
+    fail RCLONE_SHA256
+  }
   python3 -m zipfile -e /tmp/wp2-a3-rclone.zip /tmp/wp2-a3-rclone || fail RCLONE_EXTRACT
   RBIN="$(find /tmp/wp2-a3-rclone -type f -name rclone | head -1)"
   [[ -n "$RBIN" ]] || fail RCLONE_BINARY_NOT_FOUND
-  install -m 755 "$RBIN" "$HOME/.local/bin/rclone" || fail RCLONE_INSTALL
+  install -m 755 "$RBIN" "$LOCAL_RCLONE" || fail RCLONE_INSTALL
 fi
-export PATH="$HOME/.local/bin:$PATH"
-command -v rclone >/dev/null 2>&1 || fail RCLONE_NOT_FOUND
+[[ -x "$LOCAL_RCLONE" ]] || fail RCLONE_NOT_FOUND
+INSTALLED_RCLONE="$($LOCAL_RCLONE version 2>/dev/null | awk 'NR==1{gsub(/^rclone v/,""); print; exit}')"
+[[ "$INSTALLED_RCLONE" == "$RCLONE_VERSION" ]] || fail "RCLONE_VERSION_$INSTALLED_RCLONE"
+printf 'RCLONE_RUNTIME=%s\n' "$INSTALLED_RCLONE"
 
 bar 94 'Recording exact runtime versions'; echo
 {
@@ -66,11 +83,13 @@ bar 94 'Recording exact runtime versions'; echo
   printf 'uv=%s\n' "$(uv --version 2>/dev/null || true)"
   printf 'python=%s\n' "$("$PY" --version 2>&1)"
   printf 'paho_mqtt=%s\n' "$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')"
-  printf 'rclone=%s\n' "$(rclone version | head -1)"
+  printf 'rclone=%s\n' "$($LOCAL_RCLONE version | head -1)"
+  printf 'rclone_archive_sha256=%s\n' "$RCLONE_SHA256"
   printf 'repo=%s\n' "$REPO"
   printf 'venv=%s\n' "$VENV"
 } > "$HOME/wp2-a3-runtime-bootstrap.txt"
 
 bar 100 'A3 isolated runtime PASS'; echo
 printf 'WP_A3_PYTHON=%s\n' "$PY"
+printf 'WP_A3_RCLONE=%s\n' "$LOCAL_RCLONE"
 printf 'A3_RUNTIME_BOOTSTRAP=PASS\n'
