@@ -1,0 +1,71 @@
+name: WP2 P7B-R3F Extend Existing Reservation
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-r3f-extend-existing-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  extend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      TARGET_EXPID: 12b39276-af0f-4e34-8dfd-685b006dd6bd
+      TARGET_NAME: wp7brq19810043
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Freeze bounded extension authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-r3f-extend-existing-trigger)" = $'AUTHORITY=R3F_EXTEND_EXISTING_ONLY\nEXPERIMENT_ID=12b39276-af0f-4e34-8dfd-685b006dd6bd\nEXTEND_BY_HOURS=2\nNEW_RESERVATION=NO\nSCORED=NO'
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+(create|terminate)' .github/workflows/wp2-p7b-r3f-extend-existing.yml
+          echo 'EXTENSION_AUTHORITY=PASS'
+          echo 'NEW_RESERVATION=NO'
+          echo 'SCORED=NO'
+      - name: Extend exact existing reservation by two hours and verify identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api | tee /tmp/portal-pin.txt
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/portal-pin.txt
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > /tmp/before.json
+          python3 scripts/wp2_portal_record_guard.py --json /tmp/before.json --expected-experiment-id "$TARGET_EXPID" | tee /tmp/before-gate.txt
+          grep -q '^PORTAL_RECORD_GATE=PASS$' /tmp/before-gate.txt
+          BEFORE="$(awk -F= '$1=="EXPIRES_UTC"{print $2}' /tmp/before-gate.txt | tail -1)"
+          python3 - <<'PY'
+import json
+x=json.load(open('/tmp/before.json'))
+assert x.get('id')=='12b39276-af0f-4e34-8dfd-685b006dd6bd'
+assert x.get('name')=='wp7brq19810043'
+assert x.get('project')=='WellPulse'
+assert x.get('status')=='ready'
+print('PRE_EXTENSION_IDENTITY=PASS')
+PY
+          portal-cli experiment extend --experiment-id "$TARGET_EXPID" --extend-by 2 --reason 'Complete one authorized non-scored WellPulse B1-W1-B2 qualification and preserve/read back evidence before teardown.' | tee /tmp/extend-response.txt
+          sleep 3
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > /tmp/after.json
+          python3 scripts/wp2_portal_record_guard.py --json /tmp/after.json --expected-experiment-id "$TARGET_EXPID" | tee /tmp/after-gate.txt
+          grep -q '^PORTAL_RECORD_GATE=PASS$' /tmp/after-gate.txt
+          AFTER="$(awk -F= '$1=="EXPIRES_UTC"{print $2}' /tmp/after-gate.txt | tail -1)"
+          python3 - "$BEFORE" "$AFTER" <<'PY'
+import json,sys
+from datetime import datetime
+x=json.load(open('/tmp/after.json'))
+assert x.get('id')=='12b39276-af0f-4e34-8dfd-685b006dd6bd'
+assert x.get('name')=='wp7brq19810043'
+assert x.get('project')=='WellPulse'
+assert x.get('status')=='ready'
+def p(s): return datetime.fromisoformat(s.replace('Z','+00:00'))
+delta=(p(sys.argv[2])-p(sys.argv[1])).total_seconds()
+print(f'EXTENSION_DELTA_S={delta:.0f}')
+assert delta >= 7000, delta
+print('POST_EXTENSION_IDENTITY=PASS')
+print('R3F_EXTENSION=PASS_EXISTING_RESERVATION_PLUS_2H')
+PY
