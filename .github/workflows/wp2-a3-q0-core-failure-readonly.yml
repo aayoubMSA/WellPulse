@@ -1,0 +1,71 @@
+name: WP2 A3 Q0 Core Failure Readonly Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-q0-core-failure-readonly.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3q0diag
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3q0diag/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3q0diag/askpass
+          export SSH_ASKPASS=/tmp/a3q0diag/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+
+      - name: Inspect failed Q0 core start without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net 'bash -s' <<'REMOTE'
+          set +e
+          echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
+          echo "HOST=$(hostname)"
+          echo '--- START RC ---'
+          cat /tmp/wp2-a3-q0-core.start_rc 2>/dev/null || true
+          echo '--- START CONSOLE ---'
+          sed -n '1,240p' /tmp/wp2-a3-q0-core.console 2>/dev/null || true
+          echo '--- PROCESSES ---'
+          pgrep -a -x srsepc || true
+          pgrep -a -x srsenb || true
+          echo '--- TMUX ---'
+          tmux ls 2>&1 || true
+          for s in epc enb srs-epc srs-enb; do
+            echo "--- TMUX_SESSION=$s ---"
+            tmux capture-pane -p -t "$s" -S -120 2>&1 | tail -n 160 || true
+          done
+          echo '--- RECENT SRS LOG CANDIDATES ---'
+          find /tmp /var/tmp /local/repository -maxdepth 4 -type f -mmin -15 \
+            \( -iname '*epc*.log' -o -iname '*enb*.log' -o -iname '*srs*.log' \) \
+            -printf '%TY-%Tm-%TdT%TH:%TM:%TSZ %p %s bytes\n' 2>/dev/null | sort | tail -40 || true
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          echo 'GOLDEN_EXECUTED=NO'
+          REMOTE
