@@ -19,50 +19,51 @@ def build(source: Path, output: Path, expid: str, name: str, source_sha: str, fa
     i = text.index(start)
     j = text.index(end, i) + len(end)
 
-    replacement = f'''  bar 5 'Same-reservation identity + degraded-control-plane corroboration'; echo
+    replacement = f'''  bar 5 'Same-reservation UUID corroboration with bounded Portal retries'; echo
   EXPID='{expid}'
   EXP_NAME='{name}'
   set_output experiment_id "$EXPID"
   set_output experiment_name "$EXP_NAME"
   printf 'EXPID=%q\\nEXP_NAME=%q\\nPREPARE_GATE=SAME_RESERVATION_RESCUE\\n' "$EXPID" "$EXP_NAME" > "$STATE"
 
-  LIST_OK=0
-  for n in 1 2 3; do
+  GET_OK=0
+  for n in 1 2 3 4 5 6; do
     set +e
-    portal-cli experiment list > "$TMP/list-existing.json" 2>"$TMP/list-existing.err"
-    lrc=$?
+    portal-cli experiment get --experiment-id "$EXPID" > "$TMP/status.json" 2>"$TMP/status.err"
+    grc=$?
     set -e
-    if [[ "$lrc" -eq 0 ]]; then LIST_OK=1; break; fi
-    echo "RESCUE_LIST_${{n}}=ERROR:rc=$lrc"
+    if [[ "$grc" -ne 0 ]]; then
+      echo "RESCUE_GET_${{n}}=ERROR:rc=$grc"
+      tail -c 400 "$TMP/status.err" 2>/dev/null || true; echo
+      sleep 2
+      continue
+    fi
+    STATUS="$(jq -r '.status // "unknown"' "$TMP/status.json")"
+    GOT_ID="$(jq -r '.id // empty' "$TMP/status.json")"
+    GOT_NAME="$(jq -r '.name // empty' "$TMP/status.json")"
+    GOT_PROJECT="$(jq -r '.project // empty' "$TMP/status.json")"
+    echo "RESCUE_GET_${{n}}=PASS:$STATUS"
+    [[ "$GOT_ID" == "$EXPID" ]] || fail RESERVATION_UUID_MISMATCH 6
+    [[ "$GOT_NAME" == "$EXP_NAME" ]] || fail RESERVATION_NAME_MISMATCH 6
+    [[ "$GOT_PROJECT" == WellPulse ]] || fail RESERVATION_PROJECT_MISMATCH 6
+    [[ ! "$STATUS" =~ ^(terminated|destroyed|failed|error)$ ]] || fail "RESERVATION_TERMINAL_$STATUS" 6
+    if [[ "$STATUS" == ready ]]; then GET_OK=1; break; fi
     sleep 2
   done
-  EXPIRES=''
-  if [[ "$LIST_OK" -eq 1 ]]; then
-    MATCH_COUNT="$(jq --arg id "$EXPID" --arg name "$EXP_NAME" '[.[]? | select(.project=="WellPulse" and ((.id|tostring)==$id) and ((.name|tostring)==$name))] | length' "$TMP/list-existing.json" 2>/dev/null || echo 0)"
-    if [[ "$MATCH_COUNT" == 0 ]]; then
-      MATCH_COUNT="$(jq --arg id "$EXPID" --arg name "$EXP_NAME" '[.experiments[]? | select(.project=="WellPulse" and ((.id|tostring)==$id) and ((.name|tostring)==$name))] | length' "$TMP/list-existing.json" 2>/dev/null || echo 0)"
-    fi
-    [[ "$MATCH_COUNT" == 1 ]] || fail "EXACT_RESERVATION_MATCH_COUNT_$MATCH_COUNT" 6
-    ROW="$(jq -c --arg id "$EXPID" --arg name "$EXP_NAME" '.[]? | select(.project=="WellPulse" and ((.id|tostring)==$id) and ((.name|tostring)==$name)' "$TMP/list-existing.json" 2>/dev/null | head -1)"
-    if [[ -z "$ROW" ]]; then ROW="$(jq -c --arg id "$EXPID" --arg name "$EXP_NAME" '.experiments[]? | select(.project=="WellPulse" and ((.id|tostring)==$id) and ((.name|tostring)==$name)' "$TMP/list-existing.json" 2>/dev/null | head -1)"; fi
-    LIST_STATUS="$(jq -r '.status // "unknown"' <<<"$ROW")"
-    [[ ! "$LIST_STATUS" =~ ^(terminated|destroyed|failed|error)$ ]] || fail "RESERVATION_TERMINAL_$LIST_STATUS" 6
-    EXPIRES="$(jq -r '.expires_at // .expires // .expiration // empty' <<<"$ROW")"
-    echo "SAME_RESERVATION_LIST_GATE=PASS:$LIST_STATUS"
-  else
-    echo 'SAME_RESERVATION_LIST_GATE=DEGRADED_UNAVAILABLE'
-  fi
-  if [[ -z "$EXPIRES" ]]; then
-    EXPIRES='{fallback_expiry}'
-    echo "EXPIRY_SOURCE=CONSERVATIVE_UI_DERIVED:$EXPIRES"
-  else
-    echo "EXPIRY_SOURCE=PORTAL_LIST:$EXPIRES"
-  fi
+  [[ "$GET_OK" -eq 1 ]] || fail SAME_RESERVATION_READY_NOT_CORROBORATED 7
+
+  python3 scripts/wp2_portal_record_guard.py --json "$TMP/status.json" --expected-experiment-id "$EXPID" | tee "$TMP/portal-record-gate.txt"
+  grep -q '^PORTAL_RECORD_GATE=PASS$' "$TMP/portal-record-gate.txt" || fail PORTAL_RECORD_GATE 7
+  EXPIRES="$(awk -F= '$1=="EXPIRES_UTC" {{print $2}}' "$TMP/portal-record-gate.txt" | tail -1)"
+  if [[ -z "$EXPIRES" ]]; then EXPIRES='{fallback_expiry}'; echo "EXPIRY_SOURCE=CONSERVATIVE_UI_DERIVED:$EXPIRES"; else echo "EXPIRY_SOURCE=PORTAL_RECORD:$EXPIRES"; fi
   python3 scripts/wp2_prelaunch_time_guard.py --now-utc "$(utc)" --expires-utc "$EXPIRES" --min-remaining-s 3000 | tee "$TMP/time-gate.txt"
   grep -q '^PRELAUNCH_TIME_GATE=PASS$' "$TMP/time-gate.txt" || fail PRELAUNCH_TIME 7
+  [[ "$(jq -r '.bindings.enb_node // empty' "$TMP/status.json")" == nuc1 ]] || fail BINDING_ENB 7
+  [[ "$(jq -r '.bindings.ue_node // empty' "$TMP/status.json")" == nuc2 ]] || fail BINDING_UE 7
+  [[ "$(jq -r '.bindings.ue_type // empty' "$TMP/status.json")" == srsue ]] || fail BINDING_UE_TYPE 7
 
   MOK=0
-  for n in 1 2 3 4; do
+  for n in 1 2 3 4 5 6; do
     set +e
     portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifests.json" 2>"$TMP/manifests.err"
     mrc=$?
@@ -70,7 +71,7 @@ def build(source: Path, output: Path, expid: str, name: str, source_sha: str, fa
     if [[ "$mrc" -eq 0 ]]; then MOK=1; echo "RESCUE_MANIFEST_${{n}}=PASS"; break; fi
     echo "RESCUE_MANIFEST_${{n}}=ERROR:rc=$mrc"
     tail -c 400 "$TMP/manifests.err" 2>/dev/null || true; echo
-    sleep 3
+    sleep 2
   done
   [[ "$MOK" -eq 1 ]] || fail MANIFEST_FETCH_DEGRADED_CONTROL_PLANE 8
 '''
