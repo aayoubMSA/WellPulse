@@ -1,0 +1,6 @@
+purpose=final_canonical_a3_prelaunch_qa
+experiment_id=357f3275-403d-491a-906f-99677bdf454f
+review_1=PASS
+review_2=PASS
+powder_mutation=false
+scored_run=false
