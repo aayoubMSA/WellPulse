@@ -1,0 +1,7 @@
+execute=KFASTLANE_COMPAT
+classification=INFRASTRUCTURE_ONLY_NON_SCORED
+reservation_count=1
+duration_hours=1
+golden_workload=false
+h_calibration=false
+scored_run=false
