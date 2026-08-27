@@ -1,64 +1,66 @@
-# Next Gate — WP2-P6 One Clean Non-Scored Golden
+# WellPulse — Next Gate
 
-**Current frontier:** WP2-P6 ACTIVE after explicit user continuation + short QA PASS  
-**Scientific completion:** 20%  
-**WP2 management/readiness before P6 result:** 80/100  
-**K1–K8 compatibility:** `PASS / CLOSED`  
-**Pre-integration compatibility:** `PASS`  
-**AUDIT-R1:** `PASS`  
-**Live HCI/raw-evidence gate:** `PASS / CLOSED`  
-**P6 short QA:** `PASS`  
-**Golden rebook authorization:** `true — exactly one non-scored P6 reservation/run`  
-**Scored authorization:** `false`
+Status date: 2026-08-27
 
-Canonical P5 closure:
+## Current frontier
 
-`docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
+- `WP2_P6=PASS_RECOVERED_SINGLE_RUN`
+- `WP2_P7_HARDENING_QA=PASS`
+- `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`
+- `scored_runs_authorized=false`
+- `WP3=BLOCKED`
+- scientific weighted completion: **20%**
 
-P6 short QA:
+P6 completed one scientifically valid **non-scored** Golden rehearsal with verified raw evidence, persistent `/proj` escrow, independent GitHub artifact round-trip/hash verification, and confirmed teardown. P7 then hardened the reusable execution/reconstruction path and passed offline closure QA, but the scored campaign is still blocked by mandatory arm/restart-domain physical qualification.
 
-`docs/WP2_P6_SHORT_QA_2026-08-27.md`
+## Next bounded patch — not started
 
-P6 live workflow:
+`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
 
-`.github/workflows/wp2-p6-golden.yml`
+Status: **BLOCKED / NOT STARTED pending explicit continuation**.
 
-P6 live execution controller:
+The purpose is to close all remaining physical pre-score gates with one minimum-information reservation rather than several independent experiments.
 
-`powder/wp2_p6_golden_execute.sh`
+### P7B must prove, prospectively and non-scored
 
-## Exact P6 path — authorized once
+1. **B1 accepted/unacknowledged instrumentation** on the real remote LTE/MQTT path.
+2. **B1/W1 matching**: identical low-level Paho/runtime/session settings, with W1 differing only by application-level durable SQLite/reconciliation semantics.
+3. **S3 restart-domain separation**:
+   - telemetry generator outside the restarted gateway/client process;
+   - generation continues at 1 Hz;
+   - process restart only, no node reboot;
+   - W1 durable state survives;
+   - B1 volatile client state is recreated with same intra-run identity;
+   - source sequence continuity + exact restart timestamps/downtime preserved.
+4. **B2 remote qualification**: exact Eclipse Paho Java 1.2.5 durable-client configuration on the same LTE/TLS/payload/evidence path, including persistence across the required client-process restart.
+5. **Full washout/readiness enforcement** for B1/W1/B2 before any scored campaign: Q0 user plane, experimental route, fresh namespace/application state, no unresolved broker/session residue, calibrated radio envelope, frozen runtime/config, healthy clocks/evidence capture.
 
-1. Run the premutation offline QA inside the P6 workflow.
-2. Immediately before booking, inspect `https://www.powderwireless.net/resinfo.php` and record `RESOURCE_AVAILABILITY_PREFLIGHT=PASS|DEFER|UNKNOWN`. Ambiguous/unparseable advisory output is `UNKNOWN` and defers authority to the Portal lifecycle gates; it never changes frozen hardware/profile/bindings.
-3. Create exactly one reservation using `PowderProfiles/srslte-controlled-rf`, revision target `a6da96560b6526dc6816761282722c996418fd8c`, bindings `enb_node=nuc1`, `ue_node=nuc2`, `ue_type=srsue`.
-4. Require authoritative Portal READY, experiment identity, hard-expiry/time budget, exact `nuc5300` hardware, expected image, exact manifested logical/physical mapping and exact profile repository revision before science.
-5. Establish a clean Q0 5/5 user-plane baseline before protected science.
-6. Execute exactly one non-scored Golden G0-G10 with passive HCI only and frozen `H_app=300 s from t_service_ready`.
-7. After protected observation/reconstruction, require verified `/proj/WellPulse` persistent escrow and `TEARDOWN_AUTHORIZED=NO` on the node side.
-8. Controller-pull the exact persistent bundle and create deterministic TAR + SHA-256.
-9. Upload the TAR through the qualified pinned GitHub artifact action, independently download/read it back, and verify outer TAR SHA-256 plus internal `SOURCE_SHA256SUMS`.
-10. Only after `CONTROLLER_OFFPOWDER_GATE=PASS`, `EVIDENCE_ESCROW_GATE=PASS`, and `TEARDOWN_AUTHORIZED=YES` may the workflow terminate the reservation and confirm teardown.
-11. STOP. WP2-P7 formal scientific closure/scored authorization remains separate.
+Any application behavior observed in P7B is qualification evidence only. It may not be used to tune the protocol, choose H, select a favorable arm, change Q0-Q3, or replace an unfavorable future scored outcome.
 
-## Fail-closed behavior
+### If P7B PASS
 
-- Failure before protected science starts: bounded reservation cleanup is allowed.
-- Failure after protected science starts before final evidence closure: automatic teardown is prohibited; preserve the experiment live for evidence recovery.
-- HCI failure alone is non-authoritative and cannot invalidate science.
-- Unfavorable application completeness is a valid non-scored Golden outcome and is not a reason to alter the protocol or horizon.
+STOP the live experiment only after the same evidence-survival chain used in P6 has closed. Then, offline:
 
-## Frozen controls
+1. reconcile `run-matrix.yaml` gate-status fields;
+2. freeze the immutable pre-score reproducibility snapshot;
+3. issue a separate explicit `SCORED_AUTHORIZATION=PASS|BLOCKED` decision;
+4. only after PASS may WP3 scored execution be opened.
 
-- H1 remains `VALID_W1_RECOVERY_FAILURE`; original H1 node-local raw bundles were not recovered.
-- Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; IDs `1 33 2 34` remain coupled.
-- K1–K8 remain PASS/CLOSED absent a material interface change.
-- `H_app=300 s from t_service_ready` is frozen.
-- outcome-derived/W1-derived/Golden-derived H recalibration is prohibited.
-- `HCI_CONTROL_ACTIONS_ENABLED=false`.
-- `scored_runs_authorized=false`.
-- no WP3 B1/W1/B2 scored execution is authorized.
+### If P7B fails
 
-Shortest path:
+Preserve the failure and classify it as a pre-score qualification result. Do not create another reservation or relax the protocol automatically. Return to an explicit decision gate.
 
-`P6 short QA PASS -> one P6 Golden -> evidence round-trip -> teardown -> STOP -> WP2-P7 closure/scored authorization -> WP3 -> WP4 -> WP5`
+## Prohibited before P7B is explicitly resumed
+
+- no POWDER reservation or mutation;
+- no SSH to POWDER;
+- no new Golden;
+- no H calibration;
+- no RF recalibration;
+- no B1/W1/B2 scored run;
+- no OTA replication;
+- no WP3 execution;
+- no `scored_runs_authorized=true`;
+- no immutable authorization snapshot claiming readiness while physical gates remain open.
+
+Canonical P7 authority: `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`.
