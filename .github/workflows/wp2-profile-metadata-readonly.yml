@@ -1,0 +1,38 @@
+name: WP2 Frozen Profile Metadata Readonly
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-profile-metadata-readonly-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Discover and read exact profile metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api >/tmp/pin.txt
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/pin.txt
+          portal-cli profile --help | tee /tmp/profile-help.txt
+          set +e
+          portal-cli profile get --help >/tmp/profile-get-help.txt 2>&1
+          GET_HELP_RC=$?
+          set -e
+          echo "PROFILE_GET_HELP_RC=$GET_HELP_RC"
+          cat /tmp/profile-get-help.txt
+          echo 'POWDER_RESOURCE_MUTATION=NO'
+          echo 'NEW_RESERVATION_CREATED=NO'
