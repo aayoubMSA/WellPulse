@@ -1,0 +1,55 @@
+name: WP2 Pre-Integration Static Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-preintegration-static-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  static-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout audited state
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Syntax and integration contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bash -n scripts/wp2_a3_runtime_bootstrap.sh
+          bash -n scripts/wp2_golden_orchestrator.sh
+          bash -n scripts/wp2_golden_service_ready_probe.sh
+          bash -n powder/wp2_a3_adopt.sh
+          bash -n powder/wp2_a3_prepare_q0.sh
+
+          grep -q 'RCLONE_VERSION=.*1.75.0' scripts/wp2_a3_runtime_bootstrap.sh
+          grep -q 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa' scripts/wp2_a3_runtime_bootstrap.sh
+          grep -q 'sha256sum -c' scripts/wp2_a3_runtime_bootstrap.sh
+          ! grep -q 'rclone-current-linux-amd64.zip' scripts/wp2_a3_runtime_bootstrap.sh
+
+          grep -q 'RECEIVER_LAUNCH_TIMEOUT_S' scripts/wp2_golden_orchestrator.sh
+          grep -q 'timeout "${RECEIVER_LAUNCH_TIMEOUT_S}s" ssh -n' scripts/wp2_golden_orchestrator.sh
+          grep -q '</dev/null' scripts/wp2_golden_orchestrator.sh
+          grep -q 'RECEIVER_LAUNCH_ELAPSED_S' scripts/wp2_golden_orchestrator.sh
+          grep -q 'rclone v1.75.0' scripts/wp2_golden_orchestrator.sh
+          grep -q 'openssl=' scripts/wp2_golden_orchestrator.sh
+          grep -q 'mosquitto=' scripts/wp2_golden_orchestrator.sh
+
+          grep -q 'openssl s_client -brief' scripts/wp2_golden_service_ready_probe.sh
+          ! grep -q 'SSL-Session:' scripts/wp2_golden_service_ready_probe.sh
+
+          ! grep -q 'tmcc attenuator' .github/workflows/wp2-a3-attempt6-status-readonly.yml
+
+          echo 'PREINTEGRATION_STATIC_ACCEPTANCE=PASS'
+          echo 'POWDER_CONTACT=NO'
+          echo 'DRIVE_CONTACT=NO'
+          echo 'SCIENTIFIC_RUN=NO'
