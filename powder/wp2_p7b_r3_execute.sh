@@ -34,7 +34,7 @@ PRESERVATION_HELPER_BLOB='9063ec2e97e9cbf7a9f76d6ea10920236d8370ef'
 mkdir -p "$TMP"
 touch "$RESULT"
 
-bar(){ local p=$1 m=$2 n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-66s' "$p" "$m"; }
+bar(){ local p m n; p=$1; m=$2; n=$((p/5)); printf '\r['; printf '%*s' "$n" ''|tr ' ' '#'; printf '%*s' "$((20-n))" ''|tr ' ' '-'; printf '] %3d%%  %-66s' "$p" "$m"; }
 utc(){ date -u +%Y-%m-%dT%H:%M:%SZ; }
 fail(){ echo; echo "WP2_P7B_R3=BLOCKED:$1" >&2; printf 'FAILURE=%s\n' "$1" >> "$RESULT"; exit "${2:-90}"; }
 set_output(){ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then printf '%s=%s\n' "$1" "$2" >> "$GITHUB_OUTPUT"; fi; }
