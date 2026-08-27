@@ -1,0 +1,33 @@
+name: WP2 P7B-R3F Portal Extension Discovery
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-r3f-extension-discovery-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Bootstrap pinned Portal client and discover extension surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api | tee /tmp/portal-pin.txt
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/portal-pin.txt
+          echo '=== portal-cli experiment --help ==='
+          portal-cli experiment --help 2>&1 || true
+          echo '=== portal-cli experiment extend --help ==='
+          portal-cli experiment extend --help 2>&1 || true
+          echo '=== source matches: extend/extension/expire ==='
+          grep -RniE 'extend|extension|expiration|expires' /tmp/portal-api --exclude-dir=.git | head -n 300 || true
+          echo 'EXTENSION_DISCOVERY=COMPLETE_READ_ONLY'
