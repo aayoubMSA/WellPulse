@@ -30,6 +30,7 @@ jobs:
           bash -n scripts/wp2_golden_service_ready_probe.sh
           bash -n powder/wp2_a3_adopt.sh
           bash -n powder/wp2_a3_prepare_q0.sh
+          python3 -m py_compile scripts/wp2_prelaunch_time_guard.py
 
           grep -q 'RCLONE_VERSION=.*1.75.0' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa' scripts/wp2_a3_runtime_bootstrap.sh
@@ -48,6 +49,32 @@ jobs:
           ! grep -q 'SSL-Session:' scripts/wp2_golden_service_ready_probe.sh
 
           ! grep -q 'tmcc attenuator' .github/workflows/wp2-a3-attempt6-status-readonly.yml
+
+          python3 scripts/wp2_prelaunch_time_guard.py \
+            --now-utc 2026-08-27T12:00:00Z \
+            --expires-utc 2026-08-27T12:45:00Z \
+            --min-remaining-s 2700 | tee /tmp/time-pass.txt
+          grep -q '^PRELAUNCH_TIME_GATE=PASS$' /tmp/time-pass.txt
+
+          set +e
+          python3 scripts/wp2_prelaunch_time_guard.py \
+            --now-utc 2026-08-27T12:00:00Z \
+            --expires-utc 2026-08-27T12:44:59Z \
+            --min-remaining-s 2700 > /tmp/time-block.txt
+          rc=$?
+          set -e
+          [[ "$rc" -eq 3 ]]
+          grep -q '^PRELAUNCH_TIME_GATE=BLOCKED:INSUFFICIENT_REMAINING_TIME$' /tmp/time-block.txt
+          grep -q '^GOLDEN_LAUNCH_AUTHORIZED=NO$' /tmp/time-block.txt
+
+          set +e
+          python3 scripts/wp2_prelaunch_time_guard.py \
+            --now-utc 2026-08-27T12:00:00Z \
+            --expires-utc 'unknown' > /tmp/time-invalid.txt
+          rc=$?
+          set -e
+          [[ "$rc" -eq 2 ]]
+          grep -q '^PRELAUNCH_TIME_GATE=BLOCKED:INVALID_TIMESTAMP:' /tmp/time-invalid.txt
 
           echo 'PREINTEGRATION_STATIC_ACCEPTANCE=PASS'
           echo 'POWDER_CONTACT=NO'
