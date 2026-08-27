@@ -1,99 +1,138 @@
-# Next Gate — WP2 Pre-Integration Compatibility + HCI/Raw-Evidence Review
+# Next Gate — WP2 K-Fastlane Recovery to Compatibility Closure
 
-**Current frontier:** GOLDEN A3 CLOSED / REBOOK NOT YET AUTHORIZED  
+**Current frontier:** first bounded K-fastlane live compatibility reservation failed during POWDER provisioning  
 **Scientific completion:** 20%  
-**Scored authorization:** `false`
+**Scored authorization:** `false`  
+**Golden rebook authorization:** `false`
 
-## Current state
+## Current live result
 
-- Experiment `WP-GOLDEN-A3` / UUID `357f3275-403d-491a-906f-99677bdf454f` is no longer resolvable by the POWDER Portal API as of `2026-08-27T11:55:56Z` (`404 No such experiment`).
-- Attempt 6 reached G6 PASS but became `DIAGNOSTIC_NONCANONICAL` at G7 because a supposedly read-only attenuator status probe invoked `tmcc attenuator <id>` and POWDER reported mutation semantics (`changing attenuation`).
-- Attempt 7 passed request/static and Google Drive pre-mutation gates, then stopped before science because A3 no longer existed.
-- No scored run occurred.
-- G8/G9/G10 did not PASS in A3.
+GitHub Actions run:
 
-## Frozen scientific state
+`33084240768`
 
-- H1 remains `VALID_W1_RECOVERY_FAILURE`; no reclassification.
-- Q0/Q1/Q2/Q3 remain `0/40/52/55 dB`; attenuation IDs `1 33 2 34` remain coupled.
-- Recovery-semantics amendment v1 and protocol v0.6 remain frozen.
-- Primary cohort cutoff remains `t_rf_restore`.
-- Application horizon remains fixed at 300 s from `t_service_ready`.
-- `H = UNFROZEN`.
-- `scored_runs_authorized=false`.
+Workflow:
 
-## Mandatory next gates
+`.github/workflows/wp2-kfastlane-live-compat.yml`
 
-Before requesting or instantiating another POWDER experiment, complete both:
+Trigger commit:
 
-1. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-2. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+`dd275a3f7dbc75a7096b587ae3f01d61ff801411`
 
-for the GitHub Actions ↔ POWDER Golden integration.
+Compatibility experiment:
 
-Minimum evidence required:
+`02bc305d-5d84-48f9-b518-dbebd1728ee6`
 
-1. Official/authoritative semantics for Portal API experiment lifecycle/status/expiry operations.
-2. Exact POWDER profile revision, NUC hardware bindings, and startup/cleanup behavior.
-3. Authoritative semantics for `tmcc attenuator`, including whether a truly read-only query exists.
-4. Exact runtime/version fingerprints on GitHub and POWDER sides.
-5. Auth/secret/redaction contract; no TLS session-secret material in logs/evidence.
-6. Workflow concurrency, retry, trigger, and state-ownership contract.
-7. Reservation budget proving sufficient time for setup + Golden G0–G10 + raw-data freeze/hash + dual evidence escrow + read-back verification + safe shutdown margin.
-8. Persistence contract for `/proj/WellPulse` plus verified off-POWDER Drive escrow.
-9. Explicit list of safe observability calls allowed during G3–G10; all unqualified probes prohibited.
-10. Simple PI-facing live HCI fed only by orchestrator/process-emitted events; no HCI control path into POWDER during the protected scientific window.
-11. Complete raw-data inventory independent of HCI counters/summaries.
-12. Benchmark decision on whether in-run `/proj` checkpoint copying is non-perturbing; no unqualified background sync.
-13. Boundary smoke tests and fail-close/rollback behavior.
-14. End-to-end raw freeze/hash/persistent-copy/off-platform-copy/read-back verification before teardown.
+Classification:
 
-Required gate outputs:
+`INFRASTRUCTURE_ONLY_NON_SCORED`
 
-`PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
+Observed Portal sequence:
 
-`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
+`provisioning -> failed`
 
-Until then:
+The run failed at the READY/status/expiry binding step with rc `21` before any Golden workload, H calibration, or scored science.
+
+Subsequent live compatibility checks were skipped:
+
+- manifest hardware/image/login identity;
+- runtime/profile fingerprints;
+- K4 detached-process timing;
+- K6 cross-node `/proj/WellPulse` persistence;
+- actual controller artifact round-trip.
+
+Mandatory cleanup executed and returned:
+
+`COMPAT_CLEANUP=TERMINATE_REQUESTED`
+
+Before any replacement reservation, verify the failed experiment no longer resolves.
+
+## Current K status
+
+- `K1=PASS`
+- `K2=OFFLINE_PASS_LIVE_OPEN`
+- `K3=STATIC_PASS_LIVE_BLOCKED_ON_PROVISIONING_FAILURE`
+- `K4=IMPLEMENTED_LIVE_NOT_RUN`
+- `K5=IMPLEMENTED_LIVE_NOT_RUN`
+- `K6=IMPLEMENTED_LIVE_NOT_RUN`
+- `K7=POLICY_FROZEN_STATIC_ASSERTION_NEEDS_FIX`
+- `K8=BLOCKED`
+
+`PRE_INTEGRATION_COMPATIBILITY_GATE=BLOCKED`
+
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=BLOCKED`
 
 `REBOOK_GOLDEN=false`
 
-## Required HCI behavior for the next run
+## Evidence architecture now frozen for the fastlane
 
-The PI-facing cockpit should show, simply:
+Critical evidence chain:
 
-- experiment/run identity and NON-SCORED status;
-- reservation remaining safe budget;
-- G0-G10 progress and current phase;
-- latest PASS/FAIL event and timestamp;
-- safe workload-emitted counters such as generated/published/PUBACK/received when available;
-- `t_rf_restore` and `t_service_ready` when emitted;
-- raw-evidence state;
-- `/proj` copy state;
-- off-POWDER copy/read-back state;
-- fail-close and teardown authorization state.
+`raw -> /proj/WellPulse -> SHA verification -> controller pull -> GitHub Actions artifact -> independent download/read-back -> outer + internal hash verification -> teardown authority`
 
-The HCI consumes a one-way event/status stream. It must not independently SSH/API/CLI/poll/probe/reconfigure the live experiment during G3-G10.
+Google Drive is no longer a teardown-critical dependency. It may be used later only as an optional secondary mirror.
+
+The node-side Golden orchestrator must never emit teardown authority by itself.
+
+Before teardown of future science require:
+
+- `RAW_EVIDENCE_COMPLETE=PASS`
+- `EVIDENCE_ESCROW_GATE=PASS`
+- `TEARDOWN_AUTHORIZED=YES`
+
+## Exact next bounded work
+
+Do not book another reservation immediately.
+
+1. Verify experiment `02bc305d-5d84-48f9-b518-dbebd1728ee6` is absent/terminated.
+2. Obtain the smallest authoritative reason/evidence for why provisioning entered `failed`.
+3. Re-run corrected offline K3 CLI QA once.
+4. Fix the K7 static checker false-confidence issue and rerun static acceptance once.
+5. Decide whether the provisioning failure is transient/bounded or requires a profile/resource correction.
+6. Only then, if justified, use **one** replacement compatibility-only reservation to finish K3/K5, manifest/runtime identity, K4, K6, controller round-trip, and cleanup.
+7. Reconcile the compatibility matrix.
+8. Set K8 PASS only from actual evidence.
+
+## After K8
+
+Immediately return to the WP2 mission:
+
+1. close `LIVE_HCI_AND_RAW_EVIDENCE_GATE` with passive/one-way HCI and complete raw evidence contract;
+2. then request one fresh non-scored Golden reservation;
+3. run one clean G0–G10 Golden rehearsal;
+4. preserve verified complete raw evidence before teardown;
+5. only after Golden PASS requalify/freeze H;
+6. close WP2 scientifically;
+7. scored WP3 remains separately gated.
+
+## Frozen scientific state
+
+- H1 remains `VALID_W1_RECOVERY_FAILURE`.
+- H1 raw recovery remains closed/failed; do not reopen salvage without genuinely new evidence.
+- Q0/Q1/Q2/Q3 remain `0/40/52/55 dB` with attenuator IDs `1 33 2 34` coupled.
+- Primary cohort cutoff remains `t_rf_restore`.
+- Application horizon remains 300 s from `t_service_ready`.
+- `H=UNFROZEN`.
+- `scored_runs_authorized=false`.
+- no B1/W1/B2 scored work.
+
+## HCI rule
+
+Future HCI remains passive, one-way, and non-authoritative:
 
 `HCI_CONTROL_ACTIONS_ENABLED=false`
 
-## Raw-data requirement
+No independent unqualified probe may run during the protected scientific window.
 
-A successful HCI display is not evidence completion.
+## Read first
 
-Before teardown require:
+1. `HANDOVER_CURRENT.md`
+2. `docs/AGENT_HANDOVER_WP2_KFASTLANE_2026-08-27.md`
+3. this file
+4. `.github/workflows/wp2-kfastlane-live-compat.yml`
+5. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+6. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
 
-`RAW_EVIDENCE_COMPLETE=PASS`
+Shortest mission path:
 
-`EVIDENCE_ESCROW_GATE=PASS`
-
-`TEARDOWN_AUTHORIZED=YES`
-
-## After both gates PASS
-
-1. Request/instantiate the smallest new non-scored Golden reservation with a measured safe time budget.
-2. Confirm exact expected hardware/profile/runtime before workload launch.
-3. Run one clean G0–G10 rehearsal with the passive HCI and no independent unqualified probes during the scientific window.
-4. Preserve and verify complete raw evidence before teardown.
-5. Only after Golden PASS may H requalification be considered.
-6. Scored campaign remains prohibited until separately authorized by the frozen scientific gates.
+`provisioning failure -> remaining K live proofs -> K7 fix -> K8 -> HCI/raw gate -> clean Golden -> H -> WP2 close -> WP3 -> WP4 -> WP5`
