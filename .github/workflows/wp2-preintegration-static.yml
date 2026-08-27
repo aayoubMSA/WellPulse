@@ -32,10 +32,21 @@ jobs:
           bash -n powder/wp2_a3_prepare_q0.sh
           python3 -m py_compile scripts/wp2_prelaunch_time_guard.py
 
+          # K1 supply-chain/runtime pins: fail closed on mutable/bootstrap references.
+          grep -q 'UV_VERSION=.*0.12.1' scripts/wp2_a3_runtime_bootstrap.sh
+          grep -q 'uv-x86_64-unknown-linux-gnu.tar.gz' scripts/wp2_a3_runtime_bootstrap.sh
+          grep -q '90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb' scripts/wp2_a3_runtime_bootstrap.sh
+          ! grep -q 'astral.sh/uv/install.sh' scripts/wp2_a3_runtime_bootstrap.sh
+
           grep -q 'RCLONE_VERSION=.*1.75.0' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q 'sha256sum -c' scripts/wp2_a3_runtime_bootstrap.sh
           ! grep -q 'rclone-current-linux-amd64.zip' scripts/wp2_a3_runtime_bootstrap.sh
+
+          # Future integration checkout is immutable and runner major image is explicit.
+          grep -q 'runs-on: ubuntu-24.04' .github/workflows/wp2-preintegration-static.yml
+          grep -q 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' .github/workflows/wp2-preintegration-static.yml
+          ! grep -Eq 'actions/checkout@v[0-9]+' .github/workflows/wp2-preintegration-static.yml
 
           grep -q 'RECEIVER_LAUNCH_TIMEOUT_S' scripts/wp2_golden_orchestrator.sh
           grep -q 'timeout "${RECEIVER_LAUNCH_TIMEOUT_S}s" ssh -n' scripts/wp2_golden_orchestrator.sh
@@ -48,7 +59,7 @@ jobs:
           grep -q 'openssl s_client -brief' scripts/wp2_golden_service_ready_probe.sh
           ! grep -q 'SSL-Session:' scripts/wp2_golden_service_ready_probe.sh
 
-          ! grep -q 'tmcc attenuator' .github/workflows/wp2-a3-attempt6-status-readonly.yml
+          ! grep -q 'tmcc attenuator' archive/workflows/a3-2026-08-27/wp2-a3-attempt6-status-readonly.yml
 
           python3 scripts/wp2_prelaunch_time_guard.py \
             --now-utc 2026-08-27T12:00:00Z \
