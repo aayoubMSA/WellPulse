@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after K1 offline supply-chain/runtime pin closure attempt.
+Last updated: 2026-08-27 after K1-P authoritative Portal API revision resolution attempt.
 
 ## Executive state
 
@@ -15,6 +15,7 @@ Last updated: 2026-08-27 after K1 offline supply-chain/runtime pin closure attem
 - H1 GitHub salvage: **PASS as derived-evidence/provenance consolidation; raw recovery from GitHub failed**.
 - H1-PSH local salvage: **CLOSED_NO_RECOVERY**.
 - K1 supply-chain/runtime pin closure: **BLOCKED_PORTAL_API_REVISION**.
+- K1-P Portal API revision resolution: **BLOCKED_AUTHORITATIVE_PORTAL_API_REVISION_UNAVAILABLE**.
 - `H=UNFROZEN`.
 - `scored_runs_authorized=false`.
 - `REBOOK_GOLDEN=false`.
@@ -143,23 +144,33 @@ Verdict:
 5. **Compatibility matrix reconciled**
    - update commit: `3f3fefc3584f0eea91e620867ff873dd4d5a91f8`
 
-### K1 blocker
+### K1-P — authoritative Portal API revision resolution — BLOCKED
 
-Authoritative POWDER/Emulab documentation identifies the supported current Portal API client repository as:
+Canonical result:
+
+`docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md`
+
+Result record commit:
+
+`a8788e85edc9968f9cffd1880bf2d45f29eed905`
+
+Authoritative POWDER documentation identifies the supported current Portal API client repository as:
 
 `https://gitlab.flux.utah.edu/emulab/portal-api`
 
-and states that the Portal API is under active development. Therefore mutable HEAD cannot be accepted for a reproducibility-critical Golden path.
+and states that the Portal API is under active development. The legacy XML-RPC Portal API is deprecated.
 
-The current execution environment could verify the repository identity but could not resolve an authoritative immutable Git revision for the client. No canonical WellPulse artifact contains a previously frozen Portal API revision.
+K1-P attempted to resolve an immutable upstream revision only from authoritative sources. The official GitLab project surface returned HTTP 403 through the available web runtime; a direct `git ls-remote` attempt from the local execution container could not resolve `gitlab.flux.utah.edu`; indexed web sources did not expose a trustworthy immutable commit SHA.
+
+No SHA was guessed, copied from a mirror/fork, or substituted from the deprecated legacy API.
 
 Therefore:
 
-`PORTAL_API_REVISION=UNRESOLVED`
+- `K1P=BLOCKED_AUTHORITATIVE_PORTAL_API_REVISION_UNAVAILABLE`
+- `PORTAL_API_REVISION=UNRESOLVED`
+- `K1=BLOCKED_PORTAL_API_REVISION`
 
-No guessed SHA, placeholder revision, moving branch, or tag-as-commit substitute is permitted.
-
-K1 cannot PASS until this is resolved or the Portal interaction mechanism is replaced by a fully versioned alternative.
+K1 cannot PASS until the official GitLab repository yields an authoritative immutable revision, or the Portal client dependency is deliberately redesigned out of the future Golden path under a separately declared patch.
 
 ## Compatibility / Golden state
 
@@ -225,41 +236,39 @@ Required evidence path:
 ## Mandatory current read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
-3. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
-4. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-5. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
-6. `evidence/powder/h1-github-salvage-2026-08-27.md`
-7. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
-8. `docs/NEXT_GATE.md`
-9. `docs/WORKFLOW_REGISTRY.md`
-10. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
-11. `AGENTS.md`
-12. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-13. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-14. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
-15. `experiments/WP-PWD01/protocol.md`
-16. `experiments/WP-PWD01/evidence-schema.md`
+2. `docs/K1P_PORTAL_API_REVISION_RESOLUTION_2026-08-27.md`
+3. `docs/K1_SUPPLY_CHAIN_RUNTIME_PIN_CLOSURE_2026-08-27.md`
+4. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
+5. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+6. `evidence/powder/h1-psh2-targeted-provenance-result-2026-08-27.md`
+7. `evidence/powder/h1-github-salvage-2026-08-27.md`
+8. `evidence/powder/h1-github-salvage-manifest-2026-08-27.json`
+9. `docs/NEXT_GATE.md`
+10. `docs/WORKFLOW_REGISTRY.md`
+11. `docs/REPOSITORY_HYGIENE_FINAL_QA_2026-08-27.md`
+12. `AGENTS.md`
+13. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+14. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
+15. `evidence/powder/wp2-h1-valid-recovery-failure-2026-08-26.md`
+16. `experiments/WP-PWD01/protocol.md`
+17. `experiments/WP-PWD01/evidence-schema.md`
 
 ## Exact next action
 
-**STOP after K1.**
+**STOP after K1-P.**
 
-K1 did not pass, so do **not** advance to K2 yet.
+K1-P is blocked and K1 remains blocked. Do **not** advance to K2 under the current patch discipline.
 
-On the next explicit user resume, execute exactly one bounded patch:
+On the next explicit user resume, choose exactly one declared path:
 
-### K1-P — Resolve Portal API immutable revision
+### K1-P2 — User-accessible authoritative revision capture
 
-Goal:
+Use a user-accessible browser/shell path to the official GitLab repository to capture `git rev-parse HEAD` / `git ls-remote` evidence for the exact upstream revision, then freeze it in WellPulse.
 
-Resolve and freeze the exact upstream Git revision of `emulab/portal-api` from an authoritative source, update the bootstrap/integration pin record and static acceptance, then re-evaluate K1.
+**or**
 
-Constraints:
+### K1-R — Portal-client dependency redesign
 
-- no POWDER experiment contact or reservation;
-- no live scientific work;
-- no guessed/mutable revision;
-- fail closed if authoritative immutable revision cannot be established.
+Remove the mutable runtime clone/install dependency from the future Golden architecture and replace it with a separately versioned, auditable interface contract. This is a design change and must be handled as its own bounded patch.
 
-Only after `K1=PASS` may the K-series advance to K2.
+No K2 work is authorized until K1 passes or the patch discipline is explicitly changed.
