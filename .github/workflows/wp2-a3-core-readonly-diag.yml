@@ -43,40 +43,35 @@ jobs:
           setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
           echo 'DIAG_SSH_READY=PASS'
 
-      - name: Read existing A3 core failure evidence
+      - name: Read existing A3 core and UE profile topology
         shell: bash
         run: |
           set +e
-          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net 'bash -s' <<'REMOTE'
+          for host in nuc1.emulab.net nuc2.emulab.net; do
+            echo "=== READONLY HOST=$host ==="
+            ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "aayoub@$host" 'bash -s' <<'REMOTE'
           set +e
-          echo '=== A3 CORE READONLY DIAGNOSTIC ==='
           echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
           echo "HOST=$(hostname)"
-          echo '--- saved CORE_START console ---'
-          if test -f /tmp/wp2-a3-q0-core.console; then
-            sed -n '1,220p' /tmp/wp2-a3-q0-core.console
-          else
-            echo 'CORE_CONSOLE=MISSING'
-          fi
+          echo '--- saved Q0 console if present ---'
+          for f in /tmp/wp2-a3-q0-core.console /tmp/wp2-a3-q0-ue.console; do
+            if test -f "$f"; then echo "FILE=$f"; sed -n '1,180p' "$f"; fi
+          done
           echo '--- process state ---'
           pgrep -a srsepc || echo 'srsepc=absent'
           pgrep -a srsenb || echo 'srsenb=absent'
           pgrep -a srsue || echo 'srsue=absent'
           echo '--- tmux state ---'
           tmux ls 2>&1 || true
-          echo '--- startup-script structural lines (redacted) ---'
-          if test -f /local/repository/bin/start.sh; then
-            grep -nE '(^|[^A-Za-z])(srsepc|srsenb|srsue|tmux|hostname|HOSTNAME|client_id|node_id|exit|return|sudo)([^A-Za-z]|$)' /local/repository/bin/start.sh 2>/dev/null \
-              | sed -E 's/(token|secret|password|passwd|credential|apikey|api_key)[^ ]*/REDACTED/Ig' \
-              | head -120
-            echo "START_SH_SHA256=$(sha256sum /local/repository/bin/start.sh | awk '{print $1}')"
-          else
-            echo 'START_SH=MISSING'
-          fi
-          echo 'A3_CORE_READONLY_DIAG=COMPLETE'
+          echo '--- exact tmux/start structural lines (redacted) ---'
+          grep -R -nE 'tmux[[:space:]]+(new-session|kill-session|send-keys|attach-session)|srsepc|srsenb|srsue' /local/repository/bin 2>/dev/null \
+            | sed -E 's/(token|secret|password|passwd|credential|apikey|api_key)[^ ]*/REDACTED/Ig' \
+            | head -160
+          echo "START_SH_SHA256=$(sha256sum /local/repository/bin/start.sh 2>/dev/null | awk '{print $1}')"
+          echo 'HOST_READONLY_DIAG=COMPLETE'
           REMOTE
-          RC=$?
-          echo "DIAG_SSH_RC=$RC"
+            echo "HOST_DIAG_RC=$?"
+          done
           echo 'POWDER_MUTATION_EXECUTED=NO'
           echo 'GOLDEN_EXECUTED=NO'
           exit 0
