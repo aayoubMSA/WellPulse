@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after the first bounded WP2 K-fastlane live compatibility reservation failed during provisioning and cleanup was requested successfully.
+Last updated: 2026-08-27 after read-only post-cleanup diagnosis of the first bounded WP2 K-fastlane compatibility provisioning failure.
 
 ## Executive state
 
@@ -16,7 +16,9 @@ Last updated: 2026-08-27 after the first bounded WP2 K-fastlane live compatibili
 - H1 PowerShell/local salvage: **CLOSED_NO_RECOVERY**.
 - K1 supply-chain/runtime pin closure: **PASS**.
 - K2 controller/off-POWDER transport: **OFFLINE PASS / LIVE CLOSURE OPEN**.
-- K3 Portal contract: **STATIC PASS / LIVE BLOCKED ON RESERVATION PROVISIONING FAILURE**.
+- K3 Portal contract: **STATIC PASS / LIVE BLOCKED ON UNRESOLVED RESERVATION PROVISIONING FAILURE**.
+- Failed compatibility experiment cleanup: **VERIFIED PASS — experiment absent from `get` and `list`**.
+- Provisioning root cause: **NOT RECOVERED from post-cleanup Portal state**.
 - K4 receiver detach: **IMPLEMENTED / LIVE PROOF NOT RUN**.
 - K5 time budget: **IMPLEMENTED / LIVE EXPIRY BINDING NOT RUN**.
 - K6 `/proj/WellPulse` persistence + controller round-trip: **IMPLEMENTED / LIVE PROOF NOT RUN**.
@@ -160,11 +162,57 @@ Fail-closed real record guard:
 
 `scripts/wp2_portal_record_guard.py`
 
-The first live compatibility reservation failed before READY and before real expiry binding.
+### First live compatibility reservation
 
-Current live verdict:
+Workflow run: `33084240768`
 
-`K3_LIVE_PORTAL_BINDING=BLOCKED_ON_RESERVATION_PROVISIONING_FAILURE`
+Experiment UUID: `02bc305d-5d84-48f9-b518-dbebd1728ee6`
+
+Observed sequence:
+
+- reservation creation: PASS
+- `PORTAL_POLL_1=provisioning`
+- `PORTAL_POLL_2=failed`
+- READY/expiry binding: NOT REACHED
+- cleanup: `COMPAT_CLEANUP=TERMINATE_REQUESTED`
+
+### Read-only post-cleanup diagnosis
+
+Canonical artifact:
+
+`evidence/powder/kfastlane-provision-failure-diagnosis-2026-08-27.md`
+
+Diagnostic workflow:
+
+`.github/workflows/wp2-kfastlane-provision-failure-diagnose.yml`
+
+Diagnostic run: `33086065236` — **success**.
+
+Authoritative observations from the frozen Portal client:
+
+- `GET_RC=148`
+- `ELABORATE_GET_RC=148`
+- `LIST_RC=0`
+- both `experiment get` calls return `No such experiment`;
+- target is absent from `experiment list`.
+
+Therefore:
+
+- `COMPATIBILITY_CLEANUP_VERIFICATION=PASS`
+- `FAILED_EXPERIMENT_RESOLUTION=ABSENT`
+- `FAILED_EXPERIMENT_LIST_PRESENCE=NO`
+
+However, the original failed-state JSON/error details were not frozen before cleanup. The post-cleanup Portal state cannot recover the detailed provisioning failure cause.
+
+Therefore:
+
+`PROVISION_FAILURE_ROOT_CAUSE=NOT_RECOVERED_FROM_POST_CLEANUP_PORTAL_STATE`
+
+Do **not** infer hardware shortage, quota, site outage, profile failure, or any other cause without evidence.
+
+Current K3 verdict:
+
+`K3_LIVE_PORTAL_BINDING=BLOCKED_ON_UNRESOLVED_PROVISIONING_FAILURE`
 
 ## K4 — implementation PASS / live not run
 
@@ -200,55 +248,13 @@ Known QA defect: `.github/workflows/wp2-preintegration-static.yml` currently rel
 
 Shortest fix: exclude the checker or scan only execution workflows, capture match count explicitly, and fail with an explicit conditional.
 
-## First live K-fastlane compatibility reservation — final record
-
-Workflow:
-
-`.github/workflows/wp2-kfastlane-live-compat.yml`
-
-Run ID:
-
-`33084240768`
-
-Trigger commit:
-
-`dd275a3f7dbc75a7096b587ae3f01d61ff801411`
-
-Experiment UUID:
-
-`02bc305d-5d84-48f9-b518-dbebd1728ee6`
-
-Classification:
-
-`INFRASTRUCTURE_ONLY_NON_SCORED`
-
-Final observed sequence:
-
-- controller authorization: PASS
-- frozen Portal client: PASS
-- SSH identity: PASS
-- exactly one one-hour reservation creation: PASS
-- `PORTAL_POLL_1=provisioning`
-- `PORTAL_POLL_2=failed`
-- READY/expiry step: FAIL, rc `21`
-- manifest identity: SKIPPED
-- runtime/profile fingerprints: SKIPPED
-- K4 live detach: SKIPPED
-- K6 `/proj`: SKIPPED
-- controller artifact round-trip: SKIPPED
-- mandatory cleanup: PASS as `COMPAT_CLEANUP=TERMINATE_REQUESTED`
-
-No Golden workload, H calibration, or scored science ran.
-
-The next agent must verify this failed experiment no longer resolves before any replacement reservation.
-
 ## K8 / Golden state
 
 `PRE_INTEGRATION_COMPATIBILITY_GATE=BLOCKED`
 
 Still required before K8 PASS:
 
-- successful reservation READY state;
+- successful replacement compatibility reservation READY state;
 - real Portal status/expiry binding;
 - expiry -> time-budget PASS;
 - manifest hardware/image/login identity;
@@ -283,38 +289,38 @@ C0..C4 remain PASS / closed. Do not reintroduce archived live workflows casually
 ## Mandatory read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/AGENT_HANDOVER_WP2_KFASTLANE_2026-08-27.md`
-3. `.github/workflows/wp2-kfastlane-live-compat.yml`
-4. `.github/workflows/wp2-preintegration-static.yml`
-5. `.github/workflows/wp2-k3-portal-cli-contract-qa.yml`
-6. `scripts/wp2_portal_record_guard.py`
-7. `scripts/wp2_prelaunch_time_guard.py`
-8. `scripts/wp2_controller_pull_persistent_escrow.sh`
-9. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
-10. `scripts/wp2_golden_orchestrator.sh`
-11. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
-12. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
-13. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
-14. `docs/NEXT_GATE.md`
-15. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
-16. `experiments/WP-PWD01/protocol.md`
-17. `experiments/WP-PWD01/evidence-schema.md`
+2. `evidence/powder/kfastlane-provision-failure-diagnosis-2026-08-27.md`
+3. `docs/AGENT_HANDOVER_WP2_KFASTLANE_2026-08-27.md`
+4. `.github/workflows/wp2-kfastlane-live-compat.yml`
+5. `.github/workflows/wp2-kfastlane-provision-failure-diagnose.yml`
+6. `.github/workflows/wp2-preintegration-static.yml`
+7. `.github/workflows/wp2-k3-portal-cli-contract-qa.yml`
+8. `scripts/wp2_portal_record_guard.py`
+9. `scripts/wp2_prelaunch_time_guard.py`
+10. `scripts/wp2_controller_pull_persistent_escrow.sh`
+11. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
+12. `scripts/wp2_golden_orchestrator.sh`
+13. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+14. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
+15. `docs/GITHUB_POWDER_COMPATIBILITY_MATRIX_2026-08-27.md`
+16. `docs/NEXT_GATE.md`
+17. `experiments/WP-PWD01/GOLDEN_E2E_REHEARSAL_v1.md`
+18. `experiments/WP-PWD01/protocol.md`
+19. `experiments/WP-PWD01/evidence-schema.md`
 
 ## Exact next action
 
-**STOP at handover. Do not trigger another reservation automatically.**
+**STOP after provisioning-failure diagnosis. No replacement reservation is authorized in this patch.**
 
-On explicit resume:
+On explicit resume, execute one bounded **offline pre-retry hardening patch** only:
 
-1. verify compatibility experiment `02bc305d-5d84-48f9-b518-dbebd1728ee6` is absent/terminated;
-2. recover the smallest authoritative evidence explaining the provisioning `failed` state;
-3. rerun the corrected K3 offline CLI QA once;
-4. fix the K7 static assertion and rerun static acceptance once;
-5. only if the provisioning failure is understood/bounded, decide whether one replacement compatibility-only reservation is justified;
-6. use that single reservation to finish the remaining live K evidence;
-7. evaluate K8;
-8. return immediately to the HCI/raw-evidence gate and the WP2 scientific path.
+1. modify `.github/workflows/wp2-kfastlane-live-compat.yml` so any future `status=failed` freezes a sanitized failed-state Portal JSON/error artifact **before cleanup**;
+2. rerun the corrected K3 offline CLI QA once;
+3. fix the K7 static assertion and rerun static acceptance once;
+4. update canonical compatibility status and STOP.
+
+Only after that offline hardening PASS should one replacement compatibility-only reservation be considered to finish K3-K6 live proofs.
 
 Shortest mission path:
 
-`provisioning failure -> remaining live K proofs -> K7 fix -> K8 -> HCI/raw gate -> clean non-scored Golden -> freeze H -> WP2 close -> WP3 -> WP4 -> WP5`
+`offline pre-retry hardening -> one replacement compatibility reservation -> remaining K3-K6 proofs -> K8 -> HCI/raw gate -> clean non-scored Golden -> freeze H -> WP2 close -> WP3 -> WP4 -> WP5`
