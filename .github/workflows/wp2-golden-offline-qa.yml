@@ -1,6 +1,5 @@
 name: WP2 Golden Offline QA
 # AUDIT-R1 reconciled offline-only acceptance gate: 2026-08-27
-# AUDIT-R1 final offline QA trigger stamp: 2026-08-27
 
 on:
   push:
