@@ -1,0 +1,72 @@
+name: WP2 A3 G2 TLS Readonly Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-g2-tls-readonly.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3tls
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3tls/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3tls/askpass
+          export SSH_ASKPASS=/tmp/a3tls/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+
+      - name: Inspect G2 TLS broker without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net 'bash -s' <<'REMOTE'
+          set +e
+          W=/tmp/wellpulse-wp2-golden-broker
+          echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
+          echo "HOST=$(hostname)"
+          echo "OPENSSL=$(openssl version 2>&1)"
+          echo '--- LISTENER ---'
+          sudo ss -ltnp 2>/dev/null | grep -E '(:|\.)8883[[:space:]]' || true
+          echo '--- MOSQUITTO PROCESSES ---'
+          pgrep -a mosquitto || true
+          echo '--- WORKDIR METADATA ---'
+          ls -ld "$W" 2>/dev/null || true
+          find "$W" -maxdepth 1 -type f -printf '%f %m %s bytes\n' 2>/dev/null | sort | grep -Ev '\.key$' || true
+          echo '--- CERTIFICATE ---'
+          openssl x509 -in "$W/server.crt" -noout -subject -issuer -dates -fingerprint -sha256 -ext subjectAltName 2>&1 || true
+          sha256sum "$W/ca.crt" "$W/server.crt" 2>/dev/null || true
+          echo '--- BROKER PUBLIC ---'
+          cat "$W/broker_public.json" 2>/dev/null || true
+          echo '--- MOSQUITTO LOG ---'
+          sed -n '1,200p' "$W/mosquitto.log" 2>/dev/null || true
+          echo '--- LOCAL TLS PROBE ---'
+          timeout 8 openssl s_client -connect 127.0.0.1:8883 -CAfile "$W/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null 2>&1 | sed -n '1,100p'
+          echo "LOCAL_TLS_RC=${PIPESTATUS[0]}"
+          echo 'POWDER_MUTATION_EXECUTED=NO'
+          REMOTE
