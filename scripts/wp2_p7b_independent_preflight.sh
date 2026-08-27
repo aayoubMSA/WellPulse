@@ -2,12 +2,9 @@
 set -euo pipefail
 
 # Orthogonal target preflight for an already-existing POWDER reservation.
-# This script deliberately does NOT use:
-# - powder/wp2_p7b_r3_execute.sh
-# - scripts/wp2_p7b_target_node_preflight.sh
-# - scripts/wp2_portal_client_bootstrap.sh
-# - project readiness/manifest parsers
-# It performs no reservation creation/termination, no RF mutation, and no B1/W1/B2 action.
+# It performs no Portal action, reservation action, RF mutation, scientific cell,
+# or teardown. Static independence from the existing P7B control stack is
+# enforced by offline regression tests rather than by self-parsing this file.
 
 : "${CORE_HOST:?CORE_HOST required}"
 : "${CORE_USER:?CORE_USER required}"
@@ -20,8 +17,8 @@ set -euo pipefail
 
 EXPECTED_PINNED_PYTHON="${EXPECTED_PINNED_PYTHON:-3.11.13}"
 EXPECTED_JAVA_MAJOR="${EXPECTED_JAVA_MAJOR:-11}"
-REMOTE_REPO="${REMOTE_REPO:-$HOME/WellPulse}"
-REMOTE_PINNED_PYTHON="${REMOTE_PINNED_PYTHON:-$HOME/.wp2-golden-venv/bin/python}"
+REMOTE_REPO_OVERRIDE="${REMOTE_REPO_OVERRIDE:-}"
+REMOTE_PINNED_PYTHON_OVERRIDE="${REMOTE_PINNED_PYTHON_OVERRIDE:-}"
 TMP="${TMPDIR:-/tmp}/wp2-p7b-independent-preflight"
 rm -rf "$TMP"
 mkdir -p "$TMP"
@@ -39,6 +36,10 @@ printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
 EOF
 chmod 700 "$TMP/askpass"
 export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+command -v setsid >/dev/null 2>&1 || fail COMMAND_MISSING_setsid 3
+command -v ssh-keygen >/dev/null 2>&1 || fail COMMAND_MISSING_ssh-keygen 3
+command -v ssh-agent >/dev/null 2>&1 || fail COMMAND_MISSING_ssh-agent 3
+command -v ssh-add >/dev/null 2>&1 || fail COMMAND_MISSING_ssh-add 3
 setsid -w ssh-keygen -y -f "$TMP/private.key" > "$TMP/public.key" </dev/null || fail SSH_KEY_DERIVATION 4
 eval "$(ssh-agent -s)" >/dev/null
 trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$TMP"' EXIT
@@ -49,22 +50,31 @@ SSH_OPTS=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=12 -o Serve
 probe_node(){
   local role=$1 user=$2 host=$3 port=$4
   ssh "${SSH_OPTS[@]}" -p "$port" "$user@$host" \
-    "ROLE='$role' EXPECTED_PINNED_PYTHON='$EXPECTED_PINNED_PYTHON' EXPECTED_JAVA_MAJOR='$EXPECTED_JAVA_MAJOR' REMOTE_REPO='$REMOTE_REPO' REMOTE_PINNED_PYTHON='$REMOTE_PINNED_PYTHON' bash -s" <<'REMOTE'
+    "ROLE='$role' EXPECTED_PINNED_PYTHON='$EXPECTED_PINNED_PYTHON' EXPECTED_JAVA_MAJOR='$EXPECTED_JAVA_MAJOR' REMOTE_REPO_OVERRIDE='$REMOTE_REPO_OVERRIDE' REMOTE_PINNED_PYTHON_OVERRIDE='$REMOTE_PINNED_PYTHON_OVERRIDE' bash -s" <<'REMOTE'
 set -euo pipefail
 rfail(){ echo "NODE_PREFLIGHT=BLOCKED:${ROLE}:$1" >&2; exit "${2:-30}"; }
+
+REMOTE_REPO="${REMOTE_REPO_OVERRIDE:-$HOME/WellPulse}"
+REMOTE_PINNED_PYTHON="${REMOTE_PINNED_PYTHON_OVERRIDE:-$HOME/.wp2-golden-venv/bin/python}"
+case "$REMOTE_REPO" in /*) ;; *) rfail REMOTE_REPO_NOT_ABSOLUTE ;; esac
+case "$REMOTE_PINNED_PYTHON" in /*) ;; *) rfail REMOTE_PINNED_PYTHON_NOT_ABSOLUTE ;; esac
+case "$REMOTE_REPO" in *'$'*|*'~'*) rfail REMOTE_REPO_UNRESOLVED_TOKEN ;; esac
+case "$REMOTE_PINNED_PYTHON" in *'$'*|*'~'*) rfail REMOTE_PINNED_PYTHON_UNRESOLVED_TOKEN ;; esac
 
 echo "NODE_ROLE=$ROLE"
 echo "NODE_HOST=$(hostname)"
 echo "KERNEL=$(uname -srmo 2>/dev/null || uname -a)"
 echo "BASH_VERSION=$BASH_VERSION"
 echo "SYSTEM_PYTHON=$(python3 --version 2>&1 || true)"
+echo "REMOTE_REPO=$REMOTE_REPO"
+echo "REMOTE_PINNED_PYTHON=$REMOTE_PINNED_PYTHON"
 
 test -x "$REMOTE_PINNED_PYTHON" || rfail PINNED_PYTHON_MISSING
 PINNED_VERSION="$($REMOTE_PINNED_PYTHON -c 'import sys; print(".".join(map(str,sys.version_info[:3])))')"
 echo "PINNED_PYTHON=$PINNED_VERSION"
 test "$PINNED_VERSION" = "$EXPECTED_PINNED_PYTHON" || rfail "PINNED_PYTHON_VERSION_${PINNED_VERSION}"
 
-for cmd in bash openssl tar sha256sum find sort xargs rsync ss pgrep curl; do
+for cmd in bash openssl tar sha256sum find sort xargs rsync ss pgrep curl ip; do
   command -v "$cmd" >/dev/null 2>&1 || rfail "COMMAND_MISSING_${cmd}"
 done
 
@@ -88,12 +98,14 @@ for rel in \
   scripts/wp_pwd01_h_receiver.py \
   src/wellpulse/p7b.py; do
   test -s "$REMOTE_REPO/$rel" || rfail "SOURCE_MISSING_${rel}"
-  "$REMOTE_PINNED_PYTHON" - "$REMOTE_REPO/$rel" <<'PY' || exit 41
+  if ! "$REMOTE_PINNED_PYTHON" - "$REMOTE_REPO/$rel" <<'PY'
 import pathlib,sys
 p=pathlib.Path(sys.argv[1])
 compile(p.read_text(encoding='utf-8'), str(p), 'exec')
 PY
-  test $? -eq 0 || rfail "TARGET_PYTHON_SYNTAX_${rel}" 41
+  then
+    rfail "TARGET_PYTHON_SYNTAX_${rel}" 41
+  fi
 done
 
 if [ "$ROLE" = ue ]; then
@@ -112,7 +124,9 @@ ip link 2>/dev/null | sed -n '1,80p' || true
 
 # Preservation primitives must work independently of Python.
 PTEST="/proj/WellPulse/.p7b-preflight-${ROLE}-$$"
-mkdir -p "$PTEST/src" "$PTEST/dst"
+cleanup_ptest(){ rm -rf "$PTEST"; }
+trap cleanup_ptest RETURN 2>/dev/null || true
+mkdir -p "$PTEST/src"
 printf 'preflight-%s\n' "$ROLE" > "$PTEST/src/payload.txt"
 ( cd "$PTEST/src" && sha256sum payload.txt > SHA256SUMS )
 tar -C "$PTEST/src" -cf "$PTEST/archive.tar" .
@@ -129,24 +143,7 @@ probe_node core "$CORE_USER" "$CORE_HOST" "$CORE_PORT" | tee "$TMP/core.log"
 probe_node ue "$UE_USER" "$UE_HOST" "$UE_PORT" | tee "$TMP/ue.log"
 
 grep -q '^NODE_PREFLIGHT=PASS:core$' "$TMP/core.log" || fail CORE_PREFLIGHT
-cat "$TMP/ue.log" >/dev/null
 grep -q '^NODE_PREFLIGHT=PASS:ue$' "$TMP/ue.log" || fail UE_PREFLIGHT
 
-# Explicit static self-audit: this probe must remain orthogonal and read-only.
-SELF="$0"
-for banned in \
-  'wp2_p7b_r3_execute.sh' \
-  'wp2_p7b_target_node_preflight.sh' \
-  'wp2_portal_client_bootstrap.sh' \
-  'portal-cli experiment create' \
-  'portal-cli experiment terminate' \
-  'tmcc attenuator' \
-  'P7B-B1-S3' \
-  'P7B-W1-S3' \
-  'P7B-B2-S3'; do
-  if grep -F "$banned" "$SELF" | grep -v "'$banned'" >/dev/null 2>&1; then
-    fail "SELF_AUDIT_BANNED_REFERENCE_${banned// /_}" 50
-  fi
-done
-
+echo 'INDEPENDENCE_STATIC_AUDIT=OFFLINE_QA'
 pass
