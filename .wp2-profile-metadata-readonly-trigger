@@ -1,0 +1,4 @@
+profile_project=PowderProfiles
+profile_name=srslte-controlled-rf
+mode=READ_ONLY
+new_reservation=false
