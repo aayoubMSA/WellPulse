@@ -10,6 +10,8 @@ RUN_ID="${WP_RUN_ID:?WP_RUN_ID is required}"
 EXPERIMENT_ID="${WP_EXPERIMENT_ID:?WP_EXPERIMENT_ID is required}"
 CORE_HOST="${WP_CORE_HOST:?WP_CORE_HOST is required}"
 UE_HOST="${WP_UE_HOST:-$(hostname)}"
+CORE_MANAGEMENT_HOST="${WP_CORE_MANAGEMENT_HOST:?WP_CORE_MANAGEMENT_HOST is required}"
+UE_MANAGEMENT_HOST="${WP_UE_MANAGEMENT_HOST:?WP_UE_MANAGEMENT_HOST is required}"
 REMOTE_USER="${WP_REMOTE_USER:-aayoub}"
 REPO="${WP_REPO_ROOT:-$HOME/WellPulse}"
 PY="${WP_PYTHON:-python3}"
@@ -109,6 +111,8 @@ echo "RUN_ID=$RUN_ID"
 echo "EXPERIMENT_ID=$EXPERIMENT_ID"
 echo "CORE_HOST=$CORE_HOST"
 echo "UE_HOST=$UE_HOST"
+echo "CORE_MANAGEMENT_HOST=$CORE_MANAGEMENT_HOST"
+echo "UE_MANAGEMENT_HOST=$UE_MANAGEMENT_HOST"
 echo "MQTT_TOPIC=$MQTT_TOPIC"
 echo "PERSIST_ROOT=$PERSIST_ROOT"
 echo "HCI_CONTROL_ACTIONS_ENABLED=false"
@@ -117,12 +121,21 @@ echo "START_UTC=$(utc)"
 bar 5 'G0 environment identity'; echo
 cd "$REPO" || fail G0 REPO_NOT_FOUND
 GIT_SHA=$(git rev-parse HEAD)
+WP_CORE_MANAGEMENT_HOST="$CORE_MANAGEMENT_HOST" \
+WP_UE_MANAGEMENT_HOST="$UE_MANAGEMENT_HOST" \
+WP_CORE_ALIAS="$CORE_HOST" \
+WP_UE_ALIAS="$UE_HOST" \
+WP_REMOTE_USER="$REMOTE_USER" \
+bash "$REPO/scripts/wp2_golden_prepare_management_aliases.sh" \
+  > "$EVDIR/runtime/management_alias_gate.txt" || fail G0 MANAGEMENT_ALIAS_GATE
+grep -q '^WP2_GOLDEN_MANAGEMENT_ALIAS_GATE=PASS$' "$EVDIR/runtime/management_alias_gate.txt" || fail G0 MANAGEMENT_ALIAS_GATE
 PY_VERSION="$("$PY" --version 2>&1)" || fail G0 PYTHON_RUNTIME
 PAHO_VERSION="$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')" || fail G0 PAHO_RUNTIME
 [[ "$PAHO_VERSION" == 2.1.0 ]] || fail G0 "PAHO_VERSION_$PAHO_VERSION"
 OPENSSL_VERSION="$(openssl version 2>/dev/null || true)"
 {
-  printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA"
+  printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\ncore_management_host=%s\nue_management_host=%s\nmqtt_topic=%s\ngit_sha=%s\n' \
+    "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$CORE_MANAGEMENT_HOST" "$UE_MANAGEMENT_HOST" "$MQTT_TOPIC" "$GIT_SHA"
   printf 'python=%s\npaho_mqtt=%s\nopenssl=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$OPENSSL_VERSION" "$(utc)"
 } > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
 ssh_core "cd '$REPO' && echo host=\$(hostname) && echo git_sha=\$(git rev-parse HEAD) && '$PY' --version 2>&1 && '$PY' -c 'import importlib.metadata; print(\"paho_mqtt=\"+importlib.metadata.version(\"paho-mqtt\"))' && openssl version 2>&1 | sed 's/^/openssl=/' && mosquitto -h 2>&1 | head -1 | sed 's/^/mosquitto=/' && echo utc=\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
@@ -197,7 +210,10 @@ gate G7 PASS 300S_COMPLETE
 bar 74 'Collecting receiver and substrate evidence'; echo
 ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
 RECEIVER_STARTED=0
-scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
+if ! ssh_core "set -eu; test -s '$CORE_EVDIR/receiver/telemetry_received.csv'; test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'; tar -C '$CORE_EVDIR/receiver' -cf - ." | tar -C "$EVDIR/receiver" -xf -; then
+  fail G8 RECEIVER_COPY
+fi
+[[ -s "$EVDIR/receiver/telemetry_received.csv" && -s "$EVDIR/receiver/receiver_events.jsonl" ]] || fail G8 RECEIVER_COPY_INCOMPLETE
 ssh_core "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/core_tmux_capture.txt" || fail G8 CORE_TMUX_CAPTURE
 ssh_ue "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/ue_tmux_capture.txt" || fail G8 UE_TMUX_CAPTURE
 [[ -s "$EVDIR/substrate/core_tmux_capture.txt" && -s "$EVDIR/substrate/ue_tmux_capture.txt" ]] || fail G8 EMPTY_TMUX_CAPTURE
