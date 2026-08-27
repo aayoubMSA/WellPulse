@@ -8,7 +8,6 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import sys
 
 
 def dt(value: str) -> datetime:
@@ -104,27 +103,51 @@ def main() -> int:
     generated = rows(gen_path)
     received = rows(rx_path)
 
-    cohort: dict[str, str] = {}
+    generated_all: dict[str, tuple[datetime, str]] = {}
     duplicate_generated: list[str] = []
     for r in generated:
-        if dt(r["generated_ts_utc"]) <= t_rf_restore:
-            rid = r["record_id"]
-            if rid in cohort:
-                duplicate_generated.append(rid)
-            cohort[rid] = r["payload_sha256"]
-    if not cohort or duplicate_generated:
+        rid = r["record_id"]
+        if rid in generated_all:
+            duplicate_generated.append(rid)
+            continue
+        generated_all[rid] = (dt(r["generated_ts_utc"]), r["payload_sha256"])
+    if not generated_all or duplicate_generated:
+        raise SystemExit("GOLDEN_RECONSTRUCTION=FAIL_GENERATED_RECORD_IDENTITY")
+
+    cohort = {
+        rid: digest
+        for rid, (generated_at, digest) in generated_all.items()
+        if generated_at <= t_rf_restore
+    }
+    post_cohort = {
+        rid: digest
+        for rid, (generated_at, digest) in generated_all.items()
+        if generated_at > t_rf_restore
+    }
+    if not cohort:
         raise SystemExit("GOLDEN_RECONSTRUCTION=FAIL_GENERATED_COHORT")
 
     first_valid: dict[str, datetime] = {}
     duplicate_valid = 0
     checksum_mismatch = 0
     unexpected = 0
+    unexpected_record_ids: set[str] = set()
+    post_cohort_valid = 0
+    post_cohort_checksum_mismatch = 0
     late_valid = 0
+
     for r in received:
         rid = r["record_id"]
         expected = cohort.get(rid)
         if expected is None:
-            unexpected += 1
+            post_expected = post_cohort.get(rid)
+            if post_expected is None:
+                unexpected += 1
+                unexpected_record_ids.add(rid)
+            elif r["payload_sha256"] == post_expected:
+                post_cohort_valid += 1
+            else:
+                post_cohort_checksum_mismatch += 1
             continue
         if r["payload_sha256"] != expected:
             checksum_mismatch += 1
@@ -162,13 +185,17 @@ def main() -> int:
         "h_app_s": 300,
         "horizon_end_utc": horizon_end.isoformat(),
         "primary_cohort_count": len(cohort),
+        "post_cohort_generated_count": len(post_cohort),
         "received_valid_by_horizon": len(received_by_h),
         "completeness_300": completeness,
         "missing_by_horizon_count": len(missing_by_h),
         "missing_record_ids": missing_by_h,
         "duplicate_valid_attempts": duplicate_valid,
         "checksum_mismatch_attempts": checksum_mismatch,
+        "post_cohort_valid_attempts": post_cohort_valid,
+        "post_cohort_checksum_mismatch_attempts": post_cohort_checksum_mismatch,
         "unexpected_attempts": unexpected,
+        "unexpected_record_ids": sorted(unexpected_record_ids),
         "late_valid_attempts": late_valid,
         "t_app_complete": t_app_complete.isoformat() if t_app_complete else None,
         "T_service_s": t_service,
@@ -197,14 +224,19 @@ def main() -> int:
         f"- t_service_ready: `{result['t_service_ready']}`\n"
         f"- T_service: **{t_service:.3f} s**\n"
         f"- Primary cohort: **{len(cohort)}**\n"
+        f"- Post-cohort generated records: **{len(post_cohort)}**\n"
         f"- Valid by 300 s horizon: **{len(received_by_h)}/{len(cohort)}**\n"
         f"- completeness_300: **{100*completeness:.3f}%**\n"
         f"- Missing by horizon: **{len(missing_by_h)}**\n"
-        f"- Checksum mismatches: **{checksum_mismatch}**\n"
-        f"- Duplicate valid attempts: **{duplicate_valid}**\n"
+        f"- Checksum mismatches (primary cohort): **{checksum_mismatch}**\n"
+        f"- Duplicate valid attempts (primary cohort): **{duplicate_valid}**\n"
+        f"- Planned post-cohort valid attempts: **{post_cohort_valid}**\n"
+        f"- Planned post-cohort checksum mismatches: **{post_cohort_checksum_mismatch}**\n"
+        f"- Truly unexpected attempts: **{unexpected}**\n"
         f"- t_app_complete: `{result['t_app_complete']}`\n"
         f"- T_app: `{t_app}` s\n"
         f"- T_total: `{t_total}` s\n\n"
+        "Post-cohort traffic is generated intentionally after t_rf_restore and is excluded from the primary denominator; it is not classified as unexpected merely because it is outside the primary cohort.\n\n"
         "This is a non-scored Golden rehearsal reconstruction; application outcome direction does not determine Golden readiness.\n",
         encoding="utf-8",
     )
