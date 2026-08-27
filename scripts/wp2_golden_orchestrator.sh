@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # Run on the UE/application node after the profile instance is ready.
-# Fail-closed: any failed gate aborts the Golden rehearsal and never authorizes teardown.
+# Fail-closed: this node-side phase may preserve verified raw evidence in /proj,
+# but it can NEVER authorize experiment teardown. Final off-POWDER verification
+# belongs to the GitHub controller.
 
 RUN_ID="${WP_RUN_ID:?WP_RUN_ID is required}"
 EXPERIMENT_ID="${WP_EXPERIMENT_ID:?WP_EXPERIMENT_ID is required}"
@@ -14,8 +16,6 @@ PY="${WP_PYTHON:-python3}"
 EVDIR="${WP_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID}"
 CORE_EVDIR="${WP_CORE_EVIDENCE_ROOT:-$HOME/wellpulse-powder-evidence/golden/$RUN_ID-core}"
 PERSIST_ROOT="${WP_PERSIST_ROOT:-/proj/WellPulse/evidence-escrow}"
-RCLONE_ROOT="${WP_RCLONE_REMOTE_ROOT:-gdrive:}"
-RCLONE_EXPECTED="${WP_RCLONE_EXPECTED:-rclone v1.75.0}"
 RECEIVER_LAUNCH_TIMEOUT_S="${WP_RECEIVER_LAUNCH_TIMEOUT_S:-15}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 RUN_DIGEST="$(printf '%s' "$RUN_ID" | sha256sum | awk '{print substr($1,1,16)}')"
@@ -55,13 +55,13 @@ cleanup_runtime(){
 }
 trap cleanup_runtime EXIT
 
-echo '=== WellPulse WP2 Golden E2E orchestration ==='
+echo '=== WellPulse WP2 Golden E2E node phase ==='
 echo "RUN_ID=$RUN_ID"
 echo "EXPERIMENT_ID=$EXPERIMENT_ID"
 echo "CORE_HOST=$CORE_HOST"
 echo "UE_HOST=$UE_HOST"
 echo "MQTT_TOPIC=$MQTT_TOPIC"
-echo "RCLONE_ROOT=$RCLONE_ROOT"
+echo "PERSIST_ROOT=$PERSIST_ROOT"
 echo "START_UTC=$(utc)"
 
 bar 5 'G0 environment identity'; echo
@@ -70,12 +70,10 @@ GIT_SHA=$(git rev-parse HEAD)
 PY_VERSION="$("$PY" --version 2>&1)" || fail G0 PYTHON_RUNTIME
 PAHO_VERSION="$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')" || fail G0 PAHO_RUNTIME
 [[ "$PAHO_VERSION" == 2.1.0 ]] || fail G0 "PAHO_VERSION_$PAHO_VERSION"
-RCLONE_VERSION="$(rclone version 2>/dev/null | head -1 || true)"
-[[ "$RCLONE_VERSION" == "$RCLONE_EXPECTED" ]] || fail G0 "RCLONE_VERSION_${RCLONE_VERSION:-missing}"
 OPENSSL_VERSION="$(openssl version 2>/dev/null || true)"
 {
   printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA"
-  printf 'python=%s\npaho_mqtt=%s\nrclone=%s\nopenssl=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$RCLONE_VERSION" "$OPENSSL_VERSION" "$(utc)"
+  printf 'python=%s\npaho_mqtt=%s\nopenssl=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$OPENSSL_VERSION" "$(utc)"
 } > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
 ssh_core "cd '$REPO' && echo host=\$(hostname) && echo git_sha=\$(git rev-parse HEAD) && '$PY' --version 2>&1 && '$PY' -c 'import importlib.metadata; print(\"paho_mqtt=\"+importlib.metadata.version(\"paho-mqtt\"))' && openssl version 2>&1 | sed 's/^/openssl=/' && mosquitto -h 2>&1 | head -1 | sed 's/^/mosquitto=/' && echo utc=\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
 [[ -s "$EVDIR/runtime/ue_runtime_fingerprint.txt" && -s "$EVDIR/runtime/core_runtime_fingerprint.txt" ]] || fail G0 EMPTY_FINGERPRINT
@@ -161,20 +159,19 @@ bar 82 'G8 reconstructing endpoint from raw evidence'; echo
 "$PY" scripts/reconstruct_wp2_golden.py --root "$EVDIR" || fail G8 RECONSTRUCTION
 gate G8 PASS RECONSTRUCTABLE
 
-bar 88 'G9 copying and verifying persistent /proj escrow'; echo
+bar 92 'G9 copying and verifying persistent /proj escrow'; echo
 WP_EVIDENCE_SRC="$EVDIR" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PERSIST_ROOT="$PERSIST_ROOT" WP_EVIDENCE_INVENTORY="$REPO/experiments/WP-PWD01/evidence_inventory_golden_v1.txt" bash scripts/wp2_golden_evidence_escrow.sh || fail G9 PERSISTENT_ESCROW
 PDIR="$PERSIST_ROOT/$EXPERIMENT_ID/$RUN_ID"
+[[ -s "$PDIR/escrow/PERSISTENT_ESCROW_GATE.PASS" ]] || fail G9 PERSISTENT_MARKER_MISSING
+printf 'run_id=%s\nexperiment_id=%s\npersistent_dir=%s\nutc=%s\n' \
+  "$RUN_ID" "$EXPERIMENT_ID" "$PDIR" "$(utc)" > "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED"
+gate G9 PASS PERSISTENT_VERIFIED_CONTROLLER_COPY_REQUIRED
 
-bar 93 'G9 saving verified evidence to Google Drive'; echo
-WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RCLONE_ROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXPERIMENT_ID" WP_PYTHON="$PY" bash scripts/wp2_golden_offpowder_rclone.sh || fail G9 DRIVE_ESCROW
-RDIR="${RCLONE_ROOT%/}/$EXPERIMENT_ID/$RUN_ID"
-
-bar 97 'G9 enforcing dual-copy teardown guard'; echo
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$RDIR" WP_RUN_ID="$RUN_ID" WP_PYTHON="$PY" bash scripts/wp2_golden_teardown_guard_rclone.sh || fail G9 TEARDOWN_GUARD
-gate G9 PASS DUAL_VERIFIED
-
-bar 100 'G10 Golden E2E methods rehearsal PASS'; echo
-gate G10 PASS GOLDEN_E2E
-printf 'GOLDEN_E2E=PASS\n'
-printf 'EVIDENCE_ESCROW_GATE=PASS\n'
-printf 'TEARDOWN_AUTHORIZED=YES\n'
+bar 100 'Node phase safely complete; controller escrow required'; echo
+printf 'GOLDEN_NODE_PHASE=PASS_PERSISTENT_ESCROW\n'
+printf 'PERSISTENT_EVIDENCE=%s\n' "$PDIR"
+printf 'RAW_EVIDENCE_COMPLETE=PASS\n'
+printf 'CONTROLLER_OFFPOWDER_GATE=PENDING\n'
+printf 'EVIDENCE_ESCROW_GATE=PENDING_CONTROLLER_COPY\n'
+printf 'GOLDEN_E2E=PENDING_CONTROLLER_FINALIZATION\n'
+printf 'TEARDOWN_AUTHORIZED=NO\n'
