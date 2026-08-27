@@ -124,8 +124,23 @@ def install_contract_aware_writer() -> None:
 
 def install_contract_aware_run_router() -> None:
     original_run = base.run
+    core_repo_root = str(base.os.environ.get("WP_CORE_REPO_ROOT", "")).strip()
+    if not core_repo_root:
+        raise RuntimeError("CORE_REPO_ROOT_NOT_SUPPLIED")
+    core_path = PurePosixPath(core_repo_root)
+    if not core_path.is_absolute() or any(token in core_repo_root for token in ("$", "~", "\n", "\r")):
+        raise RuntimeError(f"CORE_REPO_ROOT_UNSAFE:{core_repo_root}")
+    core_repo_q = r1._q(core_repo_root)
+    legacy_absolute = r1._q(f"/users/{base.REMOTE_USER}/WellPulse")
 
     def run(cmd, **kwargs):
+        if isinstance(cmd, list) and cmd and str(cmd[0]) == "ssh":
+            new_cmd = list(cmd)
+            remote = str(new_cmd[-1])
+            remote = remote.replace('cd "$HOME/WellPulse"', f"cd {core_repo_q}")
+            remote = remote.replace(f"cd {legacy_absolute}", f"cd {core_repo_q}")
+            new_cmd[-1] = remote
+            cmd = new_cmd
         if isinstance(cmd, list) and len(cmd) >= 2:
             target = str(cmd[1])
             if target.endswith("scripts/wp2_p7b_validate_readiness.py"):
@@ -144,6 +159,7 @@ def install_contract_aware_run_router() -> None:
         return original_run(cmd, **kwargs)
 
     base.run = run
+    base.R3F_CORE_REPO_ROOT = core_repo_root
 
 
 def verify_injection() -> None:
@@ -175,6 +191,7 @@ def main() -> int:
     print("P7B_EXECUTABLE_CONTRACT_V2=PASS", flush=True)
     print("P7B_TARGET_RUNTIME_CONTRACT_V2=PASS", flush=True)
     print("P7B_EFCC_BINDING=PASS", flush=True)
+    print("R3F_CORE_STAGED_SOURCE_ROUTER=PASS:" + str(base.R3F_CORE_REPO_ROOT), flush=True)
     print("ATTENUATION_VERIFICATION=SET_ACK_PLUS_INDEPENDENT_Q0_PATH_NO_READBACK_CLAIM", flush=True)
     print("P7B_AUTHORITATIVE_ENTRYPOINT=scripts/wp2_p7b_c_node_r2.py", flush=True)
     print("LIVE_AUTHORIZATION=SEPARATE_REQUIRED", flush=True)
