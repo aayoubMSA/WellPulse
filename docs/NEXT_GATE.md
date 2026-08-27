@@ -1,4 +1,4 @@
-# Next Gate — WP2 Pre-Integration Compatibility Review
+# Next Gate — WP2 Pre-Integration Compatibility + HCI/Raw-Evidence Review
 
 **Current frontier:** GOLDEN A3 CLOSED / REBOOK NOT YET AUTHORIZED  
 **Scientific completion:** 20%  
@@ -22,13 +22,14 @@
 - `H = UNFROZEN`.
 - `scored_runs_authorized=false`.
 
-## Mandatory next gate
+## Mandatory next gates
 
-Before requesting or instantiating another POWDER experiment, complete:
+Before requesting or instantiating another POWDER experiment, complete both:
 
-`docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+1. `docs/PRE_INTEGRATION_COMPATIBILITY_GATE.md`
+2. `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`
 
-for the GitHub Actions ↔ POWDER integration.
+for the GitHub Actions ↔ POWDER Golden integration.
 
 Minimum evidence required:
 
@@ -38,24 +39,61 @@ Minimum evidence required:
 4. Exact runtime/version fingerprints on GitHub and POWDER sides.
 5. Auth/secret/redaction contract; no TLS session-secret material in logs/evidence.
 6. Workflow concurrency, retry, trigger, and state-ownership contract.
-7. Reservation budget proving sufficient time for setup + Golden G0–G10 + evidence escrow + safe shutdown margin.
+7. Reservation budget proving sufficient time for setup + Golden G0–G10 + raw-data freeze/hash + dual evidence escrow + read-back verification + safe shutdown margin.
 8. Persistence contract for `/proj/WellPulse` plus verified off-POWDER Drive escrow.
 9. Explicit list of safe observability calls allowed during G3–G10; all unqualified probes prohibited.
-10. Boundary smoke tests and fail-close/rollback behavior.
+10. Simple PI-facing live HCI fed only by orchestrator/process-emitted events; no HCI control path into POWDER during the protected scientific window.
+11. Complete raw-data inventory independent of HCI counters/summaries.
+12. Benchmark decision on whether in-run `/proj` checkpoint copying is non-perturbing; no unqualified background sync.
+13. Boundary smoke tests and fail-close/rollback behavior.
+14. End-to-end raw freeze/hash/persistent-copy/off-platform-copy/read-back verification before teardown.
 
-Required gate output:
+Required gate outputs:
 
 `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
+
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
 Until then:
 
 `REBOOK_GOLDEN=false`
 
-## After compatibility PASS
+## Required HCI behavior for the next run
 
-1. Request/instantiate the smallest new non-scored Golden reservation.
+The PI-facing cockpit should show, simply:
+
+- experiment/run identity and NON-SCORED status;
+- reservation remaining safe budget;
+- G0-G10 progress and current phase;
+- latest PASS/FAIL event and timestamp;
+- safe workload-emitted counters such as generated/published/PUBACK/received when available;
+- `t_rf_restore` and `t_service_ready` when emitted;
+- raw-evidence state;
+- `/proj` copy state;
+- off-POWDER copy/read-back state;
+- fail-close and teardown authorization state.
+
+The HCI consumes a one-way event/status stream. It must not independently SSH/API/CLI/poll/probe/reconfigure the live experiment during G3-G10.
+
+`HCI_CONTROL_ACTIONS_ENABLED=false`
+
+## Raw-data requirement
+
+A successful HCI display is not evidence completion.
+
+Before teardown require:
+
+`RAW_EVIDENCE_COMPLETE=PASS`
+
+`EVIDENCE_ESCROW_GATE=PASS`
+
+`TEARDOWN_AUTHORIZED=YES`
+
+## After both gates PASS
+
+1. Request/instantiate the smallest new non-scored Golden reservation with a measured safe time budget.
 2. Confirm exact expected hardware/profile/runtime before workload launch.
-3. Run one clean G0–G10 rehearsal with no independent unqualified probes during the scientific window.
-4. Require `EVIDENCE_ESCROW_GATE=PASS` before teardown.
+3. Run one clean G0–G10 rehearsal with the passive HCI and no independent unqualified probes during the scientific window.
+4. Preserve and verify complete raw evidence before teardown.
 5. Only after Golden PASS may H requalification be considered.
 6. Scored campaign remains prohibited until separately authorized by the frozen scientific gates.
