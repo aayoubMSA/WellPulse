@@ -1,10 +1,7 @@
 name: WP2 POWDER SSH Environment Inventory
 
 on:
-  push:
-    branches: [audit/powder-ssh-env-inventory-v3]
-    paths:
-      - '.wp2-powder-ssh-env-inventory-trigger'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,18 +23,23 @@ jobs:
       TARGET_NAME: wp7brq19810043
 
     steps:
-      - name: Checkout inventory branch
+      - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       - name: Freeze read-only SSH inventory authority
         shell: bash
         run: |
           set -euo pipefail
-          test "$(cat .wp2-powder-ssh-env-inventory-trigger)" = $'execute=WP2_POWDER_SSH_ENV_INVENTORY_ONCE\nexperiment_id=12b39276-af0f-4e34-8dfd-685b006dd6bd\nexperiment_name=wp7brq19810043\nnew_reservation=NO\nrf_mutation=NO\ncells=NO\nrestart=NO\nteardown=NO\nscored=NO'
           ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+(create|terminate)' .github/workflows/wp2-powder-ssh-environment-inventory.yml
           ! grep -Eq 'tmcc[[:space:]]+attenuator.*set|wp2_p7b_c_node|wp2_p7b_target_node_preflight|wp2_p7b_r3' scripts/wp2_powder_ssh_environment_inventory.sh
           bash -n scripts/wp2_powder_ssh_environment_inventory.sh
           echo 'SSH_ENV_INVENTORY_AUTHORITY=PASS'
+          echo 'NEW_RESERVATION=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'CELLS=NO'
+          echo 'RESTART=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
 
       - name: Install controller-side read-only dependencies
         shell: bash
@@ -55,7 +57,7 @@ jobs:
           rm -rf "$OUT"; mkdir -p "$OUT" "$HOME/.ssh"
           chmod 700 "$HOME/.ssh"
 
-          # Portal is used only to resolve the already-existing reservation's SSH endpoints.
+          # Portal is used only to resolve SSH endpoints for the existing reservation.
           bash scripts/wp2_portal_client_bootstrap.sh "$OUT/portal-api" > "$OUT/portal-pin.txt"
           grep -q '^PORTAL_API_PIN_GATE=PASS$' "$OUT/portal-pin.txt"
           MOK=0
@@ -99,7 +101,7 @@ jobs:
           cat "$OUT/nodes.env"
           set -a; source "$OUT/nodes.env"; set +a
 
-          # SSH key lifecycle and every SSH call are intentionally in this same step.
+          # SSH agent creation and every SSH call remain in this single step.
           python3 - <<'PY'
           import os,pathlib
           raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
@@ -120,7 +122,6 @@ jobs:
           export CORE_USER CORE_HOST CORE_PORT UE_USER UE_HOST UE_PORT
           bash scripts/wp2_powder_ssh_environment_inventory.sh "$OUT" | tee "$OUT/controller.log"
           grep -q '^WP2_POWDER_SSH_ENV_INVENTORY=PASS$' "$OUT/controller.log"
-          echo "artifact_path=$OUT" >> "$GITHUB_OUTPUT"
           echo 'SSH_ENV_INVENTORY_COLLECTION=PASS'
 
       - name: Upload immutable environment inventory
