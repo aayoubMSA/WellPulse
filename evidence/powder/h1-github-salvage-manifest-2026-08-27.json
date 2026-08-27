@@ -1,0 +1,105 @@
+{
+  "schema": "wellpulse.h1-github-salvage.v1",
+  "salvage_date": "2026-08-27",
+  "evidence_class": "DERIVED_GIT_GITHUB_SALVAGE",
+  "scope": "Git/GitHub-only salvage; no POWDER contact; no raw-data fabrication",
+  "status": {
+    "h1_github_salvage": "PASS",
+    "full_raw_from_github": "NOT_RECOVERED",
+    "derived_log_evidence": "AVAILABLE",
+    "record_level_reconstruction_from_github": "BLOCKED",
+    "rs1_raw_reconstruction": "BLOCKED_ON_RAW_BUNDLES"
+  },
+  "experiment": {
+    "name": "WP-HCAL-E",
+    "uuid": "9153e16a-1eb1-45f5-88bf-303636a9d1ec",
+    "profile": "PowderProfiles/srslte-controlled-rf",
+    "profile_revision": "a6da96560b6526dc6816761282722c996418fd8c",
+    "binding": {"enb1": "nuc1", "rue1": "nuc2"},
+    "deployed_source_commit": "95ba9a57bef159450b00b8a439d393d22e1c0519"
+  },
+  "run": {
+    "id": "wp2h1-a1-20260826-001",
+    "classification": "VALID_W1_RECOVERY_FAILURE",
+    "scored": false,
+    "q3_full_state_duration_s": 120.000117905,
+    "rf_restore_cohort_cutoff_utc": "2026-08-26T18:16:00.428045+00:00",
+    "generated_records": 361,
+    "cohort_records": 211,
+    "final_pending": 270,
+    "app_inflight": 20,
+    "publish_calls": 111,
+    "puback_callbacks": 91,
+    "q0_pre_readiness_ping": "5/5",
+    "post_restore_ping": "0/3",
+    "sender_status": "STOP_AND_INVESTIGATE_H_WOULD_EXCEED_300S",
+    "sender_rc": 20
+  },
+  "recovery": {
+    "ue_only_restart": "FAIL",
+    "core_ran_reset_with_live_ue": "USER_PLANE_RECOVERY_FAIL",
+    "clean_order_stop_ue_epc_enb_fresh_ue": "PASS",
+    "post_recovery_application_repeatability": "3_OF_3_PASS"
+  },
+  "hash_anchors": {
+    "h1_raw_archives": {
+      "nuc1": "3e3d4c44847bfb7e6304de89d8c1cc05ff9722b6a54d93dd08ce0acfa7418210",
+      "nuc2": "c5d3b212af015061c092c79025258a7f3378e3351051eef48318f12964af2593"
+    },
+    "recovery_archives": {
+      "nuc1": "71aaea25a50ad955fa797a358b14cce4efc0e76ec0861468b3b99dd224c7dd55",
+      "nuc2": "431855c8662fa46a82f7baca60b5f3deeda4fd849cf4d90bfc4889800be3e71d"
+    },
+    "runtime_records": {
+      "nuc1": "1ef8b04a8d3a634c1cc3ded2b84c80a7140d877758a0d63010411971eab8607f",
+      "nuc2": "fc1c131602c49b8376733ad8e190c4fc5d8d1976b62fe59c1e5becbe41cf8d5a"
+    },
+    "reproducibility_archives": {
+      "nuc1": "af601716237082be410be3680f1e33b36240beae77e7b644f0f5bef811c1b647",
+      "nuc2": "ada35310a2dd46dba6c28a26604d41f28884799e0fc27c0846a7bf66421935bc"
+    },
+    "chain_of_custody_manifests": {
+      "nuc1": {"file_count": 22, "sha256": "9596f23f4e9359d3395f29f6e0081d5acdec05dc6a986c0e0b0f19ac5fa35811"},
+      "nuc2": {"file_count": 34, "sha256": "343a9deb1e432c0f5d30cbf55def3d133726a214a595d9f7f0723a5e87d8ec2e"}
+    }
+  },
+  "post_recovery_app_hashes": [
+    {"qualification": 1, "payload_sha256": "a8b348847f2dff2032155d33bee8799628b79b8699304c90d96b6011615dfb6a", "evidence_sha256": "fa7e34b289b32f48fcc3805d28cdc6643d95503f976815179767d8c604371e3a"},
+    {"qualification": 2, "payload_sha256": "4874e3e5ac18c85cf3e3dc4fa47d9e322e1b1c9c7e456b0be0afbd770ab77a4d", "evidence_sha256": "4031016406085535b9582d2b19ffdb955b6eb5bcb7d6931c452c19a876391cc0"},
+    {"qualification": 3, "payload_sha256": "9645bf064a5e4d3a4935067d481dedc106f8c8cd2ca2bb2c82452f988fdfc023", "evidence_sha256": "4f1b25fb8f7ba62dc8ab02ae2429fcdc56f26b9580e0e5b76429aab4c6153e61"}
+  ],
+  "github_provenance": {
+    "h1_classification_commit": "9cd7789a8960fd396ba35806127c16251ea8574a",
+    "h1_classification_commit_actions_runs": 0,
+    "archive_hash_commit": "375f767bae237729458f558b1c64c60633c00673",
+    "archive_hash_commit_actions_runs": 0,
+    "ue_only_recovery_commit": "37c0924d673da6f62228ff65e03dd591e0d48224",
+    "clean_order_recovery_commit": "4a49a904eb249bc64cd4a7d7d01eb04d3e1a6fba",
+    "app_repeatability_commit": "5572476040e59089aa04e97ce5e9d38da62e4d81",
+    "fingerprint_commit": "fd3978dacfc541e985a8daae9aa362b3c727c5fa",
+    "operator_history_commit": "f6ff776a15a8b15fa01d9d643c0d735cf18da0d5",
+    "session_closeout_commit": "74722415dc6e6f0fff6af023d8e7efffd998be3b",
+    "pre_h_ssh_workflow_run": 32993568290,
+    "pre_h_ssh_workflow_artifacts": 0
+  },
+  "missing_raw_artifacts": [
+    "sender_summary.json",
+    "calibration_manifest.json",
+    "attenuation_timeline.csv",
+    "telemetry_generated.csv",
+    "queue_timeline.csv",
+    "mqtt_events.jsonl",
+    "w1_queue.sqlite",
+    "receiver raw event/record stream",
+    "full UE logs",
+    "full eNB logs",
+    "full EPC/MME/SPGW logs"
+  ],
+  "storage_correction": "Historical /users/aayoub storage was later determined non-durable for the teardown lifecycle; archive hash anchors survive, archive bytes do not.",
+  "scientific_state": {
+    "H": "UNFROZEN",
+    "scored_runs_authorized": false,
+    "rebook_golden": false,
+    "scientific_completion_percent": 20
+  }
+}
