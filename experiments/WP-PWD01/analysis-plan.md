@@ -1,6 +1,6 @@
-# WP-PWD01 Analysis Plan — v0.3
+# WP-PWD01 Analysis Plan — v0.4
 
-**Status:** PRE-SCORE ANALYSIS FREEZE. This plan may be amended only before scored-run authorization, or later through an explicit timestamped amendment that distinguishes confirmatory from exploratory analysis.
+**Status:** PRE-SCORE ANALYSIS FREEZE. Recovery-clock and endpoint semantics are governed by `RECOVERY_SEMANTICS_AMENDMENT_v1.md`. This plan may be amended only before scored-run authorization, or later through an explicit timestamped amendment that distinguishes confirmatory from exploratory analysis.
 
 ## Statistical unit
 
@@ -10,25 +10,41 @@ The primary design is paired: within each scenario/block, one `B1_MQTT_QOS1` run
 
 The run order is pre-generated in `randomization-plan.csv` using seed `26082401`; reserve pairs 4–5 exist before outcome inspection and may be executed only under the precision rule.
 
+## Frozen recovery clocks
+
+The following clocks are distinct and must never be collapsed:
+
+- `t_rf_restore`: exact physical final impairment-to-Q0 restoration timestamp. This freezes the primary cohort.
+- `t_service_ready`: first timestamp at which the prospectively defined architecture-blind end-to-end service-ready gate passes after the clean ordered LTE restoration.
+- `t_app_complete`: first timestamp at which primary-cohort application recovery is complete, when observed.
+
+Derived recovery intervals are:
+
+- `T_service = t_service_ready - t_rf_restore`;
+- `T_app = t_app_complete - t_service_ready`;
+- `T_total = t_app_complete - t_rf_restore`.
+
+The application observation horizon is prospectively fixed as **`H_app = 300 s` from `t_service_ready`** for every architecture/scenario. It is not estimated from W1, Golden, or scored outcomes.
+
 ## Primary analysis cohort and censoring rule
 
-Telemetry generation continues during recovery so B1/W1 experience realistic post-recovery traffic. However, records generated late in the observation window would otherwise have less time to arrive than earlier records.
+Telemetry generation continues during recovery so B1/W1 experience realistic post-recovery traffic. The confirmatory primary cohort is frozen as:
 
-Therefore the **confirmatory primary cohort is frozen as:**
+> all valid records generated at or before `t_rf_restore`.
 
-> all valid records generated at or before the final transition back to `Q0` after the impairment schedule.
+The corresponding UTC timestamp is stored as `t_rf_restore_utc` in the run manifest. In `S0_HEALTHY`, the orchestrator emits the prospectively defined analogous marker after the 60 s + 120 s control interval.
 
-The corresponding UTC timestamp is stored as `cohort_cutoff_utc` in the run manifest. In `S0_HEALTHY`, the analogous pseudo-restoration point after the 60 s + 120 s control interval is used.
+The confirmatory endpoint observation closes at:
 
-The endpoint observation closes at `horizon_end_utc = cohort_cutoff_utc + H`.
+`horizon_end_utc = t_service_ready_utc + 300 s`.
 
-Records generated after `cohort_cutoff_utc` continue to create realistic traffic/load but are **not** included in the primary completeness denominator. They may support exploratory steady-state/recovery diagnostics.
+Records generated after `t_rf_restore_utc` continue to create realistic traffic/load but are **not** included in the primary completeness denominator. Receiver attempts after the fixed horizon remain immutable raw evidence but do not enter the confirmatory endpoint.
 
 ## Primary endpoint
 
 For each valid run:
 
-`completeness_H = unique valid primary-cohort records received no later than horizon_end_utc / primary-cohort generated records`
+`completeness_300 = unique valid primary-cohort records received no later than t_service_ready + 300 s / primary-cohort generated records at t_rf_restore`
 
 A received record is valid only when its record identity belongs to the generated cohort and its SHA-256 payload checksum matches the generated ledger.
 
@@ -40,7 +56,7 @@ The deterministic implementation is `wellpulse.powder_analysis.reconstruct_prima
 
 For each impairment scenario separately:
 
-`delta_completeness = completeness_H(W1) - completeness_H(B1)`
+`delta_completeness_300 = completeness_300(W1) - completeness_300(B1)`
 
 Report:
 - each paired-block difference;
@@ -57,7 +73,7 @@ Effect magnitude and engineering meaning are primary. Do not reduce the conclusi
 
 For `S1_INTERMITTENT`, `S2_HARD_OUTAGE`, and `S3_OUTAGE_RESTART`:
 1. execute 3 valid paired blocks;
-2. compute the two-sided 95% Student-t interval for the three paired run-level completeness differences;
+2. compute the two-sided 95% Student-t interval for the three paired run-level `completeness_300` differences;
 3. if CI half-width <= 2 percentage points and there are no unresolved protocol deviations, stop that scenario;
 4. otherwise execute exactly 2 additional pre-authorized paired blocks (5 total pairs).
 
@@ -74,10 +90,13 @@ Do not inspect p-values, effect direction, or manuscript desirability when decid
 - out-of-order rate.
 
 ### Recovery
+- `T_service`, `T_app`, and `T_total` as separately reported recovery clocks;
 - transport reconnect time;
-- time from physical Q0 restoration to first successful post-outage delivery;
-- backlog-drain time for the pre-restoration cohort;
+- time to first successful post-service-ready delivery;
+- backlog-drain time for the primary cohort;
 - reconciliation-completion time.
+
+Recovery clocks are predeclared secondary engineering characterization. They must not change the primary 300 s horizon or become a separately powered confirmatory advantage claim.
 
 ### Performance/overhead
 - end-to-end latency p50/p95/p99 where timestamp quality is valid;
@@ -98,7 +117,7 @@ Summarize programmed attenuation and all valid exposed RSRP/RSRQ/SINR/BLER/throu
 - Report absolute differences before relative percentages when the baseline approaches 0% or 100%.
 - For latency/recovery distributions, report median and p95/p99 where sample support and timestamp quality are adequate.
 - Do not infer statistical independence from the number of messages.
-- Receiver rows after `horizon_end_utc` are excluded from the confirmatory endpoint but retained immutably for exploratory diagnostics.
+- Receiver rows after `t_service_ready + 300 s` are excluded from the confirmatory endpoint but retained immutably for exploratory diagnostics.
 
 ## Scenario interpretation hierarchy
 
@@ -127,7 +146,8 @@ Run B1/W1 x 3 paired blocks for `S1` and `S2` only. Report OTA effects separatel
 - A technically invalid run is excluded from confirmatory estimates only under the protocol's pre-defined invalidity rules.
 - The invalid run and reason remain visible in the ledger and artifact.
 - A replacement run is new evidence with a new run ID and cannot overwrite the invalid run.
-- Late delivery after H is not imputed as on-time delivery; it remains visible as a post-horizon observation.
+- Late delivery after `t_service_ready + 300 s` is not imputed as on-time delivery; it remains visible as a post-horizon observation.
+- Failure to pass the architecture-blind service-ready gate within the frozen G6 bound is technical invalidity, not an application outcome.
 
 ## Protocol deviations
 
@@ -141,10 +161,14 @@ Major deviations require exclusion from the confirmatory estimate but retention 
 ## Confirmatory vs exploratory outputs
 
 Confirmatory:
-- completeness_H and scenario-specific paired W1-B1 differences;
-- pre-defined integrity and recovery endpoints;
-- pre-defined overhead metrics;
+- `completeness_300` and scenario-specific paired W1-B1 differences;
+- pre-defined integrity endpoints;
+- the fixed 300 s horizon and frozen cohort/censoring rule;
 - conducted/OTA separation.
+
+Predeclared secondary engineering characterization:
+- `T_service`, `T_app`, `T_total` and other recovery endpoints;
+- pre-defined overhead metrics.
 
 Exploratory, unless frozen before scoring:
 - post-hoc subgrouping by unplanned RF thresholds;
@@ -162,7 +186,7 @@ A pinned analysis environment must provide one documented command that:
 1. verifies SHA-256 evidence manifests;
 2. validates run manifests/schema;
 3. reconstructs generated/received identity sets;
-4. computes run-level endpoints using the frozen cohort/censoring rule;
+4. computes run-level endpoints using `t_rf_restore`, `t_service_ready`, and fixed `H_app=300 s`;
 5. applies the frozen pairing/precision rules;
 6. produces publication tables and figures without manual spreadsheet editing.
 
