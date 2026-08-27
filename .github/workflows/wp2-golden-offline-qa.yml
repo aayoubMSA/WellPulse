@@ -1,5 +1,6 @@
 name: WP2 Golden Offline QA
 # AUDIT-R1 reconciled offline-only acceptance gate: 2026-08-27
+# WP2-P5 extends this same offline gate with passive HCI contract QA.
 
 on:
   push:
@@ -58,14 +59,17 @@ jobs:
       - name: Python compile QA
         run: |
           python3 -m py_compile scripts/reconstruct_wp2_golden.py
+          python3 -m py_compile scripts/wp2_golden_hci_emit.py
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py
           python3 -m py_compile scripts/wp_pwd01_h_receiver.py
           python3 -m py_compile src/wellpulse/transport.py
-      - name: Reconstruction, controller escrow, and fail-closed interlock QA
+      - name: Passive HCI, reconstruction, controller escrow, and fail-closed interlock QA
         run: bash scripts/wp2_golden_offline_qa.sh
       - name: Canonical QA verdict
         run: |
           echo 'WP2_GOLDEN_CANONICAL_QA=PASS'
+          echo 'PASSIVE_HCI_EVENT_QA=PASS'
+          echo 'HCI_CONTROL_ACTIONS_ENABLED=false'
           echo 'EVIDENCE_AUTHORITY=CONTROLLER_GITHUB_ARTIFACT_ROUNDTRIP'
           echo 'POWDER_CONTACT=NO'
           echo 'DRIVE_CONTACT=NO'
