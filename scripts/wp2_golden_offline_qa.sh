@@ -45,6 +45,21 @@ verifier=Path('scripts/wp2_controller_verify_artifact_roundtrip.sh').read_text()
 for marker in ('CONTROLLER_OFFPOWDER_GATE=PASS','EVIDENCE_ESCROW_GATE=PASS','TEARDOWN_AUTHORIZED=YES'):
     assert marker in verifier, marker
 
+# P7 hardening: management aliases are explicit manifest-derived preconditions.
+aliases=Path('scripts/wp2_golden_prepare_management_aliases.sh').read_text()
+assert 'WP_CORE_MANAGEMENT_HOST' in aliases
+assert 'WP_UE_MANAGEMENT_HOST' in aliases
+assert 'WP2_GOLDEN_MANAGEMENT_ALIAS_GATE=PASS' in aliases
+assert 'nuc1.emulab.net' not in aliases and 'nuc2.emulab.net' not in aliases
+assert 'WP_CORE_MANAGEMENT_HOST' in orch and 'WP_UE_MANAGEMENT_HOST' in orch
+assert 'wp2_golden_prepare_management_aliases.sh' in orch
+
+# P7 hardening: use the exact live-qualified tar-stream receiver transfer.
+assert '$CORE_EVDIR/receiver/." "$EVDIR/receiver/"' not in orch
+assert "tar -C '$CORE_EVDIR/receiver' -cf - ." in orch
+assert 'tar -C "$EVDIR/receiver" -xf -' in orch
+assert 'RECEIVER_COPY_INCOMPLETE' in orch
+
 # HCI is a passive observer, not a second control plane.
 assert 'HCI_CONTROL_ACTIONS_ENABLED=false' in orch
 assert 'HCI_OBSERVER=DEGRADED_NON_AUTHORITATIVE' in orch
@@ -69,7 +84,9 @@ command_start_utc,command_end_utc,programmed_attenuation_db,attenuator_ids
 2026-08-26T18:00:00+00:00,2026-08-26T18:00:01+00:00,0,1 33 2 34
 2026-08-26T18:01:00+00:00,2026-08-26T18:01:01+00:00,55,1 33 2 34
 2026-08-26T18:03:01+00:00,2026-08-26T18:03:02+00:00,0,1 33 2 34
+2026-08-26T18:08:30+00:00,2026-08-26T18:08:31+00:00,0,1 33 2 34
 EOF
+printf '2026-08-26T18:03:02+00:00\n' > "$SRC/sender/rf_restore.ready"
 cat > "$SRC/sender/telemetry_generated.csv" <<'EOF'
 record_id,generated_ts_utc,payload_sha256,payload_json
 r1,2026-08-26T18:02:58+00:00,a,{}
@@ -82,6 +99,8 @@ record_id,received_ts_utc,payload_sha256,payload_json,mqtt_qos,mqtt_retain
 r1,2026-08-26T18:03:20+00:00,a,{},1,false
 r2,2026-08-26T18:03:22+00:00,b,{},1,false
 r3,2026-08-26T18:03:25+00:00,c,{},1,false
+r4,2026-08-26T18:03:26+00:00,d,{},1,false
+u1,2026-08-26T18:03:27+00:00,z,{},1,false
 EOF
 cat > "$SRC/substrate/service_ready_probe.txt" <<'EOF'
 T_SERVICE_READY=2026-08-26T18:03:15+00:00
@@ -138,6 +157,9 @@ python3 scripts/reconstruct_wp2_golden.py --root "$SRC"
 grep -q '"primary_cohort_count": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"received_valid_by_horizon": 3' "$SRC/analysis/golden_reconstruction.json"
 grep -q '"completeness_300": 1.0' "$SRC/analysis/golden_reconstruction.json"
+grep -q '"post_cohort_generated_count": 1' "$SRC/analysis/golden_reconstruction.json"
+grep -q '"post_cohort_valid_attempts": 1' "$SRC/analysis/golden_reconstruction.json"
+grep -q '"unexpected_attempts": 1' "$SRC/analysis/golden_reconstruction.json"
 
 bar 40 'Running persistent escrow simulation'; echo
 WP_EVIDENCE_SRC="$SRC" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
@@ -208,6 +230,7 @@ grep -q '^TEARDOWN_AUTHORIZED=NO$' "$ROOT/corrupt-internal.txt"
 bar 100 'Offline HCI/reconstruction/controller escrow/interlock QA PASS'; echo
 printf 'QA_ROOT=%s\n' "$ROOT"
 printf 'PASSIVE_HCI_EVENT_QA=PASS\n'
+printf 'P7_GOLDEN_HARDENING_STATIC_QA=PASS\n'
 printf 'HCI_CONTROL_ACTIONS_ENABLED=false\n'
 printf 'WP2_GOLDEN_OFFLINE_QA=PASS\n'
 printf 'POWDER_CONTACT=NO\n'
