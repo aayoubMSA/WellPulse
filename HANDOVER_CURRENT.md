@@ -1,11 +1,11 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization BLOCKED**.
+Last updated: 2026-08-27 after **WP2-P7B-A offline contract freeze PASS / stopped before P7B-B**.
 
 ## Executive state
 
 - Canonical repository: `aayoubMSA/WellPulse`, branch `main`.
-- Last accepted checkpoint: **WP2-P7 CLOSED / STOPPED**.
+- Last accepted checkpoint: **WP2-P7B-A PASS / STOPPED**.
 - Scientific weighted completion: **20%**.
 - WP2 management/readiness: **95/100**; no partial scientific credit.
 - WP0: **PASS**, 8/8.
@@ -23,6 +23,8 @@ Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization
 - `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`.
 - `WP2_P6=PASS_RECOVERED_SINGLE_RUN`.
 - `WP2_P7_HARDENING_QA=PASS`.
+- `WP2_P7B_A=PASS_OFFLINE_CONTRACT_FREEZE`.
+- `WP2_P7B_PROGRESS=20/100`.
 - `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`.
 - `scored_runs_authorized=false`.
 - `HCI_CONTROL_ACTIONS_ENABLED=false`.
@@ -100,6 +102,20 @@ Bounded P7 offline closure evidence:
 
 Temporary P7 workflow/trigger were deleted after PASS. Current workflow surface is back to the six standing offline/static workflows and four standing root sentinels documented in `docs/WORKFLOW_REGISTRY.md`.
 
+## P7B-A — offline contract freeze
+
+Canonical closure:
+
+`docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`
+
+- one future reservation and exactly three sequential non-scored S3 cells are frozen: B1, W1, B2;
+- fail-closed washout/readiness precedes every cell;
+- generator/gateway restart-domain separation, runtime locks, arm-specific acceptance and evidence survival are machine-readable;
+- accepted run `33106623492`, job `98638079325`, **41/41 tests PASS**;
+- failed formatting assertion run `33106551326` is preserved as QA provenance;
+- no POWDER contact, reservation, SSH, mutation, science or scored run occurred;
+- workflow surface remains six offline/static workflows and four root sentinels.
+
 ## Current pre-score blockers
 
 P7 deliberately did **not** convert offline hardening PASS into scored authorization. Mandatory physical qualification remains open for:
@@ -132,23 +148,15 @@ Do not set `scored_runs_authorized=true` until every still-open mandatory gate c
 
 ## Exact next bounded patch — DO NOT START YET
 
-`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
+`WP2-P7B-B — OFFLINE IMPLEMENTATION + PREMUTATION COMPATIBILITY/READINESS QA`
 
 Status: **BLOCKED / NOT STARTED pending explicit continuation**.
 
-The shortest defensible design is one minimum-information reservation intended to close the five remaining physical/enforcement groups together:
+Implement only the frozen P7B-A contract: separated generator/gateway processes; B1 event reconstruction; W1 durable replay; exact B1/W1 manifest comparison; remote-capable B2 Java adapter; per-cell washout/readiness; deterministic evidence reconstruction; and fail-closed offline QA.
 
-1. B1 instrumentation + B1/W1 matched low-level transport/runtime;
-2. S3 restart-domain mechanics;
-3. B2 remote durable-client runtime/path/restart mechanics;
-4. complete per-run washout/readiness enforcement;
-5. evidence capture sufficient to decide the above without using observed application direction for tuning.
+P7B-B remains offline. It grants no authority to contact POWDER, reserve, SSH, mutate the testbed or run a physical cell. After P7B-B PASS, STOP before P7B-C and request separate explicit live authorization.
 
-If P7B PASS, STOP after verified evidence survival/teardown. Then create the immutable pre-score snapshot offline and issue a separate scored-authorization decision. Only an explicit PASS may open WP3.
-
-If P7B fails, preserve it as pre-score qualification evidence and return to a decision gate. Do not automatically create another reservation or relax the protocol.
-
-## Prohibited before explicit P7B continuation
+## Prohibited before separate P7B-C live authorization
 
 - no POWDER contact/reservation/mutation;
 - no SSH to POWDER;
@@ -164,31 +172,34 @@ If P7B fails, preserve it as pre-score qualification evidence and return to a de
 ## Mandatory read order for next agent
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
-3. `docs/NEXT_GATE.md`
-4. `docs/MILESTONE_STATUS.md`
-5. `docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
-6. `evidence/powder/wp2-p6-live-status.md`
-7. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
-8. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
-9. `experiments/WP-PWD01/run-matrix.yaml`
-10. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
-11. `experiments/WP-PWD01/protocol.md`
-12. `evidence/powder/wp2-pre-h-runtime-path-qualification-2026-08-26.md`
-13. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
-14. `docs/K8_PREINTEGRATION_COMPATIBILITY_CLOSURE_2026-08-27.md`
-15. `docs/WP2_P5_HCI_RAW_EVIDENCE_CLOSURE_2026-08-27.md`
-16. `scripts/wp2_golden_prepare_management_aliases.sh`
-17. `scripts/wp2_golden_orchestrator.sh`
-18. `scripts/reconstruct_wp2_golden.py`
-19. `scripts/wp2_golden_evidence_escrow.sh`
-20. `scripts/wp2_controller_pull_persistent_escrow.sh`
-21. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
-22. `docs/WORKFLOW_REGISTRY.md`
-23. `AGENTS.md`
+2. `docs/NEW_AGENT_PROMPT_WP2_P7B_B_2026-08-27.md`
+3. `docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`
+4. `experiments/WP-PWD01/P7B_PHYSICAL_QUALIFICATION_PLAN_v1.md`
+5. `experiments/WP-PWD01/p7b-qualification-contract.json`
+6. `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
+7. `docs/NEXT_GATE.md`
+8. `docs/MILESTONE_STATUS.md`
+9. `docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
+10. `evidence/powder/wp2-p6-live-status.md`
+11. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
+12. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
+13. `experiments/WP-PWD01/run-matrix.yaml`
+14. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
+15. `experiments/WP-PWD01/protocol.md`
+16. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
+17. `evidence/local/wp2-b2-semantics-latest.md`
+18. `src/wellpulse/transport.py`
+19. `src/wellpulse/powder_w1.py`
+20. `src/wellpulse/store.py`
+21. `scripts/wp2_golden_orchestrator.sh`
+22. `scripts/wp2_golden_evidence_escrow.sh`
+23. `scripts/wp2_controller_pull_persistent_escrow.sh`
+24. `scripts/wp2_controller_verify_artifact_roundtrip.sh`
+25. `docs/WORKFLOW_REGISTRY.md`
+26. `AGENTS.md`
 
 ## Shortest path
 
-`P6 PASS -> P7 hardening PASS / scored auth BLOCKED -> STOP -> explicit P7B resume -> one non-scored physical qualification -> if PASS, immutable snapshot + scored authorization -> WP3 -> WP4 -> WP5`
+`P6 PASS -> P7 hardening PASS -> P7B-A contract PASS -> STOP -> explicit P7B-B offline implementation -> STOP -> separate P7B-C live authorization -> P7B-D/E -> STOP -> immutable snapshot + scored authorization -> WP3 -> WP4 -> WP5`
 
-**STOP / HANDOVER READY.**
+**STOP / HANDOVER READY — P7B-B OFFLINE ONLY.**

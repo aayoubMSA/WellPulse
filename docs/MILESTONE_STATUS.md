@@ -1,6 +1,6 @@
 # WellPulse — Milestone Status
 
-Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization BLOCKED**.
+Last updated: 2026-08-27 after **WP2-P7B-A offline contract freeze PASS / stopped before P7B-B**.
 
 ## Scientific work packages
 
@@ -8,7 +8,7 @@ Last updated: 2026-08-27 after **WP2-P7 hardening QA PASS / scored authorization
 |---|---|---:|---:|---|
 | WP0 | Novelty & Venue Lock | 8% | 8/8 | PASS |
 | WP1 | Confirmatory Protocol & Statistics Freeze | 12% | 12/12 | PASS / FROZEN |
-| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — P6 Golden PASS; P7 hardening PASS; physical pre-score qualification open** |
+| WP2 | RF Calibration & Measurement Validation | 15% | gate-open | **ACTIVE — P7B-A contract PASS; implementation and physical qualification open** |
 | WP3 | Conducted-RF Confirmatory Campaign | 30% | 0/30 | BLOCKED ON WP2 |
 | WP4 | OTA External Replication | 15% | 0/15 | BLOCKED |
 | WP5 | Analysis + Artifact + Paper Closure | 20% | 0/20 scientific closure | PREPARED, NOT EXECUTED |
@@ -28,6 +28,8 @@ This internal tracking does not create partial scientific credit.
 | WP2-P5 | HCI & Raw-Evidence Closure | 10% | PASS / CLOSED |
 | WP2-P6 | One clean non-scored Golden | 15% | **PASS_RECOVERED_SINGLE_RUN / CLOSED** |
 | WP2-P7 | Reusable-path hardening + scored authorization decision | 5% | **HARDENING PASS / SCORED AUTHORIZATION BLOCKED** |
+
+P7B tracking (no added scientific or management credit): **A PASS (20/100 P7B); B-E blocked**.
 
 `WP2_MANAGEMENT_READINESS_PROGRESS=95/100`
 
@@ -107,6 +109,18 @@ Decision:
 
 `scored_runs_authorized=false`
 
+## WP2-P7B-A contract freeze
+
+Canonical record: `docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`.
+
+- `WP2_P7B_A=PASS_OFFLINE_CONTRACT_FREEZE`.
+- P7B internal progress: **20/100**.
+- one future reservation / exactly three S3 diagnostic cells: B1, W1, B2.
+- 41/41 offline tests PASS in run `33106623492`, job `98638079325`.
+- no POWDER contact, reservation, SSH, mutation, science or scored run.
+- next: P7B-B offline implementation/premutation QA, blocked pending explicit continuation.
+- WP2 management/readiness remains 95/100; scientific weighted completion remains 20%.
+
 ## Remaining pre-score blockers
 
 1. B1 accepted/unacknowledged instrumentation on the real remote path.
@@ -120,9 +134,9 @@ The shortest defensible closure is one bounded non-scored qualification reservat
 
 ## Current frontier
 
-`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
+`WP2-P7B-B — OFFLINE IMPLEMENTATION + PREMUTATION COMPATIBILITY/READINESS QA`
 
-Status: **BLOCKED / NOT STARTED pending explicit continuation**.
+Status: **BLOCKED / NOT STARTED pending explicit continuation**. P7B-A is PASS; P7B-C live execution remains separately blocked.
 
 No current workflow has authority to create a POWDER reservation or run scored science. There is no future H-calibration step.
 
@@ -139,7 +153,7 @@ P7 hardening PASS / scored authorization BLOCKED
         ↓
 STOP / explicit resume
         ↓
-P7B one non-scored physical qualification reservation
+P7B-A contract PASS -> P7B-B offline implementation -> separate authorization -> P7B-C one non-scored physical qualification reservation
         ↓
 if PASS: immutable pre-score snapshot + scored-authorization decision
         ↓

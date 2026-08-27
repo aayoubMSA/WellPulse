@@ -1,66 +1,66 @@
 # WellPulse — Next Gate
 
-Status date: 2026-08-27
+Status date: 2026-08-27 after **WP2-P7B-A offline contract freeze PASS**.
 
 ## Current frontier
 
 - `WP2_P6=PASS_RECOVERED_SINGLE_RUN`
 - `WP2_P7_HARDENING_QA=PASS`
+- `WP2_P7B_A=PASS_OFFLINE_CONTRACT_FREEZE`
+- `WP2_P7B_PROGRESS=20/100`
 - `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`
 - `scored_runs_authorized=false`
 - `WP3=BLOCKED`
+- WP2 management/readiness: **95/100**
 - scientific weighted completion: **20%**
 
-P6 completed one scientifically valid **non-scored** Golden rehearsal with verified raw evidence, persistent `/proj` escrow, independent GitHub artifact round-trip/hash verification, and confirmed teardown. P7 then hardened the reusable execution/reconstruction path and passed offline closure QA, but the scored campaign is still blocked by mandatory arm/restart-domain physical qualification.
+P7B-A froze a one-reservation, three-cell non-scored S3 qualification contract and passed 41/41 offline tests. No POWDER contact, reservation, SSH, mutation, science or scored execution occurred.
 
 ## Next bounded patch — not started
 
-`WP2-P7B — SINGLE NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION`
+`WP2-P7B-B — OFFLINE IMPLEMENTATION + PREMUTATION COMPATIBILITY/READINESS QA`
 
 Status: **BLOCKED / NOT STARTED pending explicit continuation**.
 
-The purpose is to close all remaining physical pre-score gates with one minimum-information reservation rather than several independent experiments.
+P7B-B is offline only. It must implement and fail-closed test:
 
-### P7B must prove, prospectively and non-scored
+1. a telemetry generator outside the restart domain;
+2. separate B1 and W1 gateway/client processes;
+3. B1 accepted/unacknowledged MID reconstruction from publish/PUBACK events;
+4. exact B1/W1 low-level runtime/config comparison;
+5. W1 SQLite restart-survival mechanics;
+6. the exact remote-capable Eclipse Paho Java 1.2.5 B2 adapter and JAR/config lock;
+7. the complete per-cell washout/readiness gate;
+8. the P7B evidence inventory, deterministic reconstruction and stop/interlock behavior;
+9. offline simulations for PASS and each first-actionable failure class.
 
-1. **B1 accepted/unacknowledged instrumentation** on the real remote LTE/MQTT path.
-2. **B1/W1 matching**: identical low-level Paho/runtime/session settings, with W1 differing only by application-level durable SQLite/reconciliation semantics.
-3. **S3 restart-domain separation**:
-   - telemetry generator outside the restarted gateway/client process;
-   - generation continues at 1 Hz;
-   - process restart only, no node reboot;
-   - W1 durable state survives;
-   - B1 volatile client state is recreated with same intra-run identity;
-   - source sequence continuity + exact restart timestamps/downtime preserved.
-4. **B2 remote qualification**: exact Eclipse Paho Java 1.2.5 durable-client configuration on the same LTE/TLS/payload/evidence path, including persistence across the required client-process restart.
-5. **Full washout/readiness enforcement** for B1/W1/B2 before any scored campaign: Q0 user plane, experimental route, fresh namespace/application state, no unresolved broker/session residue, calibrated radio envelope, frozen runtime/config, healthy clocks/evidence capture.
+Canonical P7B-A authority:
 
-Any application behavior observed in P7B is qualification evidence only. It may not be used to tune the protocol, choose H, select a favorable arm, change Q0-Q3, or replace an unfavorable future scored outcome.
+- `docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`;
+- `experiments/WP-PWD01/P7B_PHYSICAL_QUALIFICATION_PLAN_v1.md`;
+- `experiments/WP-PWD01/p7b-qualification-contract.json`.
 
-### If P7B PASS
+## P7B patch ledger
 
-STOP the live experiment only after the same evidence-survival chain used in P6 has closed. Then, offline:
+| Patch | Weight | Status | Acceptance |
+|---|---:|---|---|
+| P7B-A — design/contract freeze | 20% | **PASS** | contract + 41/41 offline tests |
+| P7B-B — implementation/premutation QA | 20% | **BLOCKED / NOT STARTED** | all offline compatibility/readiness/evidence gates PASS |
+| P7B-C — one non-scored physical qualification | 35% | BLOCKED ON B + separate live authorization | exactly B1-S3, W1-S3, B2-S3 in one reservation |
+| P7B-D — evidence survival + teardown | 15% | BLOCKED | independent outer/internal hash read-back; teardown confirmed |
+| P7B-E — canonical closure + STOP | 10% | BLOCKED | PASS or BLOCKED verdict; no scored execution |
 
-1. reconcile `run-matrix.yaml` gate-status fields;
-2. freeze the immutable pre-score reproducibility snapshot;
-3. issue a separate explicit `SCORED_AUTHORIZATION=PASS|BLOCKED` decision;
-4. only after PASS may WP3 scored execution be opened.
+## Authority boundary
 
-### If P7B fails
+P7B-B grants no live authority. Until a separate explicit P7B-C authorization:
 
-Preserve the failure and classify it as a pre-score qualification result. Do not create another reservation or relax the protocol automatically. Return to an explicit decision gate.
-
-## Prohibited before P7B is explicitly resumed
-
-- no POWDER reservation or mutation;
+- no POWDER contact or reservation;
 - no SSH to POWDER;
-- no new Golden;
-- no H calibration;
-- no RF recalibration;
-- no B1/W1/B2 scored run;
-- no OTA replication;
-- no WP3 execution;
+- no testbed mutation;
+- no new Golden or H calibration;
+- no B1/W1/B2 physical or scored run;
+- no OTA replication or WP3;
 - no `scored_runs_authorized=true`;
-- no immutable authorization snapshot claiming readiness while physical gates remain open.
+- no immutable authorization snapshot claiming readiness.
 
-Canonical P7 authority: `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`.
+After P7B-B PASS, STOP and request separate authorization for P7B-C. After P7B PASS, STOP again before the separate immutable pre-score snapshot and scored-authorization decision.
