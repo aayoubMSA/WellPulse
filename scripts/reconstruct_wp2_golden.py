@@ -35,6 +35,37 @@ def find_service_ready(path: Path) -> datetime:
     raise ValueError("T_SERVICE_READY missing from service_ready_probe.txt")
 
 
+def find_rf_restore(root: Path, att: list[dict[str, str]]) -> datetime:
+    """Return the prospectively emitted physical Q3->Q0 restoration clock.
+
+    The sender writes ``sender/rf_restore.ready`` immediately after the actual
+    treatment-ending Q3->Q0 command. A later fail-safe cleanup also commands Q0,
+    so selecting the *last* Q0 row from attenuation_timeline.csv is invalid.
+    The marker is therefore authoritative and is cross-checked against an exact
+    Q0 command-end timestamp in the immutable attenuation timeline.
+    """
+    marker = root / "sender" / "rf_restore.ready"
+    if not marker.is_file() or marker.stat().st_size == 0:
+        raise SystemExit(f"GOLDEN_RECONSTRUCTION=FAIL_MISSING {marker}")
+    marker_text = marker.read_text(encoding="utf-8").strip()
+    t_rf_restore = dt(marker_text)
+
+    matching_q0 = []
+    for row in att:
+        if str(row.get("programmed_attenuation_db", "")).strip() != "0":
+            continue
+        end_text = str(row.get("command_end_utc", "")).strip()
+        if not end_text:
+            continue
+        if dt(end_text) == t_rf_restore:
+            matching_q0.append(row)
+    if len(matching_q0) != 1:
+        raise SystemExit(
+            f"GOLDEN_RECONSTRUCTION=FAIL_RF_RESTORE_TIMELINE_MATCH count={len(matching_q0)}"
+        )
+    return t_rf_restore
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -54,19 +85,17 @@ def main() -> int:
     gen_path = root / "sender" / "telemetry_generated.csv"
     rx_path = root / "receiver" / "telemetry_received.csv"
     att_path = root / "sender" / "attenuation_timeline.csv"
+    rf_restore_path = root / "sender" / "rf_restore.ready"
     service_path = root / "substrate" / "service_ready_probe.txt"
 
-    for p in (gen_path, rx_path, att_path, service_path):
+    for p in (gen_path, rx_path, att_path, rf_restore_path, service_path):
         if not p.is_file() or p.stat().st_size == 0:
             raise SystemExit(f"GOLDEN_RECONSTRUCTION=FAIL_MISSING {p}")
 
     att = rows(att_path)
-    q0_restores = [r for r in att if str(r.get("programmed_attenuation_db", "")).strip() == "0"]
-    if not q0_restores:
-        raise SystemExit("GOLDEN_RECONSTRUCTION=FAIL_NO_Q0_RESTORE")
-    # Golden schedule may contain an initial Q0 command; the final Q0 transition is the treatment endpoint.
-    final_q0 = q0_restores[-1]
-    t_rf_restore = dt(final_q0["command_end_utc"])
+    if not att:
+        raise SystemExit("GOLDEN_RECONSTRUCTION=FAIL_EMPTY_ATTENUATION_TIMELINE")
+    t_rf_restore = find_rf_restore(root, att)
     t_service_ready = find_service_ready(service_path)
     if t_service_ready < t_rf_restore:
         raise SystemExit("GOLDEN_RECONSTRUCTION=FAIL_SERVICE_BEFORE_RF_RESTORE")
@@ -128,6 +157,7 @@ def main() -> int:
         "evidence_class": "NON_SCORED_WP2_GOLDEN_REHEARSAL",
         "root": str(root),
         "t_rf_restore": t_rf_restore.isoformat(),
+        "t_rf_restore_authority": "sender/rf_restore.ready_crosschecked_to_attenuation_timeline",
         "t_service_ready": t_service_ready.isoformat(),
         "h_app_s": 300,
         "horizon_end_utc": horizon_end.isoformat(),
@@ -148,6 +178,7 @@ def main() -> int:
             "telemetry_generated.csv": sha256(gen_path),
             "telemetry_received.csv": sha256(rx_path),
             "attenuation_timeline.csv": sha256(att_path),
+            "rf_restore.ready": sha256(rf_restore_path),
             "service_ready_probe.txt": sha256(service_path),
         },
         "golden_scientific_outcome_is_scored": False,
@@ -162,6 +193,7 @@ def main() -> int:
         "# WP2 Golden Reconstruction\n\n"
         f"- Gate: **PASS**\n"
         f"- t_rf_restore: `{result['t_rf_restore']}`\n"
+        "- t_rf_restore authority: `sender/rf_restore.ready` cross-checked to attenuation timeline\n"
         f"- t_service_ready: `{result['t_service_ready']}`\n"
         f"- T_service: **{t_service:.3f} s**\n"
         f"- Primary cohort: **{len(cohort)}**\n"
