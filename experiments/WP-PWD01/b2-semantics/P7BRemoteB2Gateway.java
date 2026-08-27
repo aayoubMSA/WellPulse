@@ -104,7 +104,7 @@ public final class P7BRemoteB2Gateway {
         Thread worker = new Thread(() -> {
             while (!STOP.get()) {
                 try {
-                    if (!client.isConnected() && !client.isConnecting()) {
+                    if (!client.isConnected()) {
                         event(eventLog, "b2_connect_attempt", "paho=" + PAHO_VERSION);
                         client.connect(options).waitForCompletion(10000);
                     }
