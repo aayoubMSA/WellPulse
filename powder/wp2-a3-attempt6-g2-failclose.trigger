@@ -1,0 +1,6 @@
+experiment_id=357f3275-403d-491a-906f-99677bdf454f
+workflow_run=33067316888
+run_id=wp2-golden-a3-gh-33067316888-20260827T112727Z
+observed_gate=G2_RECEIVER_START_HANG
+g3_sender_observed=false
+rf_transition_observed=false
