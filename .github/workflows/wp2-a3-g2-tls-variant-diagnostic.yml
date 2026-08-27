@@ -1,0 +1,123 @@
+name: WP2 A3 G2 TLS Broker Variant Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'powder/wp2-a3-g2-tls-variant-diagnostic.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+    steps:
+      - name: Prepare SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/a3tlsv
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+"\n"
+          Path.home().joinpath('.ssh/id_powder').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$HOME/.ssh/id_powder"
+          cat >/tmp/a3tlsv/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/a3tlsv/askpass
+          export SSH_ASKPASS=/tmp/a3tlsv/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          setsid -w ssh-add "$HOME/.ssh/id_powder" </dev/null >/dev/null
+
+      - name: Compare isolated TLS broker configurations
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -A -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new aayoub@nuc1.emulab.net 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          W=/tmp/wellpulse-wp2-golden-broker
+          D=/tmp/wp2-g2-tls-variant-diagnostic
+          rm -rf "$D"; mkdir -p "$D"; chmod 700 "$D"
+          pids=()
+          cleanup(){ for p in "${pids[@]}"; do kill "$p" >/dev/null 2>&1 || true; done; rm -rf "$D"; }
+          trap cleanup EXIT
+
+          run_variant(){
+            local name="$1" port="$2" body="$3" conf="$D/$name.conf" log="$D/$name.log"
+            printf '%s\n' "$body" > "$conf"
+            chmod 600 "$conf"
+            mosquitto -c "$conf" -v >"$log" 2>&1 & local pid=$!
+            pids+=("$pid")
+            local ready=0
+            for _ in $(seq 1 20); do
+              if kill -0 "$pid" 2>/dev/null && ss -ltnp 2>/dev/null | grep -q ":$port "; then ready=1; break; fi
+              sleep 0.2
+            done
+            echo "=== VARIANT=$name PORT=$port PROCESS_READY=$ready ==="
+            if [[ "$ready" -eq 1 ]]; then
+              set +e
+              timeout 5 openssl s_client -connect "127.0.0.1:$port" -tls1_2 -CAfile "$W/ca.crt" -verify_return_error -verify_ip 172.16.0.1 </dev/null >"$D/$name.client" 2>&1
+              rc=$?
+              set -e
+              if grep -q 'Verify return code: 0 (ok)' "$D/$name.client" && grep -q 'BEGIN CERTIFICATE\|Server certificate' "$D/$name.client"; then verdict=PASS; else verdict=FAIL; fi
+              echo "TLS_RC=$rc TLS_VERDICT=$verdict"
+              grep -E '^(CONNECTED|Protocol *:|Cipher *:|New,|Verification:|Verify return code:|no peer certificate|SSL handshake|write:|[0-9A-F]+:error:)' "$D/$name.client" | head -25 || true
+            else
+              echo 'TLS_VERDICT=NOT_RUN'
+            fi
+            echo '--- broker log ---'
+            sed -n '1,80p' "$log" || true
+            kill "$pid" >/dev/null 2>&1 || true
+            wait "$pid" >/dev/null 2>&1 || true
+          }
+
+          run_variant A_CURRENT 18884 "listener 18884 127.0.0.1
+          allow_anonymous true
+          persistence false
+          certfile $W/server.crt
+          keyfile $W/server.key
+          log_type all"
+
+          run_variant B_TLSVERSION 18885 "listener 18885 127.0.0.1
+          allow_anonymous true
+          persistence false
+          certfile $W/server.crt
+          keyfile $W/server.key
+          tls_version tlsv1.2
+          log_type all"
+
+          run_variant C_CAFILE_TLSVERSION 18886 "listener 18886 127.0.0.1
+          allow_anonymous true
+          persistence false
+          cafile $W/ca.crt
+          certfile $W/server.crt
+          keyfile $W/server.key
+          tls_version tlsv1.2
+          log_type all"
+
+          run_variant D_DEFAULT_PORT 18887 "port 18887
+          bind_address 127.0.0.1
+          allow_anonymous true
+          persistence false
+          cafile $W/ca.crt
+          certfile $W/server.crt
+          keyfile $W/server.key
+          tls_version tlsv1.2
+          log_type all"
+
+          echo 'DIAGNOSTIC_PORTS_ONLY=18884,18885,18886,18887'
+          echo 'PRODUCTION_8883_TOUCHED=NO'
+          echo 'LTE_RF_TOUCHED=NO'
+          REMOTE
