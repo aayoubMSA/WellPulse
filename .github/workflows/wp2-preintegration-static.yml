@@ -33,7 +33,7 @@ jobs:
           bash -n scripts/wp2_controller_verify_artifact_roundtrip.sh
           bash -n powder/wp2_a3_adopt.sh
           bash -n powder/wp2_a3_prepare_q0.sh
-          python3 -m py_compile scripts/wp2_prelaunch_time_guard.py scripts/wp2_portal_record_guard.py
+          python3 -m py_compile scripts/wp2_prelaunch_time_guard.py scripts/wp2_portal_record_guard.py scripts/wp2_k7_active_workflow_guard.py
 
           # K1 supply-chain/runtime pins.
           grep -q 'UV_VERSION=.*0.12.1' scripts/wp2_a3_runtime_bootstrap.sh
@@ -126,9 +126,9 @@ jobs:
           set -e
           [[ "$rc" -eq 2 ]]
 
-          # K7: no active GitHub workflow may query/change RF through tmcc attenuator.
-          ! grep -R -E 'tmcc[[:space:]]+attenuator' .github/workflows --include='*.yml' --include='*.yaml'
-          ! grep -q 'tmcc attenuator' archive/workflows/a3-2026-08-27/wp2-a3-attempt6-status-readonly.yml
+          # K7: semantic active-workflow guard excludes comments/search assertions and fails only on executable-looking unsafe RF invocations.
+          python3 scripts/wp2_k7_active_workflow_guard.py | tee /tmp/k7-guard.txt
+          grep -q '^K7_ACTIVE_WORKFLOW_RF_GUARD=PASS$' /tmp/k7-guard.txt
 
           echo 'K2_CONTROLLER_TRANSPORT_STATIC=PASS'
           echo 'K3_PORTAL_FAILCLOSE_STATIC=PASS'
