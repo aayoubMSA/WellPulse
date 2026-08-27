@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="${1:-$(mktemp -d)}"
 SRC="$ROOT/source"
 PERSIST="$ROOT/persist"
-RCLONE_LOCAL="$ROOT/rclone-remote"
+CONTROLLER="$ROOT/controller"
+ROUNDTRIP="$ROOT/independent-roundtrip"
 RUN_ID="wp2-golden-offline-qa"
 EXP_ID="OFFLINE-QA"
 
@@ -18,7 +19,7 @@ bar(){
 }
 
 echo '=== WP2 Golden offline QA ==='
-bar 3 'Checking static Golden contracts'; echo
+bar 3 'Checking static Golden/controller contracts'; echo
 PYTHONPATH=src python3 - <<'PY'
 from pathlib import Path
 from wellpulse.transport import make_run_topic
@@ -32,17 +33,22 @@ unsafe='local p="$1" m="$2" n=$((p/5))'
 for name in (
     'scripts/wp2_golden_orchestrator.sh',
     'scripts/wp2_golden_evidence_escrow.sh',
-    'scripts/wp2_golden_offpowder_rclone.sh',
     'scripts/wp2_golden_service_restore.sh',
     'scripts/wp2_golden_service_ready_probe.sh',
 ):
     text=Path(name).read_text()
     assert unsafe not in text, f'unsafe set -u progress helper remains in {name}'
-print('STATIC_GOLDEN_CONTRACTS=PASS')
+escrow=Path('scripts/wp2_golden_evidence_escrow.sh').read_text()
+assert 'CONTROLLER_OFFPOWDER_REQUIRED' in escrow
+assert 'TEARDOWN_AUTHORIZED=NO' in escrow
+verifier=Path('scripts/wp2_controller_verify_artifact_roundtrip.sh').read_text()
+for marker in ('CONTROLLER_OFFPOWDER_GATE=PASS','EVIDENCE_ESCROW_GATE=PASS','TEARDOWN_AUTHORIZED=YES'):
+    assert marker in verifier, marker
+print('STATIC_GOLDEN_CONTROLLER_CONTRACTS=PASS')
 PY
 
 bar 7 'Creating synthetic evidence tree'; echo
-mkdir -p "$SRC"/{sender,receiver,substrate,runtime,orchestration,analysis} "$RCLONE_LOCAL"
+mkdir -p "$SRC"/{sender,receiver,substrate,runtime,orchestration,analysis} "$CONTROLLER" "$ROUNDTRIP"
 
 cat > "$SRC/sender/attenuation_timeline.csv" <<'EOF'
 command_start_utc,command_end_utc,programmed_attenuation_db,attenuator_ids
@@ -97,30 +103,70 @@ bar 40 'Running persistent escrow simulation'; echo
 WP_EVIDENCE_SRC="$SRC" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
 WP_PERSIST_ROOT="$PERSIST" \
 WP_EVIDENCE_INVENTORY="experiments/WP-PWD01/evidence_inventory_golden_v1.txt" \
-bash scripts/wp2_golden_evidence_escrow.sh
+bash scripts/wp2_golden_evidence_escrow.sh | tee "$ROOT/persistent-escrow.txt"
 
 PDIR="$PERSIST/$EXP_ID/$RUN_ID"
 [[ -s "$PDIR/escrow/PERSISTENT_ESCROW_GATE.PASS" ]]
+[[ -s "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED" ]]
+grep -q '^TEARDOWN_AUTHORIZED=NO$' "$PDIR/escrow/CONTROLLER_OFFPOWDER_REQUIRED"
+grep -q '^PERSISTENT_ESCROW_GATE=PASS$' "$ROOT/persistent-escrow.txt"
+grep -q '^CONTROLLER_OFFPOWDER_GATE=PENDING$' "$ROOT/persistent-escrow.txt"
+! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/persistent-escrow.txt"
 
-bar 65 'Testing rclone remote copy/read-back SHA verification'; echo
-RROOT=":local:$RCLONE_LOCAL"
-WP_LOCAL_VERIFIED_ROOT="$PDIR" WP_RCLONE_REMOTE_ROOT="$RROOT" WP_RUN_ID="$RUN_ID" WP_EXPERIMENT_ID="$EXP_ID" \
-bash scripts/wp2_golden_offpowder_rclone.sh | tee "$ROOT/rclone-copy.txt"
-REMOTE_DIR="$RROOT/$EXP_ID/$RUN_ID"
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$REMOTE_DIR" WP_RUN_ID="$RUN_ID" \
-bash scripts/wp2_golden_teardown_guard_rclone.sh | tee "$ROOT/rclone-guard.txt"
-grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/rclone-guard.txt"
+bar 60 'Building deterministic controller bundle'; echo
+BUNDLE="$CONTROLLER/wp2-offpowder-qa.tar"
+tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+  -C "$PDIR" -cf "$BUNDLE" .
+[[ -s "$BUNDLE" ]]
+BUNDLE_SHA="$(sha256sum "$BUNDLE" | awk '{print $1}')"
+[[ "$BUNDLE_SHA" =~ ^[0-9a-f]{64}$ ]]
+printf 'CONTROLLER_PULL_GATE=PASS\nCONTROLLER_BUNDLE_SHA256=%s\n' "$BUNDLE_SHA" > "$ROOT/controller-pull-simulated.txt"
 
-bar 85 'Testing fail-closed remote corruption behavior'; echo
-printf 'corruption\n' >> "$RCLONE_LOCAL/$EXP_ID/$RUN_ID/sender/telemetry_generated.csv"
+bar 75 'Testing independent controller round-trip verification'; echo
+ROUNDTRIP_TAR="$ROUNDTRIP/wp2-offpowder-qa.tar"
+cp "$BUNDLE" "$ROUNDTRIP_TAR"
+WP_ROUNDTRIP_TAR="$ROUNDTRIP_TAR" WP_EXPECTED_BUNDLE_SHA256="$BUNDLE_SHA" \
+WP_VERIFY_DIR="$ROOT/verified" \
+bash scripts/wp2_controller_verify_artifact_roundtrip.sh | tee "$ROOT/controller-roundtrip.txt"
+grep -q '^CONTROLLER_OFFPOWDER_GATE=PASS$' "$ROOT/controller-roundtrip.txt"
+grep -q "^ROUNDTRIP_BUNDLE_SHA256=$BUNDLE_SHA$" "$ROOT/controller-roundtrip.txt"
+grep -q '^EVIDENCE_ESCROW_GATE=PASS$' "$ROOT/controller-roundtrip.txt"
+grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/controller-roundtrip.txt"
+
+bar 88 'Testing fail-closed outer-hash corruption'; echo
+cp "$BUNDLE" "$ROOT/corrupt-outer.tar"
+printf 'corruption\n' >> "$ROOT/corrupt-outer.tar"
 set +e
-WP_PERSIST_EVIDENCE_DIR="$PDIR" WP_RCLONE_EVIDENCE_DIR="$REMOTE_DIR" WP_RUN_ID="$RUN_ID" \
-bash scripts/wp2_golden_teardown_guard_rclone.sh > "$ROOT/corrupt-guard.txt" 2>&1
+WP_ROUNDTRIP_TAR="$ROOT/corrupt-outer.tar" WP_EXPECTED_BUNDLE_SHA256="$BUNDLE_SHA" \
+bash scripts/wp2_controller_verify_artifact_roundtrip.sh > "$ROOT/corrupt-outer.txt" 2>&1
 RC=$?
 set -e
 [[ "$RC" -ne 0 ]]
-! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/corrupt-guard.txt"
+grep -q '^CONTROLLER_OFFPOWDER_GATE=FAIL:BUNDLE_SHA_MISMATCH$' "$ROOT/corrupt-outer.txt"
+grep -q '^TEARDOWN_AUTHORIZED=NO$' "$ROOT/corrupt-outer.txt"
+! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/corrupt-outer.txt"
 
-bar 100 'Offline reconstruction/rclone escrow/interlock QA PASS'; echo
+bar 95 'Testing fail-closed internal raw-hash corruption'; echo
+mkdir -p "$ROOT/internal-corrupt"
+tar -xf "$BUNDLE" -C "$ROOT/internal-corrupt"
+printf 'corruption\n' >> "$ROOT/internal-corrupt/sender/telemetry_generated.csv"
+INTERNAL_BAD="$ROOT/internal-corrupt.tar"
+tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+  -C "$ROOT/internal-corrupt" -cf "$INTERNAL_BAD" .
+INTERNAL_BAD_SHA="$(sha256sum "$INTERNAL_BAD" | awk '{print $1}')"
+set +e
+WP_ROUNDTRIP_TAR="$INTERNAL_BAD" WP_EXPECTED_BUNDLE_SHA256="$INTERNAL_BAD_SHA" \
+bash scripts/wp2_controller_verify_artifact_roundtrip.sh > "$ROOT/corrupt-internal.txt" 2>&1
+RC=$?
+set -e
+[[ "$RC" -ne 0 ]]
+grep -q '^CONTROLLER_OFFPOWDER_GATE=FAIL:INTERNAL_RAW_HASH_MISMATCH$' "$ROOT/corrupt-internal.txt"
+grep -q '^TEARDOWN_AUTHORIZED=NO$' "$ROOT/corrupt-internal.txt"
+! grep -q '^TEARDOWN_AUTHORIZED=YES$' "$ROOT/corrupt-internal.txt"
+
+bar 100 'Offline reconstruction/controller escrow/interlock QA PASS'; echo
 printf 'QA_ROOT=%s\n' "$ROOT"
 printf 'WP2_GOLDEN_OFFLINE_QA=PASS\n'
+printf 'POWDER_CONTACT=NO\n'
+printf 'DRIVE_CONTACT=NO\n'
+printf 'SCIENTIFIC_RUN=NO\n'
