@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Prevent time/resource loss caused by discovering interface assumptions, version mismatches, side effects, lifecycle constraints, or evidence hazards during a live integration.
+Prevent time/resource loss caused by discovering interface assumptions, version mismatches, side effects, lifecycle constraints, observability hazards, or evidence-loss risks during a live integration.
 
 The gate must be completed **before** implementation of a materially new cross-platform live path, and refreshed when either side changes materially.
 
@@ -110,7 +110,9 @@ A live run must not start when the remaining window is insufficient for the full
 - retention duration;
 - evidence escrow/verification procedure.
 
-### C9 — Observability contract
+Raw record-level evidence must be preserved independently of dashboards, counters, summaries, screenshots, or derived plots.
+
+### C9 — Observability and HCI contract
 
 For every diagnostic/status action, prove whether it is read-only.
 
@@ -120,7 +122,20 @@ For every diagnostic/status action, prove whether it is read-only.
 - logging volume;
 - redaction;
 - whether observation changes timing/state/load;
-- whether an independent probe can contaminate the experiment.
+- whether an independent probe can contaminate the experiment;
+- which process is authoritative for each displayed status/counter.
+
+For scientifically material runs, prefer a **push model**:
+
+`experiment/orchestrator emits bounded status -> passive HCI renders it`
+
+Do not use a pull/probe model during the protected scientific window unless it has been independently qualified as non-perturbing and scientifically acceptable.
+
+The HCI must not have control actions during the protected scientific window.
+
+Required state:
+
+`HCI_CONTROL_ACTIONS_ENABLED=false`
 
 During a scientific window, do not run unqualified status/probe actions.
 
@@ -145,6 +160,7 @@ Enumerate likely failures at each boundary:
 - connectivity loss;
 - stale state;
 - timeout;
+- HCI/rendering failure;
 - evidence-copy failure;
 - remote expiry;
 - runner failure;
@@ -157,6 +173,8 @@ For each material failure define:
 - rollback/recovery primitive;
 - whether recovery invalidates the run;
 - evidence preserved before cleanup.
+
+An HCI failure must not stop, alter, or invalidate the scientific acquisition path.
 
 ### C12 — Quotas and platform constraints
 
@@ -178,6 +196,8 @@ For each information type, assign one authoritative source:
 - hardware binding;
 - runtime version;
 - time/event clocks;
+- raw scientific records;
+- HCI status/counters;
 - evidence location;
 - teardown authority;
 - scientific classification.
@@ -194,8 +214,11 @@ Before E2E, run the smallest discriminating tests possible:
 4. version/fingerprint validation;
 5. safe read-only status verification;
 6. bounded interface smoke test;
-7. evidence-path write/read/hash verification;
-8. teardown guard dry-run.
+7. passive-HCI status-stream test with no control path;
+8. raw-evidence inventory/freeze/hash test;
+9. evidence-path write/read/hash verification;
+10. teardown guard dry-run;
+11. benchmark any proposed in-run checkpoint/background-copy mechanism for non-interference.
 
 Only then launch the end-to-end live path.
 
@@ -213,6 +236,10 @@ Material unknowns must be explicit.
 PASS only when every material item is verified or explicitly bounded and accepted:
 
 `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`
+
+For experimental integrations, also require:
+
+`LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`
 
 Otherwise:
 
@@ -233,6 +260,12 @@ Before the next GitHub Actions ↔ POWDER Golden rehearsal, verify at minimum:
 - GitHub workflow concurrency and trigger ownership;
 - full Golden duration plus startup/recovery/G8/G9/Drive escrow margin against reservation expiry;
 - `/proj/WellPulse` and off-POWDER evidence persistence before teardown;
-- explicit ban on independent unqualified live probes during G3–G10.
+- explicit ban on independent unqualified live probes during G3–G10;
+- a simple PI-facing HCI fed only by orchestrator/process-emitted status events;
+- complete raw-data inventory independent of HCI summaries;
+- benchmarked decision on whether in-run `/proj` checkpoints are non-perturbing;
+- final raw freeze/hash/persistent-copy/off-platform-copy/read-back verification path.
 
-Only after this matrix passes should a new non-scored Golden reservation be requested/instantiated.
+Canonical HCI/raw-evidence design: `docs/LIVE_EXPERIMENT_HCI_AND_RAW_EVIDENCE.md`.
+
+Only after this matrix and the HCI/raw-evidence design both pass should a new non-scored Golden reservation be requested/instantiated.
