@@ -118,7 +118,7 @@ sleep 2
 ! pgrep -x srsenb >/dev/null 2>&1' || fail STOP_CORE 8
 
 bar 54 'Starting clean EPC/eNB through profile start.sh'; echo
-ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'cd /local/repository && bash bin/start.sh > /tmp/wp2-a3-q0-core.console 2>&1' || fail CORE_START 9
+ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'cd /local/repository && set +e; bash bin/start.sh > /tmp/wp2-a3-q0-core.console 2>&1; rc=$?; printf "%s\n" "$rc" > /tmp/wp2-a3-q0-core.start_rc; exit 0' || fail CORE_START_TRANSPORT 9
 CORE_READY=0
 for i in $(seq 1 45); do
   if ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null'; then CORE_READY=1; break; fi
@@ -130,7 +130,7 @@ sleep 10
 ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null' || fail CORE_NOT_STABLE 9
 
 bar 70 'Starting fresh UE through profile start.sh'; echo
-ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'cd /local/repository && bash bin/start.sh > /tmp/wp2-a3-q0-ue.console 2>&1' || fail UE_START 10
+ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'cd /local/repository && set +e; bash bin/start.sh > /tmp/wp2-a3-q0-ue.console 2>&1; rc=$?; printf "%s\n" "$rc" > /tmp/wp2-a3-q0-ue.start_rc; exit 0' || fail UE_START_TRANSPORT 10
 UE_READY=0
 for i in $(seq 1 60); do
   if ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'pgrep -x srsue >/dev/null && ip link show tun_srsue >/dev/null 2>&1 && ip -4 addr show dev tun_srsue | grep -q "inet "'; then UE_READY=1; break; fi
