@@ -27,7 +27,7 @@ PY
 
 # Remote probe is generated once and piped over SSH; it does not write to POWDER nodes.
 python3 - "$OUT/imports.txt" "$OUT/sources.txt" "$OUT/remote_probe.sh" <<'PY'
-import json, pathlib, shlex, sys
+import json, pathlib, sys
 mods=[x.strip() for x in pathlib.Path(sys.argv[1]).read_text().splitlines() if x.strip()]
 sources=[x.strip() for x in pathlib.Path(sys.argv[2]).read_text().splitlines() if x.strip()]
 mods_json=json.dumps(mods)
@@ -48,7 +48,7 @@ if test -d "$REPO/.git"; then echo "REPO_SHA=$(git -C \"$REPO\" rev-parse HEAD 2
 for c in bash python python3 pip pip3 java javac openssl mosquitto mosquitto_pub mosquitto_sub tar sha256sum find sort xargs rsync tmux ss pgrep curl jq ip ping timeout awk sed grep stat date git; do
   if command -v "$c" >/dev/null 2>&1; then
     p=$(command -v "$c")
-    v=$(("$c" --version 2>&1 || "$c" -version 2>&1 || "$c" -V 2>&1 || true) | head -n 2 | tr '\n' ' ')
+    v=$( { "$c" --version 2>&1 || "$c" -version 2>&1 || "$c" -V 2>&1 || true; } | head -n 2 | tr '\n' ' ' )
     printf 'CLI|%s|PRESENT|%s|%s\n' "$c" "$p" "$v"
   else
     printf 'CLI|%s|MISSING||\n' "$c"
@@ -61,7 +61,7 @@ probe_py(){
   resolved=$(command -v "$py" 2>/dev/null || printf '%s' "$py")
   echo "PYTHON|$label|PATH|$resolved"
   "$py" - <<'PYCODE'
-import importlib, json, os, platform, sys
+import importlib, json, platform, sys
 mods=__MODS__
 out={"version":sys.version,"executable":sys.executable,"platform":platform.platform(),"imports":{}}
 for m in mods:
@@ -87,7 +87,7 @@ probe_py pinned "$PINNED"
 # Compile the exact WP2/P7B source set using the pinned interpreter, without imports or pyc writes.
 if test -x "$PINNED" && test -d "$REPO"; then
   "$PINNED" - "$REPO" <<'PYCODE'
-import json, pathlib, sys
+import pathlib, sys
 repo=pathlib.Path(sys.argv[1]); sources=__SOURCES__
 for rel in sources:
     p=repo/rel
@@ -118,6 +118,7 @@ script=script.replace('__MODS__',mods_json).replace('__SOURCES__',sources_json)
 pathlib.Path(sys.argv[3]).write_text(script,encoding='utf-8')
 PY
 chmod 700 "$OUT/remote_probe.sh"
+bash -n "$OUT/remote_probe.sh"
 
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
 probe_node(){
@@ -131,7 +132,7 @@ probe_node core "$CORE_USER" "$CORE_HOST" "$CORE_PORT"
 probe_node ue "$UE_USER" "$UE_HOST" "$UE_PORT"
 
 python3 - "$OUT" <<'PY'
-import json,pathlib,re,sys
+import json,pathlib,sys
 root=pathlib.Path(sys.argv[1]); report={"schema":"wp2-powder-ssh-env-inventory-v1","nodes":{}}
 for role in ("core","ue"):
     text=(root/(role+'.txt')).read_text(errors='replace')
