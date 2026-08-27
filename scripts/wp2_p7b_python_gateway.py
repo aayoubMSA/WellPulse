@@ -158,7 +158,12 @@ def main() -> int:
         client_id=client_id,
         topic=topic,
     )
-    session.connect()
+    # P7B restarts the gateway at the midpoint of Q3. The new process must be
+    # able to exist while the LTE path is still unavailable and reconnect when
+    # Q0 service returns; synchronous connect() would fail the process itself.
+    emit(process_events, "gateway_async_connect_armed", pid=os.getpid())
+    session.client.connect_async(args.host, args.port, 60)
+    session.client.loop_start()
     queue = DurableQueue(args.queue_db) if args.architecture == "W1" else None
     replay = DurablePahoReplay(queue, session) if queue is not None else None
     fifo_fd = None
