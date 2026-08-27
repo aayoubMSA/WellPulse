@@ -2,7 +2,7 @@
 
 ## Verdict
 
-`K1=BLOCKED_PORTAL_API_REVISION`
+`K1=PASS`
 
 `POWDER_CONTACT=NO`
 
@@ -12,7 +12,7 @@
 
 `REBOOK_GOLDEN=false`
 
-K1 closed every supply-chain/runtime item that can be resolved reproducibly from the current repository and authoritative public release metadata without contacting POWDER. One material blocker remains: the exact immutable upstream revision of the supported Emulab/POWDER Portal API client cannot yet be established from an authoritative accessible source, so K1 must fail closed rather than pin an invented or mutable revision.
+K1 has now closed the supply-chain/runtime pinning items required before later compatibility patches. The final blocker, the immutable revision of the supported Emulab/POWDER Portal API client, was resolved through K1-P2 and is now frozen and statically enforced.
 
 ## Closed items
 
@@ -26,20 +26,14 @@ The active pre-integration workflow uses explicit runner label `ubuntu-24.04`, n
 
 ### 2. uv bootstrap
 
-The previous runtime bootstrap fetched and executed the mutable installer:
-
-`https://astral.sh/uv/install.sh`
-
-That path is no longer used by `scripts/wp2_a3_runtime_bootstrap.sh`.
-
-The bootstrap is now pinned to:
+Pinned to:
 
 - uv version: `0.12.1`
 - asset: `uv-x86_64-unknown-linux-gnu.tar.gz`
 - SHA-256: `90b2f223fb69d19db49e117da601f64978593417988530aa733d456141b4bcbb`
-- upstream release target commit recorded from the immutable GitHub release: `329541a503de8a4d9bb021814f9c0875efe033c8`
+- upstream release target commit: `329541a503de8a4d9bb021814f9c0875efe033c8`
 
-The archive SHA-256 is verified before extraction/install, the exact runtime version is checked after install, and the archive hash is written to the runtime fingerprint.
+The mutable `https://astral.sh/uv/install.sh` path is prohibited in the accepted runtime bootstrap. The archive is hash-verified before extraction/install and the exact runtime version is checked afterward.
 
 Implementation commit:
 
@@ -47,7 +41,7 @@ Implementation commit:
 
 ### 3. rclone bootstrap
 
-The existing bootstrap already satisfied the exact-version/checksum contract:
+Frozen contract:
 
 - rclone version: `1.75.0`
 - Linux amd64 ZIP SHA-256: `aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa`
@@ -55,42 +49,63 @@ The existing bootstrap already satisfied the exact-version/checksum contract:
 - SHA-256 verified before extraction/install
 - exact installed version checked after install
 
-No weaker moving reference was introduced.
+### 4. Portal API client
 
-### 4. Static fail-close enforcement
+Authoritative repository:
 
-`.github/workflows/wp2-preintegration-static.yml` now checks that:
+`https://gitlab.flux.utah.edu/emulab/portal-api.git`
 
-- uv is exactly `0.12.1`;
-- the exact uv archive SHA-256 is present;
-- the mutable `astral.sh/uv/install.sh` reference is absent;
-- rclone remains exactly `1.75.0` with the frozen checksum;
-- the integration checkout action is the immutable SHA;
-- `ubuntu-latest` is not used by this pre-integration path;
-- the archived Attempt-6 status workflow is checked at its actual archived path;
-- existing receiver-launch, TLS-diagnostic, rclone-runtime and prelaunch-time fail-close checks remain active.
+Frozen authoritative revision:
+
+`01be03b2f60c067815a7654437320dd981ca3617`
+
+Capture archive provenance:
+
+- archive: `portal-api-01be03b2f60c067815a7654437320dd981ca3617.tar`
+- SHA-256: `3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8`
+- bytes: `1003520`
+
+Canonical K1-P2 record:
+
+`docs/K1P2_PORTAL_API_PIN_CLOSURE_2026-08-27.md`
+
+Accepted future bootstrap:
+
+`scripts/wp2_portal_client_bootstrap.sh`
 
 Implementation commit:
 
-`421eb314b7210c646dfc19405b2fd6a867a5bfd6`
+`4a88d439b4084f0f0155a94166304150018e2fac`
 
-## Remaining material blocker
+The bootstrap fetches the exact revision, checks out detached state, verifies `git rev-parse HEAD` equals the frozen SHA, and fails closed before installing the CLI if any mismatch occurs.
 
-### Portal API client immutable revision
+### 5. Static fail-close enforcement
 
-Authoritative POWDER/Emulab documentation identifies the supported current client repository as:
+`.github/workflows/wp2-preintegration-static.yml` checks:
 
-`https://gitlab.flux.utah.edu/emulab/portal-api`
+- exact uv version/archive/hash and absence of mutable installer;
+- exact rclone version/hash and absence of moving download;
+- immutable checkout action and explicit `ubuntu-24.04` runner;
+- exact Portal API repository/revision/capture hash and checked-out-SHA equality contract;
+- existing receiver-launch, TLS-diagnostic, rclone-runtime and prelaunch-time fail-close checks.
 
-and explicitly states that the Portal API is under active development. Therefore cloning or installing repository HEAD is not acceptable for a reproducibility-critical Golden path.
+Portal-pin static implementation commit:
 
-During this K1 patch, the environment could verify the authoritative repository identity and active-development warning, but could not resolve an authoritative immutable Git commit for the client. Direct GitLab repository access was not available through the current execution path, and no canonical WellPulse artifact contains a previously frozen Portal API revision.
+`76aa56c202d66b12ec7bf9239b2177c2007da73e`
 
-Accordingly:
+Offline validation trigger commit:
 
-`PORTAL_API_REVISION=UNRESOLVED`
+`479459d801e4b08e438eb1aa793a5c747121fe3b`
 
-No placeholder SHA, guessed commit, tag-as-commit substitute, or mutable branch name is accepted.
+Validation workflow run:
+
+- `WP2 Pre-Integration Static Acceptance`
+- run ID `33081196297`
+- conclusion `success`
+
+## Workstation-independence rule
+
+Home and work PCs are operator terminals only. No future Golden/scored execution may depend on workstation-local history, downloads, tokens, or unique filesystem state. Canonical execution authority remains GitHub + frozen repository state + GitHub Actions/secrets.
 
 ## Scope boundary
 
@@ -99,12 +114,12 @@ K1 does **not** close:
 - Google Drive dedicated OAuth and transport verification;
 - Portal lifecycle/status/error semantics;
 - receiver live detach proof;
-- live reservation budget validation;
+- authoritative live reservation budget validation;
 - `/proj/WellPulse` live write/read/hash validation;
 - live observation semantics proof;
 - the full C1–C14 compatibility gate.
 
-These remain later K patches or live-only gates.
+These remain later K-series patches or live-only gates.
 
 ## Scientific consequence
 
@@ -118,10 +133,6 @@ Scientific weighted completion remains `20%`.
 
 ## Exact next patch
 
-Because K1 is blocked, do **not** advance to K2 yet.
+`K2 — Auth / Drive transport contract closure`
 
-Next bounded patch:
-
-`K1-P — Resolve and freeze the exact Portal API upstream revision from an authoritative source, then re-run K1 static acceptance.`
-
-If an authoritative immutable revision cannot be established, the future Golden automation must use a different fully versioned Portal interaction path or remain blocked.
+K2 must be executed as a separate bounded patch under the project patch discipline.
