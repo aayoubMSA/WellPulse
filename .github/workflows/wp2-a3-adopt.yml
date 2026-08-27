@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - wp2-a3-adoption-hardening-20260827
     paths:
       - 'powder/wp2-a3-adopt-request.json'
 
@@ -56,6 +55,7 @@ jobs:
           set -euo pipefail
           bash -n powder/wp2_a3_adopt.sh
           bash -n powder/wp2_a3_prepare_q0.sh
+          bash -n powder/wp2_a3_install_control_aliases.sh
           bash -n scripts/wp2_a3_runtime_bootstrap.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_restore.sh
@@ -64,11 +64,15 @@ jobs:
           bash -n scripts/wp2_golden_offpowder_rclone.sh
           bash -n scripts/wp2_golden_teardown_guard_rclone.sh
           python3 -m py_compile scripts/wp_pwd01_golden_sender.py scripts/wp_pwd01_h_receiver.py scripts/reconstruct_wp2_golden.py scripts/wp2_golden_rclone_verify.py
-          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh
-          ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh powder/wp2_a3_install_control_aliases.sh
+          ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh powder/wp2_a3_install_control_aliases.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
           grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_prepare_q0.sh
           grep -q 'WP-GOLDEN-A3' powder/wp2_a3_adopt.sh
+          grep -q 'tmux kill-session -t ue' powder/wp2_a3_prepare_q0.sh
+          grep -q 'tmux kill-session -t enb' powder/wp2_a3_prepare_q0.sh
+          grep -q 'tmux kill-session -t ue' scripts/wp2_golden_service_restore.sh
+          grep -q 'tmux kill-session -t enb' scripts/wp2_golden_service_restore.sh
           printf '{"scored":false}\n' | jq -e '.scored == false' >/dev/null
           if printf '{"scored":true}\n' | jq -e '.scored == false' >/dev/null; then
             echo 'BOOLEAN_REGRESSION_GATE=FAIL'
@@ -108,6 +112,14 @@ jobs:
           set -euo pipefail
           chmod +x powder/wp2_a3_prepare_q0.sh
           bash powder/wp2_a3_prepare_q0.sh
+
+      - name: Install and verify A3 manifest-host control aliases
+        if: steps.request.outputs.mode == 'RUN'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x powder/wp2_a3_install_control_aliases.sh
+          bash powder/wp2_a3_install_control_aliases.sh
 
       - name: Execute A3-only adopter
         id: adopter
