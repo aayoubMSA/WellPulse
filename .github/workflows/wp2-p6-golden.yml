@@ -1,0 +1,245 @@
+name: WP2 P6 — One Clean Non-Scored Golden
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.wp2-p6-golden-trigger'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: wp2-p6-golden-once
+  cancel-in-progress: false
+
+jobs:
+  p6-golden:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_USERNAME: ${{ secrets.POWDER_USERNAME }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+
+    steps:
+      - name: Checkout authorized P6 source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - name: Install controller QA dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rsync jq curl >/dev/null
+
+      - name: Fail-closed P6 trigger and offline QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH="$(awk -F= '$1=="execute" {print $2}' .wp2-p6-golden-trigger | tail -n1 | tr -d '\r')"
+          SCORED="$(awk -F= '$1=="scored" {print $2}' .wp2-p6-golden-trigger | tail -n1 | tr -d '\r')"
+          [[ "$AUTH" == "WP2_P6_GOLDEN_ONCE" ]]
+          [[ "$SCORED" == "NO" ]]
+          [[ -n "$PORTAL_TOKEN" ]]
+          [[ -n "$POWDER_SSH_PRIVATE_KEY" ]]
+          bash -n powder/wp2_p6_golden_execute.sh
+          bash -n scripts/wp2_golden_orchestrator.sh
+          bash -n scripts/wp2_golden_evidence_escrow.sh
+          bash -n scripts/wp2_controller_pull_persistent_escrow.sh
+          bash -n scripts/wp2_controller_verify_artifact_roundtrip.sh
+          python3 -m py_compile scripts/wp2_golden_hci_emit.py scripts/reconstruct_wp2_golden.py
+          bash scripts/wp2_golden_offline_qa.sh
+          echo 'P6_PREMUTATION_OFFLINE_QA=PASS'
+          echo 'SCORED_RUN_AUTHORIZED=NO'
+
+      - name: Record P6 live run identity before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/powder
+          cat > evidence/powder/wp2-p6-live-status.md <<EOF
+          # WP2-P6 Live Status
+
+          - GitHub run ID: ${GITHUB_RUN_ID}
+          - Authorized source SHA: ${GITHUB_SHA}
+          - Stage: **PRE-MUTATION QA PASS / STARTING RESOURCE PREFLIGHT**
+          - Scored run: **NO**
+          - HCI control actions: **false**
+          - Golden finalization: **PENDING**
+          - Teardown authorized: **NO**
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/wp2-p6-live-status.md
+          git commit -m "WP2-P6 live status start run ${GITHUB_RUN_ID}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Execute reservation, Golden node phase, and controller pull
+        id: execute
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x powder/wp2_p6_golden_execute.sh
+          bash powder/wp2_p6_golden_execute.sh
+          set -a
+          source /tmp/wp2-p6/result.env
+          set +a
+          echo "experiment_id=$EXPERIMENT_ID" >> "$GITHUB_OUTPUT"
+          echo "experiment_name=$EXPERIMENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "hard_expiry_utc=$HARD_EXPIRY_UTC" >> "$GITHUB_OUTPUT"
+          echo "resource_preflight=$RESOURCE_AVAILABILITY_PREFLIGHT" >> "$GITHUB_OUTPUT"
+          echo "resource_preflight_reason=$RESOURCE_AVAILABILITY_PREFLIGHT_REASON" >> "$GITHUB_OUTPUT"
+          echo "persistent_dir=$PERSISTENT_DIR" >> "$GITHUB_OUTPUT"
+          echo "bundle_path=$BUNDLE_PATH" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha256=$BUNDLE_SHA256" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified controller bundle
+        id: upload
+        if: steps.execute.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p6-golden-${{ github.run_id }}
+          path: ${{ steps.execute.outputs.bundle_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Independent artifact download/read-back
+        id: download
+        if: steps.upload.outcome == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p6-golden-${{ github.run_id }}
+          path: /tmp/wp2-p6/roundtrip
+
+      - name: Verify artifact round-trip and terminate only after PASS
+        id: finalize
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPERIMENT_ID: ${{ steps.execute.outputs.experiment_id }}
+          EXPECTED_SHA: ${{ steps.execute.outputs.bundle_sha256 }}
+          RUN_ID: ${{ steps.execute.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          ROUNDTRIP="$(find /tmp/wp2-p6/roundtrip -maxdepth 2 -type f -name '*.tar' | head -1)"
+          [[ -s "$ROUNDTRIP" ]]
+          WP_ROUNDTRIP_TAR="$ROUNDTRIP" \
+          WP_EXPECTED_BUNDLE_SHA256="$EXPECTED_SHA" \
+          WP_VERIFY_DIR="/tmp/wp2-p6/verified" \
+          bash scripts/wp2_controller_verify_artifact_roundtrip.sh | tee /tmp/wp2-p6/controller-finalization.txt
+          grep -q '^CONTROLLER_OFFPOWDER_GATE=PASS$' /tmp/wp2-p6/controller-finalization.txt
+          grep -q '^EVIDENCE_ESCROW_GATE=PASS$' /tmp/wp2-p6/controller-finalization.txt
+          grep -q '^TEARDOWN_AUTHORIZED=YES$' /tmp/wp2-p6/controller-finalization.txt
+
+          bash scripts/wp2_portal_client_bootstrap.sh /tmp/portal-api-final | tee /tmp/wp2-p6/portal-final-pin.txt
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' /tmp/wp2-p6/portal-final-pin.txt
+          portal-cli experiment terminate --experiment-id "$EXPERIMENT_ID" > /tmp/wp2-p6/terminate.json 2>/tmp/wp2-p6/terminate.err || true
+          TERMINATED=0
+          for i in $(seq 1 60); do
+            set +e
+            portal-cli experiment get --experiment-id "$EXPERIMENT_ID" > /tmp/wp2-p6/postterm.json 2>/dev/null
+            rc=$?
+            set -e
+            if [[ "$rc" -ne 0 ]]; then TERMINATED=1; break; fi
+            st="$(jq -r '.status // "unknown"' /tmp/wp2-p6/postterm.json)"
+            echo "TERMINATION_POLL_${i}=$st"
+            if [[ "$st" =~ ^(terminated|destroyed)$ ]]; then TERMINATED=1; break; fi
+            sleep 5
+          done
+          [[ "$TERMINATED" -eq 1 ]]
+          echo 'P6_ARTIFACT_ROUNDTRIP=PASS'
+          echo 'EVIDENCE_ESCROW_GATE=PASS'
+          echo 'TEARDOWN_AUTHORIZED=YES'
+          echo 'TEARDOWN_CONFIRMED=YES'
+          echo 'WP2_P6_GOLDEN=PASS'
+
+      - name: Record final sanitized P6 status
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          EXECUTE_OUTCOME: ${{ steps.execute.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+          EXPERIMENT_ID: ${{ steps.execute.outputs.experiment_id }}
+          EXPERIMENT_NAME: ${{ steps.execute.outputs.experiment_name }}
+          GOLDEN_RUN_ID: ${{ steps.execute.outputs.run_id }}
+          RESOURCE_PREFLIGHT: ${{ steps.execute.outputs.resource_preflight }}
+          RESOURCE_PREFLIGHT_REASON: ${{ steps.execute.outputs.resource_preflight_reason }}
+          HARD_EXPIRY_UTC: ${{ steps.execute.outputs.hard_expiry_utc }}
+          BUNDLE_SHA: ${{ steps.execute.outputs.bundle_sha256 }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          mkdir -p evidence/powder
+          if [[ "$FINALIZE_OUTCOME" == success ]]; then
+            VERDICT=PASS
+            EVIDENCE_GATE=PASS
+            TEARDOWN=YES_CONFIRMED
+          else
+            VERDICT=FAIL_CLOSED
+            EVIDENCE_GATE=NOT_CLOSED
+            TEARDOWN=NO_OR_NOT_CONFIRMED
+          fi
+          cat > evidence/powder/wp2-p6-live-status.md <<EOF
+          # WP2-P6 Live Status
+
+          - GitHub run ID: ${GITHUB_RUN_ID}
+          - Authorized source SHA: ${GITHUB_SHA}
+          - Experiment ID: ${EXPERIMENT_ID:-not_created}
+          - Experiment name: ${EXPERIMENT_NAME:-not_created}
+          - Golden run ID: ${GOLDEN_RUN_ID:-not_started}
+          - Resource preflight: ${RESOURCE_PREFLIGHT:-not_reached}
+          - Resource preflight reason: ${RESOURCE_PREFLIGHT_REASON:-not_reached}
+          - Hard expiry UTC: ${HARD_EXPIRY_UTC:-unknown}
+          - Execute outcome: ${EXECUTE_OUTCOME}
+          - Artifact upload outcome: ${UPLOAD_OUTCOME}
+          - Artifact download outcome: ${DOWNLOAD_OUTCOME}
+          - Finalization outcome: ${FINALIZE_OUTCOME}
+          - Controller bundle SHA-256: ${BUNDLE_SHA:-unavailable}
+          - GitHub artifact ID: ${ARTIFACT_ID:-unavailable}
+          - GitHub artifact digest: ${ARTIFACT_DIGEST:-unavailable}
+          - Evidence escrow gate: **${EVIDENCE_GATE}**
+          - Teardown: **${TEARDOWN}**
+          - WP2-P6 verdict: **${VERDICT}**
+          - Scored run: **NO**
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/powder/wp2-p6-live-status.md
+          git commit -m "WP2-P6 live status ${VERDICT} run ${GITHUB_RUN_ID}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Final fail-closed workflow verdict
+        if: always()
+        shell: bash
+        env:
+          FINALIZE_OUTCOME: ${{ steps.finalize.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$FINALIZE_OUTCOME" != success ]]; then
+            echo 'WP2_P6_WORKFLOW=FAIL_CLOSED'
+            echo 'SCORED_RUN_AUTHORIZED=NO'
+            exit 1
+          fi
+          echo 'WP2_P6_WORKFLOW=PASS'
+          echo 'SCORED_RUN_AUTHORIZED=NO'
