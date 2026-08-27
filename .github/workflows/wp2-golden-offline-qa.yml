@@ -1,6 +1,7 @@
 name: WP2 Golden Offline QA
 # AUDIT-R1 reconciled offline-only acceptance gate: 2026-08-27
 # WP2-P5 extends this same offline gate with passive HCI contract QA.
+# WP2-P7 adds management-alias, receiver-transfer and reconstruction hardening.
 
 on:
   push:
@@ -41,6 +42,7 @@ jobs:
           bash -n powder/wp2_a3_adopt.sh
           bash -n powder/wp2_a3_prepare_q0.sh
           bash -n scripts/wp2_a3_runtime_bootstrap.sh
+          bash -n scripts/wp2_golden_prepare_management_aliases.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_restore.sh
           bash -n scripts/wp2_golden_service_ready_probe.sh
@@ -68,6 +70,7 @@ jobs:
       - name: Canonical QA verdict
         run: |
           echo 'WP2_GOLDEN_CANONICAL_QA=PASS'
+          echo 'P7_GOLDEN_HARDENING_STATIC_QA=PASS'
           echo 'PASSIVE_HCI_EVENT_QA=PASS'
           echo 'HCI_CONTROL_ACTIONS_ENABLED=false'
           echo 'EVIDENCE_AUTHORITY=CONTROLLER_GITHUB_ARTIFACT_ROUNDTRIP'
