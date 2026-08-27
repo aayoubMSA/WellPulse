@@ -1,0 +1,6 @@
+experiment_id=357f3275-403d-491a-906f-99677bdf454f
+source_workflow_run=33066691028
+failure_gate=PRE_SCIENCE_Q0_CORE_NOT_READY
+mode=read_only
+powder_mutation=false
+golden=false
