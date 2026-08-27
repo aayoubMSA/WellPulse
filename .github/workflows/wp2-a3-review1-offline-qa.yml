@@ -1,4 +1,4 @@
-name: WP2 A3 Review1 Offline QA
+name: WP2 A3 Hardened Offline QA
 
 on:
   push:
@@ -11,11 +11,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: wp2-a3-review1-offline-qa
+  group: wp2-a3-hardened-offline-qa
   cancel-in-progress: false
 
 jobs:
-  review1-qa:
+  hardened-qa:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,10 +31,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq rsync rclone
 
-      - name: Bash syntax gate
+      - name: Bash syntax and forbidden-path gate
         shell: bash
         run: |
           set -euo pipefail
+          bash -n powder/wp2_a3_adopt.sh
+          bash -n powder/wp2_a3_prepare_q0.sh
+          bash -n scripts/wp2_a3_runtime_bootstrap.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_restore.sh
           bash -n scripts/wp2_golden_service_ready_probe.sh
@@ -42,7 +45,11 @@ jobs:
           bash -n scripts/wp2_golden_offpowder_rclone.sh
           bash -n scripts/wp2_golden_teardown_guard_rclone.sh
           bash -n scripts/wp2_golden_offline_qa.sh
-          echo 'REVIEW1_BASH_SYNTAX=PASS'
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+create|experiment[[:space:]]+create' powder/wp2_a3_adopt.sh powder/wp2_a3_prepare_q0.sh
+          ! grep -Eq 'tmcc[[:space:]]+attenuator' powder/wp2_a3_prepare_q0.sh
+          grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_adopt.sh
+          grep -q '357f3275-403d-491a-906f-99677bdf454f' powder/wp2_a3_prepare_q0.sh
+          echo 'REVIEW2_STATIC_FORBIDDEN_PATHS=PASS'
 
       - name: Python compile gate
         shell: bash
@@ -53,7 +60,7 @@ jobs:
           python3 -m py_compile scripts/reconstruct_wp2_golden.py
           python3 -m py_compile scripts/wp2_golden_rclone_verify.py
           python3 -m py_compile src/wellpulse/transport.py
-          echo 'REVIEW1_PYTHON_COMPILE=PASS'
+          echo 'REVIEW2_PYTHON_COMPILE=PASS'
 
       - name: Production-path offline contract QA
         shell: bash
@@ -61,9 +68,21 @@ jobs:
           set -euo pipefail
           bash scripts/wp2_golden_offline_qa.sh
 
-      - name: Review 1 verdict
+      - name: Runtime and evidence contract assertions
         shell: bash
         run: |
-          echo 'WP2_A3_REVIEW1_QA=PASS'
+          set -euo pipefail
+          grep -q 'paho-mqtt==2.1.0' pyproject.toml
+          grep -q 'PAHO_VERSION' scripts/wp2_golden_orchestrator.sh
+          grep -q 'cleanup_runtime' scripts/wp2_golden_orchestrator.sh
+          grep -q 'PERSISTENT_ESCROW_GATE.PASS' experiments/WP-PWD01/evidence_inventory_golden_v1.txt
+          grep -q 'OFF_POWDER_RCLONE.PASS' experiments/WP-PWD01/evidence_inventory_golden_v1.txt
+          ! grep -q 'OFF_POWDER_SHA256SUMS.txt' experiments/WP-PWD01/evidence_inventory_golden_v1.txt
+          echo 'REVIEW2_RUNTIME_EVIDENCE_CONTRACT=PASS'
+
+      - name: Review 2 verdict
+        shell: bash
+        run: |
+          echo 'WP2_A3_REVIEW2_QA=PASS'
           echo 'POWDER_MUTATION_EXECUTED=NO'
           echo 'SCORED_RUN_EXECUTED=NO'
