@@ -26,6 +26,7 @@ jobs:
           set -euo pipefail
 
           bash -n scripts/wp2_a3_runtime_bootstrap.sh
+          bash -n scripts/wp2_portal_client_bootstrap.sh
           bash -n scripts/wp2_golden_orchestrator.sh
           bash -n scripts/wp2_golden_service_ready_probe.sh
           bash -n powder/wp2_a3_adopt.sh
@@ -42,6 +43,15 @@ jobs:
           grep -q 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa' scripts/wp2_a3_runtime_bootstrap.sh
           grep -q 'sha256sum -c' scripts/wp2_a3_runtime_bootstrap.sh
           ! grep -q 'rclone-current-linux-amd64.zip' scripts/wp2_a3_runtime_bootstrap.sh
+
+          # Portal API future-integration bootstrap must use the authoritative immutable revision.
+          grep -q 'https://gitlab.flux.utah.edu/emulab/portal-api.git' scripts/wp2_portal_client_bootstrap.sh
+          grep -q 'PORTAL_API_REVISION="01be03b2f60c067815a7654437320dd981ca3617"' scripts/wp2_portal_client_bootstrap.sh
+          grep -q 'PORTAL_API_CAPTURE_ARCHIVE_SHA256="3e9f0073b2df6840801baa38333f1f04debd02a2eaa57997939b6f7ee678d4c8"' scripts/wp2_portal_client_bootstrap.sh
+          grep -q 'git -C "$DEST" fetch -q --depth 1 origin "$PORTAL_API_REVISION"' scripts/wp2_portal_client_bootstrap.sh
+          grep -q 'ACTUAL="$(git -C "$DEST" rev-parse HEAD)"' scripts/wp2_portal_client_bootstrap.sh
+          grep -q '\[\[ "$ACTUAL" == "$PORTAL_API_REVISION" \]\]' scripts/wp2_portal_client_bootstrap.sh
+          ! grep -Eq 'git clone .*portal-api\.git' scripts/wp2_portal_client_bootstrap.sh
 
           # Future integration checkout is immutable and runner major image is explicit.
           grep -q 'runs-on: ubuntu-24.04' .github/workflows/wp2-preintegration-static.yml
@@ -88,6 +98,7 @@ jobs:
           grep -q '^PRELAUNCH_TIME_GATE=BLOCKED:INVALID_TIMESTAMP:' /tmp/time-invalid.txt
 
           echo 'PREINTEGRATION_STATIC_ACCEPTANCE=PASS'
+          echo 'PORTAL_API_PIN_STATIC_GATE=PASS'
           echo 'POWDER_CONTACT=NO'
           echo 'DRIVE_CONTACT=NO'
           echo 'SCIENTIFIC_RUN=NO'
