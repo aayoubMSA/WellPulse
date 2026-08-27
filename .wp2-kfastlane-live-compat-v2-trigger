@@ -1,0 +1,9 @@
+execute=KFASTLANE_COMPAT_FINAL_RETRY
+classification=INFRASTRUCTURE_ONLY_NON_SCORED
+reservation_count=1
+duration_hours=1
+known_good_bindings=true
+sshpubkey=true
+golden_workload=false
+h_calibration=false
+scored_run=false
