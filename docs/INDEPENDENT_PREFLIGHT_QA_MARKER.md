@@ -1,1 +1,0 @@
-Independent preflight QA phase marker. No live authority.
