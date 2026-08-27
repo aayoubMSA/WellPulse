@@ -14,6 +14,13 @@ RUNTIME = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v1.json"
 PROBE = ROOT / "evidence/powder/wp2-p7b-r3-target-runtime-probe-2026-08-28.json"
 
 
+def shell_executable_text(text: str) -> str:
+    return "\n".join(
+        raw for raw in text.splitlines()
+        if raw.strip() and not raw.lstrip().startswith("#")
+    )
+
+
 class P7BR3CTargetRuntimeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -31,7 +38,9 @@ class P7BR3CTargetRuntimeTests(unittest.TestCase):
     def test_shell_preservation_helper_has_zero_python_dependency(self):
         helper = ROOT / "scripts/wp2_p7b_preservation_helpers_v2.sh"
         text = helper.read_text(encoding="utf-8")
-        self.assertNotIn("python3", text)
+        executable = shell_executable_text(text)
+        self.assertNotIn("python3", executable)
+        self.assertIn("system python3 is 3.6.9", text)
         p = subprocess.run(["bash", "-n", str(helper)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(p.returncode, 0, p.stdout)
 
