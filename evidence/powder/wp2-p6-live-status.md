@@ -2,8 +2,20 @@
 
 - GitHub run ID: 33097498036
 - Authorized source SHA: bd1b5e12f3d2eca27ec81ccadbeec5afaa2f2159
-- Stage: **PRE-MUTATION QA PASS / STARTING RESOURCE PREFLIGHT**
+- Experiment ID: not_created
+- Experiment name: not_created
+- Golden run ID: not_started
+- Resource preflight: not_reached
+- Resource preflight reason: not_reached
+- Hard expiry UTC: unknown
+- Execute outcome: failure
+- Artifact upload outcome: skipped
+- Artifact download outcome: skipped
+- Finalization outcome: skipped
+- Controller bundle SHA-256: unavailable
+- GitHub artifact ID: unavailable
+- GitHub artifact digest: unavailable
+- Evidence escrow gate: **NOT_CLOSED**
+- Teardown: **NO_OR_NOT_CONFIRMED**
+- WP2-P6 verdict: **FAIL_CLOSED**
 - Scored run: **NO**
-- HCI control actions: **false**
-- Golden finalization: **PENDING**
-- Teardown authorized: **NO**
