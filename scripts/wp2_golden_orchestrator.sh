@@ -18,6 +18,8 @@ RCLONE_ROOT="${WP_RCLONE_REMOTE_ROOT:-gdrive:}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 RUN_DIGEST="$(printf '%s' "$RUN_ID" | sha256sum | awk '{print substr($1,1,16)}')"
 MQTT_TOPIC="wellpulse/wp-pwd01/gold/${RUN_DIGEST}/records"
+SENDER_PID=""
+RECEIVER_STARTED=0
 
 mkdir -p "$EVDIR"/{sender,receiver,substrate,runtime,orchestration,analysis,escrow}
 CONSOLE="$EVDIR/orchestration/golden_console.txt"
@@ -37,7 +39,19 @@ ssh_ue(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@$UE_HOST" "$@"; }
 scp_core(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST:$1" "$2"; }
 scp_ue(){ scp "${SSH_OPTS[@]}" "${REMOTE_USER}@$UE_HOST:$1" "$2"; }
 cleanup_rf(){ for id in 1 33 2 34; do /usr/local/etc/emulab/tmcc attenuator "$id" 0 >/dev/null 2>&1 || true; done; }
-trap cleanup_rf EXIT
+cleanup_runtime(){
+  set +e
+  cleanup_rf
+  if [[ -n "$SENDER_PID" ]] && kill -0 "$SENDER_PID" 2>/dev/null; then
+    kill -TERM "$SENDER_PID" 2>/dev/null || true
+    sleep 1
+    kill -KILL "$SENDER_PID" 2>/dev/null || true
+  fi
+  if [[ "$RECEIVER_STARTED" -eq 1 ]]; then
+    ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup_runtime EXIT
 
 echo '=== WellPulse WP2 Golden E2E orchestration ==='
 echo "RUN_ID=$RUN_ID"
@@ -51,9 +65,17 @@ echo "START_UTC=$(utc)"
 bar 5 'G0 environment identity'; echo
 cd "$REPO" || fail G0 REPO_NOT_FOUND
 GIT_SHA=$(git rev-parse HEAD)
-printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\nutc=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA" "$(utc)" > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
-ssh_core "cd '$REPO' && printf 'host=%s\\ngit_sha=%s\\nutc=%s\\n' \"\$(hostname)\" \"\$(git rev-parse HEAD)\" \"\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)\"" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
+PY_VERSION="$("$PY" --version 2>&1)" || fail G0 PYTHON_RUNTIME
+PAHO_VERSION="$("$PY" -c 'import importlib.metadata; print(importlib.metadata.version("paho-mqtt"))')" || fail G0 PAHO_RUNTIME
+[[ "$PAHO_VERSION" == 2.1.0 ]] || fail G0 "PAHO_VERSION_$PAHO_VERSION"
+RCLONE_VERSION="$(rclone version 2>/dev/null | head -1 || true)"
+{
+  printf 'run_id=%s\nexperiment_id=%s\nue_host=%s\ncore_host=%s\nmqtt_topic=%s\ngit_sha=%s\n' "$RUN_ID" "$EXPERIMENT_ID" "$UE_HOST" "$CORE_HOST" "$MQTT_TOPIC" "$GIT_SHA"
+  printf 'python=%s\npaho_mqtt=%s\nrclone=%s\nutc=%s\n' "$PY_VERSION" "$PAHO_VERSION" "$RCLONE_VERSION" "$(utc)"
+} > "$EVDIR/runtime/ue_runtime_fingerprint.txt"
+ssh_core "cd '$REPO' && echo host=\$(hostname) && echo git_sha=\$(git rev-parse HEAD) && '$PY' --version 2>&1 && '$PY' -c 'import importlib.metadata; print(\"paho_mqtt=\"+importlib.metadata.version(\"paho-mqtt\"))' && echo utc=\$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" > "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_IDENTITY
 [[ -s "$EVDIR/runtime/ue_runtime_fingerprint.txt" && -s "$EVDIR/runtime/core_runtime_fingerprint.txt" ]] || fail G0 EMPTY_FINGERPRINT
+grep -q '^paho_mqtt=2.1.0$' "$EVDIR/runtime/core_runtime_fingerprint.txt" || fail G0 CORE_PAHO_VERSION
 gate G0 PASS "$GIT_SHA"
 
 bar 10 'G1 clean run identity and paths'; echo
@@ -71,6 +93,7 @@ gate G2 PASS READY
 
 bar 22 'G2 launching receiver on core node'; echo
 ssh_core "cd '$REPO' && nohup '$PY' scripts/wp_pwd01_h_receiver.py --run-id '$RUN_ID' --host 172.16.0.1 --port 8883 --topic '$MQTT_TOPIC' --ca-file /tmp/wellpulse-wp2-golden-broker/ca.crt --output-dir '$CORE_EVDIR/receiver' > '$CORE_EVDIR/receiver/receiver_console.txt' 2>&1 & echo \$! > '$CORE_EVDIR/receiver/receiver.pid'" || fail G2 RECEIVER_START
+RECEIVER_STARTED=1
 sleep 3
 ssh_core "test -s '$CORE_EVDIR/receiver/receiver_events.jsonl'" || fail G2 RECEIVER_NOT_READY
 
@@ -105,11 +128,13 @@ gate G6 PASS "$T_SERVICE_READY"
 
 bar 66 'G7 fixed 300 s application observation'; echo
 wait "$SENDER_PID" || fail G7 SENDER_FIXED_HORIZON
+SENDER_PID=""
 [[ $("$PY" -c "import json;print(json.load(open('$EVDIR/sender/sender_summary.json'))['status'])") == GOLDEN_FIXED_HORIZON_COMPLETE ]] || fail G7 BAD_SENDER_STATUS
 gate G7 PASS 300S_COMPLETE
 
 bar 74 'Collecting receiver and substrate evidence'; echo
 ssh_core "test -f '$CORE_EVDIR/receiver/receiver.pid' && kill -TERM \$(cat '$CORE_EVDIR/receiver/receiver.pid') 2>/dev/null || true; sleep 2" || true
+RECEIVER_STARTED=0
 scp -r "${SSH_OPTS[@]}" "${REMOTE_USER}@$CORE_HOST:$CORE_EVDIR/receiver/." "$EVDIR/receiver/" || fail G8 RECEIVER_COPY
 ssh_core "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/core_tmux_capture.txt" || fail G8 CORE_TMUX_CAPTURE
 ssh_ue "tmux list-panes -a -F '#S:#I.#P' 2>/dev/null | while read p; do echo '=== PANE ' \"\$p\" ' ==='; tmux capture-pane -p -S -3000 -t \"\$p\" 2>/dev/null || true; done" > "$EVDIR/substrate/ue_tmux_capture.txt" || fail G8 UE_TMUX_CAPTURE
