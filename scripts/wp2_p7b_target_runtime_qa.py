@@ -48,7 +48,7 @@ def main() -> int:
 
     ptxt = PRESERVE.read_text(encoding="utf-8")
     pexec = shell_executable_text(ptxt)
-    if re.search(r"(^|[;&|()[:space:]])python3([;&|()[:space:]]|$)", pexec):
+    if re.search(r"(^|[;&|()\s])python3([;&|()\s]|$)", pexec):
         fail("PRESERVATION_SYSTEM_PYTHON_DEPENDENCY")
     if "p7b_copy_tree_with_hash_manifest_v2" not in ptxt: fail("PRESERVATION_V2_FUNCTION_MISSING")
     q = subprocess.run(["bash", "-n", str(PRESERVE)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
