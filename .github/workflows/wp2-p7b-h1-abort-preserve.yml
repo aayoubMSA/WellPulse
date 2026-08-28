@@ -1,0 +1,173 @@
+name: WP2 P7B-H1 Abort Evidence Preservation
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-h1-preserve-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      CORE_EXT: 155.98.36.173
+      UE_EXT: 155.98.36.162
+      CORE_USER: aayoub
+      UE_USER: aayoub
+      EXPECTED_PROFILE_REVISION: a6da96560b6526dc6816761282722c996418fd8c
+      EXPERIMENT_ID: f6de95cb-a13a-421e-bd0e-766dfc1d3fb3
+      EXPERIMENT_NAME: wp7brq2609012
+      RUN_ID: wp2-p7b-manual-20260828T024433Z
+    steps:
+      - name: Checkout control repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Freeze preservation-only authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-h1-preserve-trigger)" = $'AUTHORITY=P7B_H1_ABORT_PRESERVATION_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nRUN_ID=wp2-p7b-manual-20260828T024433Z\nSCIENTIFIC_RETRY=NO\nRF_MUTATION=NO\nRESTART=NO\nTEARDOWN=NO'
+          ! grep -Eq 'tmcc[[:space:]]+attenuator|killall[[:space:]]+srs|bin/start\.sh|experiment[[:space:]]+create|experiment[[:space:]]+terminate' .github/workflows/wp2-p7b-h1-abort-preserve.yml
+          echo 'H1_AUTHORITY_GATE=PASS_PRESERVATION_ONLY'
+          echo 'SCIENTIFIC_RETRY=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'RESTART=NO'
+          echo 'TEARDOWN=NO'
+
+      - name: Load POWDER SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$POWDER_SSH_PRIVATE_KEY"
+          umask 077
+          mkdir -p "$HOME/.ssh" /tmp/wp2-h1
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          Path('/tmp/wp2-h1/private.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 /tmp/wp2-h1/private.key
+          cat > /tmp/wp2-h1/askpass <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 /tmp/wp2-h1/askpass
+          export SSH_ASKPASS=/tmp/wp2-h1/askpass SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add /tmp/wp2-h1/private.key </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          echo 'H1_SSH_IDENTITY=PASS'
+
+      - name: Verify exact live nodes without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          core_host="$(ssh "${SSH[@]}" "$CORE_USER@$CORE_EXT" hostname)"
+          ue_host="$(ssh "${SSH[@]}" "$UE_USER@$UE_EXT" hostname)"
+          test "$core_host" = nuc1
+          test "$ue_host" = nuc2
+          core_sha="$(ssh "${SSH[@]}" "$CORE_USER@$CORE_EXT" 'git -C /local/repository rev-parse HEAD')"
+          ue_sha="$(ssh "${SSH[@]}" "$UE_USER@$UE_EXT" 'git -C /local/repository rev-parse HEAD')"
+          test "$core_sha" = "$EXPECTED_PROFILE_REVISION"
+          test "$ue_sha" = "$EXPECTED_PROFILE_REVISION"
+          printf 'CORE_HOST=%s\nUE_HOST=%s\nCORE_PROFILE_SHA=%s\nUE_PROFILE_SHA=%s\n' "$core_host" "$ue_host" "$core_sha" "$ue_sha"
+          echo 'H1_NODE_IDENTITY=PASS'
+
+      - name: Pull aborted-run raw evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          OUT="$GITHUB_WORKSPACE/h1-evidence"
+          mkdir -p "$OUT/controller" "$OUT/ue-home" "$OUT/ue-proj" "$OUT/core-home"
+
+          {
+            echo "UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "EXPERIMENT_ID=$EXPERIMENT_ID"
+            echo "EXPERIMENT_NAME=$EXPERIMENT_NAME"
+            echo "RUN_ID=$RUN_ID"
+            echo 'EVIDENCE_CLASS=ABORTED_AFTER_Q3_NULL_QUALIFICATION'
+            echo 'SCIENTIFIC_RETRY=NO'
+            echo 'RF_MUTATION=NO'
+            echo 'RESTART=NO'
+            echo 'TEARDOWN=NO'
+          } > "$OUT/controller/authority.txt"
+
+          ssh "${SSH[@]}" "$UE_USER@$UE_EXT" 'set +e; echo HOST=$(hostname); date -u +UTC=%Y-%m-%dT%H:%M:%SZ; pgrep -af srsue || true; ip -4 addr show tun_srsue 2>/dev/null || true; tmux ls 2>&1 || true; git -C /local/repository rev-parse HEAD' > "$OUT/controller/ue-state.txt"
+          ssh "${SSH[@]}" "$CORE_USER@$CORE_EXT" 'set +e; echo HOST=$(hostname); date -u +UTC=%Y-%m-%dT%H:%M:%SZ; pgrep -af srsepc || true; pgrep -af srsenb || true; tmux ls 2>&1 || true; git -C /local/repository rev-parse HEAD' > "$OUT/controller/core-state.txt"
+
+          ssh "${SSH[@]}" "$UE_USER@$UE_EXT" "set -eu; test -d \"\$HOME/wellpulse-powder-evidence/p7b/$RUN_ID\"; tar -C \"\$HOME/wellpulse-powder-evidence/p7b\" -cf - '$RUN_ID'" | tar -C "$OUT/ue-home" -xf -
+          echo 'UE_HOME_EVIDENCE_PULL=PASS'
+
+          ssh "${SSH[@]}" "$UE_USER@$UE_EXT" "set -eu; test -d '/proj/WellPulse/evidence/p7b-live-$RUN_ID'; tar -C /proj/WellPulse/evidence -cf - 'p7b-live-$RUN_ID'" | tar -C "$OUT/ue-proj" -xf -
+          echo 'UE_PROJ_EVIDENCE_PULL=PASS'
+
+          ssh "${SSH[@]}" "$CORE_USER@$CORE_EXT" "set -eu; test -d \"\$HOME/wellpulse-powder-evidence/p7b/${RUN_ID}-core\"; tar -C \"\$HOME/wellpulse-powder-evidence/p7b\" -cf - '${RUN_ID}-core'" | tar -C "$OUT/core-home" -xf -
+          echo 'CORE_HOME_EVIDENCE_PULL=PASS'
+
+          test -e "$OUT/ue-home/$RUN_ID/orchestration/p7b_c_events.jsonl"
+          test -e "$OUT/ue-home/$RUN_ID/cells/P7B-B1-S3/attenuator_q3_set.txt"
+          test -e "$OUT/ue-home/$RUN_ID/cells/P7B-B1-S3/t_rf_restore.txt"
+          test ! -e "$OUT/ue-home/$RUN_ID/cells/P7B-B1-S3/restart_proof.json"
+          echo 'H1_ABORT_FRONTIER=PASS_Q3_STARTED_RESTORE_RECORDED_RESTART_PROOF_ABSENT'
+
+          find "$OUT" -type f -print0 | sort -z | xargs -0 sha256sum > "$OUT/controller/SHA256SUMS.txt"
+          find "$OUT" -type f | sort > "$OUT/controller/FILE_INVENTORY.txt"
+          echo 'H1_RAW_PULL=PASS'
+
+      - name: Build deterministic evidence bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf - h1-evidence | gzip -n > "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz"
+          sha256sum "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz" > "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz.sha256"
+          cat "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz.sha256"
+          echo 'H1_BUNDLE_BUILD=PASS'
+
+      - name: Upload H1 aborted-run evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp2-p7b-h1-${{ env.RUN_ID }}
+          path: |
+            ${{ env.RUN_ID }}-H1-ABORT-EVIDENCE.tar.gz
+            ${{ env.RUN_ID }}-H1-ABORT-EVIDENCE.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  verify:
+    needs: preserve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RUN_ID: wp2-p7b-manual-20260828T024433Z
+    steps:
+      - name: Download uploaded H1 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: wp2-p7b-h1-${{ env.RUN_ID }}
+          path: readback
+
+      - name: Independent off-node readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd readback
+          sha256sum -c "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz.sha256"
+          tar -tzf "${RUN_ID}-H1-ABORT-EVIDENCE.tar.gz" > inventory.txt
+          grep -q "h1-evidence/ue-home/$RUN_ID/cells/P7B-B1-S3/attenuator_q3_set.txt" inventory.txt
+          grep -q "h1-evidence/ue-home/$RUN_ID/cells/P7B-B1-S3/t_rf_restore.txt" inventory.txt
+          ! grep -q "h1-evidence/ue-home/$RUN_ID/cells/P7B-B1-S3/restart_proof.json" inventory.txt
+          grep -q "h1-evidence/ue-home/$RUN_ID/orchestration/p7b_c_events.jsonl" inventory.txt
+          echo 'H1_OFFPOWDER_READBACK=PASS'
+          echo 'WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_PENDING_OFFLINE'
