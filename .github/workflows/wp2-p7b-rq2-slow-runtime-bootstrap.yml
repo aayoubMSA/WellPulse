@@ -1,0 +1,113 @@
+name: WP2 P7B-RQ2 Slow Runtime Bootstrap
+
+on:
+  push:
+    paths:
+      - '.wp2-p7b-rq2-slow-runtime-bootstrap-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      TARGET_EXPID: f6de95cb-a13a-421e-bd0e-766dfc1d3fb3
+      TARGET_NAME: wp7brq2609012
+      SCIENTIFIC_SOURCE_SHA: 13b34c8dc4b515c010a5b531eaaaf40cfcd00c49
+    steps:
+      - name: Checkout full provenance history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - name: Freeze bootstrap-only authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-rq2-slow-runtime-bootstrap-trigger)" = $'AUTHORITY=P7B_RQ2_SLOW_RUNTIME_BOOTSTRAP_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nSCIENTIFIC_SOURCE_SHA=13b34c8dc4b515c010a5b531eaaaf40cfcd00c49\nCORE_TO_UE_GAP_SECONDS=20\nFINAL_QUIET_SECONDS=90\nSSH=YES_BOUNDED\nRUNTIME_BOOTSTRAP=PINNED_ONLY\nRF=NO\nCELLS=NO\nRESTART=NO\nTEARDOWN=NO\nSCORED=NO'
+          git cat-file -e "$SCIENTIFIC_SOURCE_SHA^{commit}"
+          test "$(git rev-parse "$SCIENTIFIC_SOURCE_SHA:scripts/wp2_a3_runtime_bootstrap.sh")" = d2d8f48f99b2fb7af2e5955ce26180c71f3cca91
+          ! grep -Eq 'experiment[[:space:]]+(create|terminate)|tmcc|attenuator|bin/start.sh|wp2_p7b_c_node|srsue|srsenb|srsepc' .github/workflows/wp2-p7b-rq2-slow-runtime-bootstrap.yml
+          echo 'RQ2_SLOW_BOOTSTRAP_AUTHORITY=PASS'
+
+      - name: Slow pinned runtime bootstrap on current reservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP=/tmp/wp2-rq2-bootstrap
+          rm -rf "$TMP"; mkdir -p "$TMP"
+          fail(){ echo "RQ2_SLOW_BOOTSTRAP=BLOCKED:$1" >&2; exit "${2:-90}"; }
+
+          bash scripts/wp2_portal_client_bootstrap.sh "$TMP/portal-api" | tee "$TMP/portal-pin.txt"
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' "$TMP/portal-pin.txt" || fail PORTAL_PIN
+          sleep 15
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > "$TMP/experiment.json" || fail PORTAL_GET
+          python3 scripts/wp2_portal_record_guard.py --json "$TMP/experiment.json" --expected-experiment-id "$TARGET_EXPID" | tee "$TMP/portal-gate.txt"
+          grep -q '^PORTAL_RECORD_GATE=PASS$' "$TMP/portal-gate.txt" || fail PORTAL_RECORD
+          python3 -c 'import json,os; x=json.load(open("/tmp/wp2-rq2-bootstrap/experiment.json")); assert x.get("id")==os.environ["TARGET_EXPID"]; assert x.get("name")==os.environ["TARGET_NAME"]; assert x.get("project")=="WellPulse"; assert str(x.get("status","")).lower()=="ready"'
+          sleep 15
+          portal-cli experiment manifests get --experiment-id "$TARGET_EXPID" > "$TMP/manifest.json" || fail MANIFEST
+          python3 -c 'import json,xml.etree.ElementTree as ET; obj=json.load(open("/tmp/wp2-rq2-bootstrap/manifest.json")); xmls=[]; w=lambda x:[w(v) for v in x.values()] if isinstance(x,dict) else [w(v) for v in x] if isinstance(x,list) else xmls.append(x) if isinstance(x,str) and "<node" in x else None; w(obj); out={}; [(lambda root:[(lambda n:out.setdefault(n.attrib.get("client_id",""),next(({"username":c.attrib.get("username","aayoub"),"hostname":c.attrib["hostname"],"port":int(c.attrib.get("port","22"))} for c in n.iter() if c.tag.rsplit("}",1)[-1]=="login" and c.attrib.get("hostname")),None)))(n) for n in root.iter() if n.tag.rsplit("}",1)[-1]=="node" and n.attrib.get("client_id") in {"enb1","rue1"}])(ET.fromstring(t)) for t in xmls]; assert out.get("enb1") and out.get("rue1"); json.dump(out,open("/tmp/wp2-rq2-bootstrap/nodes.json","w"))'
+
+          umask 077
+          python3 -c 'import os,pathlib; raw=os.environ["POWDER_SSH_PRIVATE_KEY"].replace("\r\n","\n").replace("\r","\n").lstrip("\ufeff").strip()+"\n"; pathlib.Path("/tmp/wp2-rq2-bootstrap/private.key").write_text(raw,encoding="utf-8",newline="\n")'
+          chmod 600 "$TMP/private.key"
+          printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$POWDER_SSH_KEY_PASSPHRASE"\n' > "$TMP/askpass"
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null || fail SSH_KEY_LOAD
+          mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"; : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          SSH=(-o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          get_login(){ python3 -c 'import json,sys; x=json.load(open("/tmp/wp2-rq2-bootstrap/nodes.json"))[sys.argv[1]]; print("%s\t%s\t%s"%(x.get("username","aayoub"),x["hostname"],x.get("port",22)))' "$1"; }
+          IFS=$'\t' read -r CORE_USER CORE_HOST CORE_PORT < <(get_login enb1)
+          IFS=$'\t' read -r UE_USER UE_HOST UE_PORT < <(get_login rue1)
+
+          git archive --format=tar "$SCIENTIFIC_SOURCE_SHA" | gzip -n > "$TMP/science.tgz"
+          SRC_SHA256="$(sha256sum "$TMP/science.tgz" | awk '{print $1}')"
+          printf 'SCIENTIFIC_SOURCE_SHA=%s\nSOURCE_ARCHIVE_SHA256=%s\n' "$SCIENTIFIC_SOURCE_SHA" "$SRC_SHA256" | tee "$TMP/source.txt"
+
+          stage_and_bootstrap(){
+            local label="$1" user="$2" host="$3" port="$4"
+            echo "PACED_BOOTSTRAP=$label:STAGE"
+            scp "${SSH[@]}" -P "$port" "$TMP/science.tgz" "$user@$host:/tmp/wp2-rq2-science.tgz" >/dev/null || fail "${label}_SCP"
+            ssh "${SSH[@]}" -p "$port" "$user@$host" 'set -eu; rm -rf "$HOME/WellPulse"; mkdir -p "$HOME/WellPulse"; tar -xzf /tmp/wp2-rq2-science.tgz -C "$HOME/WellPulse"; rm -f /tmp/wp2-rq2-science.tgz' || fail "${label}_STAGE"
+            echo "PACED_BOOTSTRAP=$label:RUNTIME"
+            ssh "${SSH[@]}" -p "$port" "$user@$host" 'set -eu; cd "$HOME/WellPulse"; WP_REPO_ROOT="$HOME/WellPulse" WP_A3_VENV="$HOME/.wp2-golden-venv" WP_A3_PYTHON_VERSION=3.11.13 bash scripts/wp2_a3_runtime_bootstrap.sh' | tee "$TMP/${label,,}-bootstrap.txt" || fail "${label}_BOOTSTRAP"
+          }
+
+          stage_and_bootstrap CORE "$CORE_USER" "$CORE_HOST" "$CORE_PORT"
+          sleep 20
+          stage_and_bootstrap UE "$UE_USER" "$UE_HOST" "$UE_PORT"
+
+          echo 'PACED_CONTROL=post-bootstrap-quiet:90s'
+          sleep 90
+
+          echo 'PACED_VERIFY=CORE'
+          ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_HOST" 'set -eu; test "$("$HOME/.wp2-golden-venv/bin/python" -c "import sys;print(\".\".join(map(str,sys.version_info[:3])))")" = 3.11.13; test "$("$HOME/.wp2-golden-venv/bin/python" -c "import importlib.metadata as m;print(m.version(\"paho-mqtt\"))")" = 2.1.0; echo CORE_RUNTIME_BOOTSTRAP=PASS' | tee "$TMP/core-verify.txt" || fail CORE_VERIFY
+          sleep 20
+          echo 'PACED_VERIFY=UE'
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_HOST" 'set -eu; test "$("$HOME/.wp2-golden-venv/bin/python" -c "import sys;print(\".\".join(map(str,sys.version_info[:3])))")" = 3.11.13; test "$("$HOME/.wp2-golden-venv/bin/python" -c "import importlib.metadata as m;print(m.version(\"paho-mqtt\"))")" = 2.1.0; echo UE_RUNTIME_BOOTSTRAP=PASS' | tee "$TMP/ue-verify.txt" || fail UE_VERIFY
+
+          printf 'RQ2_SLOW_RUNTIME_BOOTSTRAP=PASS\nRF_AUTHORIZED=NO\nCELLS_AUTHORIZED=NO\nRESTART_AUTHORIZED=NO\nTEARDOWN_AUTHORIZED=NO\n' | tee "$TMP/verdict.txt"
+
+      - name: Upload bootstrap evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp2-p7b-rq2-slow-runtime-bootstrap-${{ github.run_id }}
+          path: |
+            /tmp/wp2-rq2-bootstrap/source.txt
+            /tmp/wp2-rq2-bootstrap/core-bootstrap.txt
+            /tmp/wp2-rq2-bootstrap/ue-bootstrap.txt
+            /tmp/wp2-rq2-bootstrap/core-verify.txt
+            /tmp/wp2-rq2-bootstrap/ue-verify.txt
+            /tmp/wp2-rq2-bootstrap/portal-gate.txt
+            /tmp/wp2-rq2-bootstrap/verdict.txt
+          if-no-files-found: error
+          retention-days: 90
