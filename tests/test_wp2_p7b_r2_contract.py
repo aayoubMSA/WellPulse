@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 R2 = ROOT / "experiments" / "WP-PWD01" / "p7b-requalification-r2-contract.json"
 ORIGINAL = ROOT / "experiments" / "WP-PWD01" / "p7b-qualification-contract.json"
+RQ2_ACTIVATION = ROOT / "experiments" / "WP-PWD01" / "p7b-rq2-live-authorization-2026-08-28.json"
 
 
 def load_module(path: Path):
@@ -120,9 +121,9 @@ portal-cli experiment terminate --experiment-id "$EXPID"
 """
         self.assertEqual(self.validator.validate_controller_text(text, self.contract), [])
 
-    def test_r2_itself_grants_no_live_authority_and_later_r3_surface_is_bounded(self):
-        # R2 remains an offline contract forever; a later, separately authorized
-        # R3 surface may exist without retroactively changing R2's authority bits.
+    def test_r2_itself_grants_no_live_authority_and_later_surface_is_phase_bounded(self):
+        # Historical R2 remains offline forever. Later live surfaces are legal only
+        # when a newer explicit authority artifact exists; this does not mutate R2.
         self.assertFalse(self.contract["live_authorized"])
         self.assertFalse(self.contract["powder_contact_authorized"])
         self.assertFalse(self.contract["scored_runs_authorized"])
@@ -132,7 +133,14 @@ portal-cli experiment terminate --experiment-id "$EXPID"
             for p in (ROOT / ".github" / "workflows").glob("*.yml")
             if "p7b" in p.name.lower() and "b2-semantics" not in p.name.lower()
         }
-        self.assertTrue(workflows.issubset({"wp2-p7b-r3-live.yml"}), workflows)
+        allowed = {"wp2-p7b-r3-live.yml"}
+        if RQ2_ACTIVATION.exists():
+            activation = json.loads(RQ2_ACTIVATION.read_text(encoding="utf-8"))
+            self.assertTrue(activation["user_live_authorization_received"])
+            self.assertEqual(activation["authority_id"], "P7B-RQ2")
+            allowed.add("wp2-p7b-rq2-session.yml")
+        self.assertTrue(workflows.issubset(allowed), workflows)
+
         if "wp2-p7b-r3-live.yml" in workflows:
             text = (ROOT / ".github" / "workflows" / "wp2-p7b-r3-live.yml").read_text(encoding="utf-8")
             self.assertIn("authority_id=P7B-RQ1", text)
@@ -140,6 +148,14 @@ portal-cli experiment terminate --experiment-id "$EXPID"
             self.assertIn("automatic_retry=NO", text)
             self.assertIn("second_replacement=NO", text)
             self.assertNotIn("workflow_dispatch", text)
+
+        if "wp2-p7b-rq2-session.yml" in workflows:
+            text = (ROOT / ".github" / "workflows" / "wp2-p7b-rq2-session.yml").read_text(encoding="utf-8")
+            self.assertIn("workflow_dispatch:", text)
+            self.assertNotIn("push:", text)
+            self.assertNotIn("schedule:", text)
+            self.assertIn("SCORED_AUTHORIZATION=BLOCKED", text)
+            self.assertIn("TEARDOWN_AUTHORIZED=NO_MANUAL_T0_REQUIRED", text)
 
 
 if __name__ == "__main__":
