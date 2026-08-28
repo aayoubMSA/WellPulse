@@ -1,0 +1,58 @@
+{
+  "schema_version": "wp2-p7b-h2-authority-decision-result-v1",
+  "terminal_verdict": "WP2_P7B_H2=PASS",
+  "terminal_detail": "PASS_REQUALIFICATION_REPAIR_CLOSED",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "authority_id": "P7B-RQ2",
+  "authority_artifact": {
+    "path": "experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json",
+    "git_blob_sha": "76522aa16d9af09d2f3d779a256236f752850245",
+    "status": "OFFLINE_H2_PASS_PROSPECTIVE_REQUALIFICATION_AUTHORITY_NOT_LIVE_AUTHORITY"
+  },
+  "decision": {
+    "h2_repair_sufficient_for_future_non_scored_requalification_request": true,
+    "historical_b1_remains": "NULL_ABORTED_AFTER_Q3",
+    "historical_attempt_consumed": true,
+    "future_session_if_later_authorized_is_new_and_one_shot": true,
+    "prospective_node_entrypoint": "scripts/wp2_p7b_c_node_h2.py",
+    "prospective_node_entrypoint_git_blob_sha": "d66bc791455127ef87497cea3e912ee6f46e685b"
+  },
+  "final_qa": {
+    "run_id": 33142326835,
+    "job_id": 98755668809,
+    "head_sha": "8735013bedc6d576424b0aa88670cd6ea68caa45",
+    "suite_tests": 174,
+    "suite_result": "PASS",
+    "h2_6_specific_tests": 6,
+    "h2_6_specific_tests_passed": 6,
+    "python_validation_host": "3.12.14",
+    "paho_mqtt": "2.1.0"
+  },
+  "authority_now": {
+    "powder_contact": false,
+    "network_contact": false,
+    "live_powder_authorization": false,
+    "reservation_creation": false,
+    "reservation_selection": false,
+    "ssh_live_target": false,
+    "rf_mutation": false,
+    "service_mutation": false,
+    "b1_requalification_attempt": false,
+    "w1_b2": false,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "automatic_teardown": false,
+    "scored": false,
+    "wp3": false
+  },
+  "future_boundary": {
+    "separate_explicit_user_live_authorization_required": true,
+    "then_current_reservation_and_access_validation_required": true,
+    "user_manual_reservation_boundary_preserved": true,
+    "future_live_workflow_absent_at_h2_closure": true,
+    "maximum_live_session_attempts_if_later_authorized": 1,
+    "maximum_new_reservations_if_later_authorized": 1
+  },
+  "h2_progress_pct": 100,
+  "next_state": "STOP_H2_COMPLETE_AWAIT_SEPARATE_EXPLICIT_USER_LIVE_AUTHORIZATION_P7B_RQ2"
+}
