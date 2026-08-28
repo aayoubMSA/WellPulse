@@ -19,7 +19,8 @@ Classification is based on immutable raw evidence and the frozen P8 acceptance c
 | E4 | p8-master-20260828A-e4 | VALID | Valid RF-only impairment/recovery reference with baseline, impairment and recovery phases frozen. |
 | E5 | p8-master-20260828A-e5 | SETUP_ARTIFACT | Pre-treatment MQTT-gate SSH failure; fail-safe RF restore; no scientific treatment began. |
 | E5 | p8-master-20260828A-e5-a01 | SETUP_ARTIFACT | Pre-treatment CORE→UE baseline ping failed 100%; no scientific treatment began. |
-| E5 | p8-e5-20260829-000744 | SETUP_ARTIFACT | Gate-only evidence; no treatment phase or valid recovery experiment. |
+| E5 | p8-e5-20260829-000402 | SETUP_ARTIFACT | Local timing/controller attempt failed during SSH identity preflight with PowerShell `System.Char.Trim` error; fail-safe RF restore; no treatment. |
+| E5 | p8-e5-20260829-000744 | SETUP_ARTIFACT | Pre-treatment controller/gate attempt; MQTT gate ended invalid (`53/5`), fail-safe RF restore; no treatment phase. |
 | E5 | p8-e5-manual-20260829A | VALID_WITH_CAVEAT | Valid UE-restart recovery run; forward UE recovery-ping was observed live but was not frozen. |
 | E6 | p8-e6-manual-20260829A | VALID | Valid CORE-restart recovery run with both-node raw evidence. |
 | E7 | p8-e7-manual-20260829A | VALID | Valid combined recovery stress run with both-node raw evidence. |
@@ -37,7 +38,7 @@ Classification is based on immutable raw evidence and the frozen P8 acceptance c
 ## Important interpretation controls
 
 - `p8-e1-20260828T1707Z` is `NULL`, because treatment continued after the 0 dB prerequisite had already failed.
-- The three pre-treatment E5 attempts are `SETUP_ARTIFACT`; no scientific treatment began.
+- All four pre-treatment E5 attempts/fragments are `SETUP_ARTIFACT`; no scientific treatment began.
 - E9 is a `CONTROL`, not a treatment run.
 - E10-A is a valid censored observation with a caveat: no recovery occurred inside the recorded observation window; no exact recovery latency exists.
 - E10-C attempt A is a setup artifact; suffix B is the valid run.
