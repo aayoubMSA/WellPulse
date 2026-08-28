@@ -1,0 +1,82 @@
+{
+  "schema_version": "wp2-p7b-h1-abort-root-cause-v1",
+  "date": "2026-08-28",
+  "patch": "WP2-P7B-H1",
+  "terminal_verdict": "WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED",
+  "scientific_state": {
+    "attempt": "P7B_B1_ATTEMPT=ABORTED_AFTER_SCIENTIFIC_IMPAIRMENT",
+    "b1_scientific_verdict": null,
+    "b1_state": "NULL_ABORTED_AFTER_Q3",
+    "w1": "NOT_STARTED",
+    "b2": "NOT_STARTED",
+    "scored": false,
+    "automatic_retry": false,
+    "manual_retry_authorized_under_current_contract": false,
+    "teardown_authorized_by_h1": false
+  },
+  "reservation": {
+    "experiment_id": "f6de95cb-a13a-421e-bd0e-766dfc1d3fb3",
+    "name": "wp7brq2609012",
+    "current_liveness_assumed": false,
+    "roles": {
+      "core": "nuc1",
+      "ue": "nuc2"
+    }
+  },
+  "aborted_run": {
+    "run_id": "wp2-p7b-manual-20260828T024433Z",
+    "q3_started": true,
+    "gateway_restart_observed": true,
+    "rf_restore_timestamp_observed": true,
+    "service_restore_started": true,
+    "service_ready_observed": false,
+    "app_horizon_complete_observed": false,
+    "final_restart_proof_observed": false,
+    "completed_cells": []
+  },
+  "evidence_freeze": {
+    "operational_branch": "wp2-p7b-h1-freeze-20260828",
+    "operational_commit": "118a8c025ef0be5a643f710ff9c620abdcb5698b",
+    "github_run_id": 33138161593,
+    "github_job_id": 98742778306,
+    "github_artifact_id": 9672862285,
+    "github_artifact_name": "wp2-p7b-h1-abort-freeze-33138161593",
+    "artifact_bytes": 1972916,
+    "artifact_sha256": "a7e3b06d27f46729fcf0ce57aab217a1cf2c1e9edb71211db58d0a7f9063d09d",
+    "independent_artifact_readback": "PASS",
+    "controller_manifest_readback": "PASS",
+    "ue_internal_hash_readback": "PASS",
+    "core_internal_hash_readback": "PASS",
+    "canonical_drive_file_id": "1mE3GX6lm5k6DeUXaYqOmz7N74rKgYBJ3",
+    "canonical_drive_filename": "wp2-p7b-h1-abort-freeze-33138161593.zip",
+    "prior_local_abort_bundle_sha256": "a2f9e4a8677bc5b3488da6bf0aad76ad9c67eea2a755009d7cad745228b2b836"
+  },
+  "execution_frontier": {
+    "cell_begin_utc_approx": "2026-08-28T02:44:44Z",
+    "q3_start_utc": "2026-08-28T02:45:46.961547Z",
+    "gateway_stop_requested_utc": "2026-08-28T02:46:46.970797Z",
+    "old_gateway_exit_utc": "2026-08-28T02:46:46.986343Z",
+    "new_gateway_start_utc": "2026-08-28T02:46:51.402954Z",
+    "rf_restore_utc_approx": "2026-08-28T02:47:47Z",
+    "service_restore_start_utc": "2026-08-28T02:47:47.138928511Z",
+    "last_service_restore_phase": "UE_CLEANUP_BEGIN",
+    "t_ue_stopped_written": false,
+    "core_cleanup_reached": false
+  },
+  "root_cause": {
+    "first_technical_root_cause": "CONTROLLER_SESSION_COLLISION_SERVICE_RESTORE_KILLED_OPERATOR_TMUX_UE",
+    "class": "CONTROLLER_SESSION_INFRASTRUCTURE",
+    "confidence": "HIGH",
+    "exact_signal_recorded": false,
+    "evidence_summary": "The service-restore helper begins by killing tmux session 'ue' on nuc2. Frozen q0_radio_capture proves that tmux 'ue' hosted the manual operator/controller shell that launched the runner. The runner disappeared exactly at this first UE-cleanup frontier; detached gateway/generator processes continued and CORE remained running because later restore phases were never reached.",
+    "rf_lte_nas_observations_promoted_to_first_cause": false,
+    "scientific_failure_claimed": false
+  },
+  "future_amendment": {
+    "path": "experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md",
+    "status": "DRAFT_OFFLINE_ONLY",
+    "live_authorized": false,
+    "retry_authorized": false,
+    "scientific_controls_changed": false
+  }
+}
