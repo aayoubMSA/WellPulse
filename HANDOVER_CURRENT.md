@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 after **WP2-P7B-H2.1 executable controller/restore contract delta PASS**.
+Last updated: 2026-08-28 after **WP2-P7B-H2.2 controller/session ownership repair PASS**.
 
 ## Authority
 
@@ -145,7 +145,7 @@ Offline draft:
 
 `experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
 
-The draft remains provenance for the H1-derived A1–A7 proposal. H2.1 has now translated it into a separate machine-readable prospective delta; the draft itself grants no authority.
+The draft remains provenance for the H1-derived A1–A7 proposal. H2.1 translated it into a separate machine-readable prospective delta; the draft itself grants no authority.
 
 ## WP2-P7B-H2.1 — PASS
 
@@ -173,13 +173,52 @@ H2.1 QA:
 - POWDER contact: **NONE**
 - scientific mutation: **NONE**
 
-The tests prove exact A1–A7 presence, frozen-science equivalence to v2, exact base blob identity, all authority flags false, unsafe generic tmux/session destruction prohibited without ownership proof, incremental restart/restoration evidence requirements, adversarial QA requirements, and H2.2 as the next patch rather than live execution.
+## WP2-P7B-H2.2 — PASS
 
-`H2_PROGRESS=20%`
+Terminal verdict:
+
+`H2_2_SESSION_OWNERSHIP=PASS`
+
+Canonical closure:
+
+`docs/WP2_P7B_H2_2_CONTROLLER_SESSION_OWNERSHIP_REPAIR_CLOSURE_2026-08-28.md`
+
+H2.2 implements only A1–A3 prospectively and offline.
+
+New implementation surfaces:
+
+- `src/wellpulse/p7b_session_ownership.py`
+- `scripts/wp2_p7b_service_restore_h2.sh`
+- `scripts/wp2_p7b_c_node_h2.py`
+- `tests/test_wp2_p7b_h2_session_ownership.py`
+
+Key safety change:
+
+`DESTRUCTIVE_TMUX_SESSION_KILL_AUTHORIZED=NO`
+
+The prospective H2 restore contains no `tmux kill-session`. It discovers exact `srsue`/`srsenb`/`srsepc` PIDs, proves the controller PID is not among them, terminates only those service PIDs, and fails closed if stale service tmux state remains rather than destroying that session blindly.
+
+The historical `scripts/wp2_golden_service_restore.sh` remains unchanged as provenance and is not the prospective H2-safe restore.
+
+H2.2 QA:
+
+- implementation commit: `989162cdc82fb0233cceee89e8e39e6780c2e728`
+- QA trigger commit: `1eeb8771d0cc36f10f6684b55e499d0f3f071d38`
+- Local Unit Tests run: `33140208485`
+- job: `98749151195`
+- result: **147/147 PASS**
+- H2.2-specific tests: **12/12 PASS**
+- POWDER contact: **NONE**
+- live service mutation: **NONE**
+- scientific mutation: **NONE**
+
+The machine-readable H2 delta now records `status=OFFLINE_H2_2_SESSION_OWNERSHIP_PASS_NOT_LIVE_AUTHORITY`. All live/reservation/RF/retry/W1-B2/teardown/scored/WP3 authority remains false.
+
+`H2_PROGRESS=40%`
 
 ## Frozen scientific controls
 
-No H1 or H2.1 action changed these controls:
+No H1, H2.1, or H2.2 action changed these controls:
 
 - Q0/Q1/Q2/Q3 = `0/40/52/55 dB`.
 - attenuator IDs `[1,33,2,34]`, coupled.
@@ -210,22 +249,21 @@ Evidence survival must remain simpler than the application path: shell/coreutils
 
 ## Exact next bounded patch
 
-`WP2-P7B-H2.2 — CONTROLLER/SESSION OWNERSHIP REPAIR`
+`WP2-P7B-H2.3 — INCREMENTAL RESTART/RESTORATION FRONTIER EVIDENCE`
 
-H2 is **OFFLINE / IN PROGRESS — 20%**.
+H2 is **OFFLINE / IN PROGRESS — 40%**.
 
-H2.2 may only implement the already-frozen prospective A1–A3 operational controls offline:
+H2.3 may only implement the already-frozen prospective A4–A6 controls offline:
 
-1. controller/session identity and disjointness guard;
-2. service ownership proof before destructive session cleanup;
-3. controller execution outside the restoration failure domain;
-4. offline tests of those ownership/session boundaries.
+1. write `restart_transition.json` immediately after replacement gateway start is proven;
+2. write durable restoration-frontier markers before/after destructive restoration phases;
+3. add supplementary parent-controller trap/flush handling that correctness does not depend on;
+4. add offline tests of incremental evidence survival.
 
-H2.2 must not contact POWDER, create a reservation, mutate RF, restart live services, retry B1, execute W1/B2, teardown, score, or alter scientific controls.
+H2.3 must not contact POWDER, create a reservation, mutate RF, restart live services, retry B1, execute W1/B2, teardown, score, or alter scientific controls.
 
-Remaining H2 patches after H2.2:
+Remaining H2 patches after H2.3:
 
-- H2.3 — incremental restart/restoration frontier evidence;
 - H2.4 — static/adversarial QA;
 - H2.5 — contract/runtime regression gate;
 - H2.6 — future non-scored requalification authority decision.
@@ -255,15 +293,19 @@ Even a terminal H2 PASS does not itself contact POWDER. Any future live action r
 4. `experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
 5. `experiments/WP-PWD01/p7b-h2-controller-restore-contract-delta-v1.json`
 6. `docs/WP2_P7B_H2_1_EXECUTABLE_CONTRACT_DELTA_CLOSURE_2026-08-28.md`
-7. `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`
-8. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
-9. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
-10. `scripts/wp2_p7b_c_node_r2.py`
-11. `scripts/wp2_p7b_c_node_r1.py`
-12. `scripts/wp2_p7b_c_node.py`
-13. `scripts/wp2_golden_service_restore.sh`
-14. `scripts/wp2_p7b_target_node_preflight.sh`
-15. current `Research & Grants — Lessons Learned Ledger` in Drive
+7. `docs/WP2_P7B_H2_2_CONTROLLER_SESSION_OWNERSHIP_REPAIR_CLOSURE_2026-08-28.md`
+8. `src/wellpulse/p7b_session_ownership.py`
+9. `scripts/wp2_p7b_service_restore_h2.sh`
+10. `scripts/wp2_p7b_c_node_h2.py`
+11. `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`
+12. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
+13. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
+14. `scripts/wp2_p7b_c_node_r2.py`
+15. `scripts/wp2_p7b_c_node_r1.py`
+16. `scripts/wp2_p7b_c_node.py`
+17. `scripts/wp2_golden_service_restore.sh`
+18. `scripts/wp2_p7b_target_node_preflight.sh`
+19. current `Research & Grants — Lessons Learned Ledger` in Drive
 
 ## Stop state
 
@@ -271,9 +313,11 @@ Even a terminal H2 PASS does not itself contact POWDER. Any future live action r
 
 `H2_1_CONTRACT_DELTA=PASS`
 
-`H2_PROGRESS=20%`
+`H2_2_SESSION_OWNERSHIP=PASS`
 
-`NEXT_PATCH=WP2-P7B-H2.2_CONTROLLER_SESSION_OWNERSHIP_REPAIR`
+`H2_PROGRESS=40%`
+
+`NEXT_PATCH=WP2-P7B-H2.3_INCREMENTAL_RESTART_RESTORATION_FRONTIER_EVIDENCE`
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -289,4 +333,4 @@ Even a terminal H2 PASS does not itself contact POWDER. Any future live action r
 
 `LIVE_POWDER_AUTHORIZATION=NO`
 
-**STOP — H2.1 CLOSED. H2.2 NOT STARTED.**
+**STOP — H2.2 CLOSED. H2.3 NOT STARTED.**
