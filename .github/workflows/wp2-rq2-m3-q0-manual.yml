@@ -22,7 +22,7 @@ jobs:
           POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
         run: |
           set -euo pipefail
-          RUN_ID='wp2-p7b-rq2-manual-20260828T054903Z'
+          RUN_ID='wp2-p7b-rq2-manual-20260828T055500Z'
           EXPID='41d64b85-e743-4d06-a81d-687c28c58e52'
           SRC='2d7eb744f14ad4d5889909dac3cc29236c667190'
           EXPIRES='2026-08-28T21:00:00Z'
@@ -46,65 +46,37 @@ jobs:
           setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
           : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
           SSH_OPTS=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          emit(){ local host=$1 role=$2 state=$3; ssh "${SSH_OPTS[@]}" "aayoub@${host}.emulab.net" "set -eu; d=\"\$HOME/wellpulse-live-status/p7b-rq2\"; mkdir -p \"\$d\"; ts=\$(date -u +%Y-%m-%dT%H:%M:%SZ); printf '%s HOST=%s ROLE=%s RUN_ID=%s STATE=%s\\n' \"\$ts\" '$host' '$role' '$RUN_ID' '$state' | tee -a \"\$d/status.log\"; printf '%s\\n' '$state' > \"\$d/current.state\""; }
+          fail_state(){ emit nuc1 CORE "$1" || true; emit nuc2 UE "$1" || true; }
+          trap 'rc=$?; if [ $rc -ne 0 ]; then fail_state M3_BLOCKED; fi' EXIT
 
-          emit(){
-            local host=$1 role=$2 state=$3
-            ssh "${SSH_OPTS[@]}" "aayoub@${host}.emulab.net" "set -eu; d=\"\$HOME/wellpulse-live-status/p7b-rq2\"; mkdir -p \"\$d\"; ts=\$(date -u +%Y-%m-%dT%H:%M:%SZ); printf '%s HOST=%s ROLE=%s RUN_ID=%s STATE=%s\\n' \"\$ts\" '$host' '$role' '$RUN_ID' '$state' | tee -a \"\$d/status.log\"; printf '%s\\n' '$state' > \"\$d/current.state\""
-          }
-
+          for spec in 'nuc1 CORE /users/aayoub/wellpulse-powder-evidence/p7b/'"$RUN_ID"'-core' 'nuc2 UE /users/aayoub/wellpulse-powder-evidence/p7b/'"$RUN_ID"; do set -- $spec; ssh "${SSH_OPTS[@]}" "aayoub@$1.emulab.net" "test ! -e '$3'"; done
           emit nuc1 CORE M3_Q0_START
           emit nuc2 UE M3_Q0_START
-
           curl -fsSL 'https://repo.maven.apache.org/maven2/org/eclipse/paho/org.eclipse.paho.client.mqttv3/1.2.5/org.eclipse.paho.client.mqttv3-1.2.5.jar' -o "$TMP/paho.jar"
           echo '59914287adac506a28d5e8172eed262a22605f3df4d426b9d92f41dae2448185  '"$TMP/paho.jar" | sha256sum -c -
           scp "${SSH_OPTS[@]}" "$TMP/paho.jar" aayoub@nuc2.emulab.net:/tmp/wp2-p7b-rq2-paho.jar >/dev/null
-
           emit nuc1 CORE PREPARE_RUNNING
           emit nuc2 UE PREPARE_RUNNING
-
-          ssh "${SSH_OPTS[@]}" aayoub@nuc2.emulab.net "cd /users/aayoub/WellPulse && env \
-            WP_RUN_ID='$RUN_ID' \
-            WP_EXPERIMENT_ID='$EXPID' \
-            WP_CORE_HOST='enb1' \
-            WP_UE_HOST='rue1' \
-            WP_REMOTE_USER='aayoub' \
-            WP_REPO_ROOT='/users/aayoub/WellPulse' \
-            WP_PYTHON='/users/aayoub/.wp2-golden-venv/bin/python' \
-            WP_HARD_EXPIRY_UTC='$EXPIRES' \
-            WP_CORE_MANAGEMENT_HOST='nuc1.emulab.net' \
-            WP_UE_MANAGEMENT_HOST='nuc2.emulab.net' \
-            WP_CORE_REPO_ROOT='/users/aayoub/WellPulse' \
-            WP_AUTHORITY_ID='P7B-RQ2' \
-            WP_SCIENTIFIC_SOURCE_SHA='$SRC' \
-            WP_B2_JAR_STAGED='/tmp/wp2-p7b-rq2-paho.jar' \
-            WP_CONTROLLER_HOST_ROLE='UE' \
-            /users/aayoub/.wp2-golden-venv/bin/python scripts/wp2_p7b_rq2_module_adapter.py prepare"
-
+          ssh "${SSH_OPTS[@]}" aayoub@nuc2.emulab.net "cd /users/aayoub/WellPulse && env WP_RUN_ID='$RUN_ID' WP_EXPERIMENT_ID='$EXPID' WP_CORE_HOST='enb1' WP_UE_HOST='rue1' WP_REMOTE_USER='aayoub' WP_REPO_ROOT='/users/aayoub/WellPulse' WP_PYTHON='/users/aayoub/.wp2-golden-venv/bin/python' WP_HARD_EXPIRY_UTC='$EXPIRES' WP_CORE_MANAGEMENT_HOST='nuc1.emulab.net' WP_UE_MANAGEMENT_HOST='nuc2.emulab.net' WP_CORE_REPO_ROOT='/users/aayoub/WellPulse' WP_AUTHORITY_ID='P7B-RQ2' WP_SCIENTIFIC_SOURCE_SHA='$SRC' WP_B2_JAR_STAGED='/tmp/wp2-p7b-rq2-paho.jar' WP_CONTROLLER_HOST_ROLE='UE' /users/aayoub/.wp2-golden-venv/bin/python scripts/wp2_p7b_rq2_module_adapter.py prepare"
           emit nuc1 CORE Q0_BASELINE_READY
           emit nuc2 UE Q0_BASELINE_READY
           emit nuc1 CORE M3_EVIDENCE_FREEZE
           emit nuc2 UE M3_EVIDENCE_FREEZE
-
           OUT="$TMP/evidence"; mkdir -p "$OUT"
           scp "${SSH_OPTS[@]}" -r aayoub@nuc2.emulab.net:/users/aayoub/wellpulse-powder-evidence/p7b/$RUN_ID "$OUT/ue"
           scp "${SSH_OPTS[@]}" -r aayoub@nuc1.emulab.net:/users/aayoub/wellpulse-powder-evidence/p7b/$RUN_ID-core "$OUT/core" || true
           (cd "$OUT"; find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
           tar -C "$OUT" -czf "$TMP/m3-q0-raw.tgz" .
           sha256sum "$TMP/m3-q0-raw.tgz" > "$TMP/m3-q0-raw.tgz.sha256"
-          mkdir -p evidence/powder/p7b-rq2/$RUN_ID/m3
-          cp "$TMP/m3-q0-raw.tgz.sha256" evidence/powder/p7b-rq2/$RUN_ID/m3/
-          cp "$OUT/SHA256SUMS.txt" evidence/powder/p7b-rq2/$RUN_ID/m3/
-          printf 'RUN_ID=%s\nEXPERIMENT_ID=%s\nSOURCE_SHA=%s\nGITHUB_RUN_ID=%s\n' "$RUN_ID" "$EXPID" "$SRC" "$GITHUB_RUN_ID" > evidence/powder/p7b-rq2/$RUN_ID/m3/PROVENANCE.txt
-
           emit nuc1 CORE M3_PASS
           emit nuc2 UE M3_PASS
-          echo "WP2_RQ2_M3_Q0=PASS"
-          echo "RAW_BUNDLE=$TMP/m3-q0-raw.tgz"
-
+          trap - EXIT
+          echo 'WP2_RQ2_M3_Q0=PASS'
       - name: Upload M3 raw evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: wp2-p7b-rq2-manual-20260828T054903Z-m3-q0-raw
+          name: wp2-p7b-rq2-manual-20260828T055500Z-m3-q0-raw
           path: /tmp/wp2-rq2-m3-${{ github.run_id }}/m3-q0-raw.tgz
           if-no-files-found: error
           retention-days: 90
