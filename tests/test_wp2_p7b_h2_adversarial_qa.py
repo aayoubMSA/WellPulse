@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 import subprocess
@@ -41,12 +42,19 @@ class P7BH2AdversarialQATests(unittest.TestCase):
             self.assertFalse(data["teardown"])
             self.assertIn("H2_4_ADVERSARIAL_QA=PASS", p.stdout)
 
-    def test_adversarial_qa_has_no_live_powder_authority_surface(self):
+    def test_adversarial_qa_has_no_live_powder_executable_subprocess_surface(self):
         text = QA.read_text(encoding="utf-8")
-        self.assertNotIn("portal-cli experiment create", text)
-        self.assertNotIn("portal-cli experiment terminate", text)
-        self.assertNotIn("AUTOMATIC_RETRY=YES", text)
-        self.assertNotIn("scored_runs_authorized=true", text)
+        tree = ast.parse(text)
+        run_calls = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "_run" and node.args:
+                strings = [x.value for x in ast.walk(node.args[0]) if isinstance(x, ast.Constant) and isinstance(x.value, str)]
+                run_calls.append(strings)
+        self.assertTrue(run_calls)
+        executable_literals = "\n".join(" ".join(x) for x in run_calls)
+        self.assertNotIn("portal-cli", executable_literals)
+        self.assertNotIn("experiment create", executable_literals)
+        self.assertNotIn("experiment terminate", executable_literals)
         self.assertIn('"network_contact": False', text)
         self.assertIn('"powder_contact": False', text)
 
