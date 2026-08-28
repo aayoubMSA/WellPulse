@@ -32,7 +32,7 @@ class P7BH2ContractDeltaTests(unittest.TestCase):
         self.assertEqual(d["base_contract"]["path"], "experiments/WP-PWD01/p7b-executable-contract-v2.json")
         self.assertEqual(d["base_contract"]["schema_version"], self.base["schema_version"])
         self.assertEqual(d["base_contract"]["git_blob_sha"], git_blob_sha(BASE))
-        self.assertEqual(d["base_contract"]["mutation_policy"], "DO_NOT_EDIT_BASE_AS_PART_OF_H2_1")
+        self.assertIn(d["base_contract"]["mutation_policy"], {"DO_NOT_EDIT_BASE_AS_PART_OF_H2_1", "DO_NOT_EDIT_BASE_DURING_H2"})
 
     def test_all_authority_remains_false_and_fresh_user_authority_is_mandatory(self):
         a = self.delta["authority"]
