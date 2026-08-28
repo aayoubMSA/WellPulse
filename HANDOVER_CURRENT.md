@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 after **WP2-P7B-H1 aborted-Q3 evidence freeze + offline first-cause classification PASS**.
+Last updated: 2026-08-28 after **WP2-P7B-H2.1 executable controller/restore contract delta PASS**.
 
 ## Authority
 
@@ -139,35 +139,47 @@ The exact Unix signal is not recorded, so no specific signal is claimed.
 
 RLF/RRC reconnects and `SECURITY_MODE_REJECT`/NAS-integrity messages remain retained observations. They are not promoted to the first cause of the controller disappearance and do not convert B1 into a scientific failure.
 
-## Draft future amendment — not authority
+## H1 amendment source — retained as draft provenance
 
 Offline draft:
 
 `experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
 
-Status:
+The draft remains provenance for the H1-derived A1–A7 proposal. H2.1 has now translated it into a separate machine-readable prospective delta; the draft itself grants no authority.
 
-`DRAFT_OFFLINE_ONLY`
+## WP2-P7B-H2.1 — PASS
 
-`LIVE_AUTHORIZATION=NO`
+Terminal verdict:
 
-`RETRY_AUTHORIZATION=NO`
+`H2_1_CONTRACT_DELTA=PASS`
 
-`NEW_RESERVATION_AUTHORIZATION=NO`
+Canonical closure:
 
-`RF_AUTHORIZATION=NO`
+`docs/WP2_P7B_H2_1_EXECUTABLE_CONTRACT_DELTA_CLOSURE_2026-08-28.md`
 
-`TEARDOWN_AUTHORIZATION=NO`
+Prospective executable delta:
 
-`SCORED_AUTHORIZATION=NO`
+`experiments/WP-PWD01/p7b-h2-controller-restore-contract-delta-v1.json`
 
-The draft proposes controller/service-session disjointness, ownership proof before tmux destruction, controller execution outside the restoration failure domain, incremental restart-transition evidence, restoration frontier markers, and adversarial offline QA.
+H2.1 deliberately did **not** edit the frozen base contract `p7b-executable-contract-v2.json`. Instead it pins that base and machine-encodes A1–A7 as operational safety/observability changes only.
 
-It changes no scientific control.
+H2.1 QA:
+
+- delta commit: `46ec4dd758847fe2a16325739107b68ca05c811e`
+- test commit: `5d6fa9d74bf5f4b1059434fc46344d264694c52e`
+- Local Unit Tests run: `33139803749`
+- job: `98747874891`
+- result: **135/135 PASS**
+- POWDER contact: **NONE**
+- scientific mutation: **NONE**
+
+The tests prove exact A1–A7 presence, frozen-science equivalence to v2, exact base blob identity, all authority flags false, unsafe generic tmux/session destruction prohibited without ownership proof, incremental restart/restoration evidence requirements, adversarial QA requirements, and H2.2 as the next patch rather than live execution.
+
+`H2_PROGRESS=20%`
 
 ## Frozen scientific controls
 
-No H1 action changed these controls:
+No H1 or H2.1 action changed these controls:
 
 - Q0/Q1/Q2/Q3 = `0/40/52/55 dB`.
 - attenuator IDs `[1,33,2,34]`, coupled.
@@ -198,20 +210,27 @@ Evidence survival must remain simpler than the application path: shell/coreutils
 
 ## Exact next bounded patch
 
-`WP2-P7B-H2 — CONTROLLER/RESTORE-DOMAIN CONTRACT AMENDMENT QA + FUTURE REQUALIFICATION AUTHORITY DECISION`
+`WP2-P7B-H2.2 — CONTROLLER/SESSION OWNERSHIP REPAIR`
 
-H2 is **OFFLINE / NOT STARTED**.
+H2 is **OFFLINE / IN PROGRESS — 20%**.
 
-H2 may only:
+H2.2 may only implement the already-frozen prospective A1–A3 operational controls offline:
 
-1. translate the H1 draft into a finite executable contract delta;
-2. repair controller/session ownership boundaries offline;
-3. add incremental restart/restoration frontier evidence offline;
-4. add static/adversarial tests that prove the controller cannot be killed by service cleanup;
-5. run offline contract-delta/runtime regression QA;
-6. decide whether a future non-scored requalification can be scientifically authorized under a newly frozen contract.
+1. controller/session identity and disjointness guard;
+2. service ownership proof before destructive session cleanup;
+3. controller execution outside the restoration failure domain;
+4. offline tests of those ownership/session boundaries.
 
-Even an H2 PASS does not itself contact POWDER. Any future live action must still require separate explicit user authority and must first establish the then-current reservation/access situation without assuming this historical reservation survives.
+H2.2 must not contact POWDER, create a reservation, mutate RF, restart live services, retry B1, execute W1/B2, teardown, score, or alter scientific controls.
+
+Remaining H2 patches after H2.2:
+
+- H2.3 — incremental restart/restoration frontier evidence;
+- H2.4 — static/adversarial QA;
+- H2.5 — contract/runtime regression gate;
+- H2.6 — future non-scored requalification authority decision.
+
+Even a terminal H2 PASS does not itself contact POWDER. Any future live action requires a separate explicit user authority and must first establish the then-current reservation/access situation without assuming the historical reservation survives.
 
 ## Prohibited until a later explicit authority decision
 
@@ -234,19 +253,27 @@ Even an H2 PASS does not itself contact POWDER. Any future live action must stil
 2. `docs/WP2_P7B_H1_ABORT_EVIDENCE_FREEZE_ROOT_CAUSE_CLOSURE_2026-08-28.md`
 3. `evidence/powder/wp2-p7b-h1-abort-root-cause.json`
 4. `experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
-5. `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`
-6. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
-7. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
-8. `scripts/wp2_p7b_c_node_r2.py`
-9. `scripts/wp2_p7b_c_node_r1.py`
-10. `scripts/wp2_p7b_c_node.py`
-11. `scripts/wp2_golden_service_restore.sh`
-12. `scripts/wp2_p7b_target_node_preflight.sh`
-13. current `Research & Grants — Lessons Learned Ledger` in Drive
+5. `experiments/WP-PWD01/p7b-h2-controller-restore-contract-delta-v1.json`
+6. `docs/WP2_P7B_H2_1_EXECUTABLE_CONTRACT_DELTA_CLOSURE_2026-08-28.md`
+7. `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`
+8. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
+9. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
+10. `scripts/wp2_p7b_c_node_r2.py`
+11. `scripts/wp2_p7b_c_node_r1.py`
+12. `scripts/wp2_p7b_c_node.py`
+13. `scripts/wp2_golden_service_restore.sh`
+14. `scripts/wp2_p7b_target_node_preflight.sh`
+15. current `Research & Grants — Lessons Learned Ledger` in Drive
 
 ## Stop state
 
 `WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
+
+`H2_1_CONTRACT_DELTA=PASS`
+
+`H2_PROGRESS=20%`
+
+`NEXT_PATCH=WP2-P7B-H2.2_CONTROLLER_SESSION_OWNERSHIP_REPAIR`
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -260,4 +287,6 @@ Even an H2 PASS does not itself contact POWDER. Any future live action must stil
 
 `TEARDOWN=NO`
 
-**STOP — H1 CLOSED. H2 OFFLINE NOT STARTED.**
+`LIVE_POWDER_AUTHORIZATION=NO`
+
+**STOP — H2.1 CLOSED. H2.2 NOT STARTED.**
