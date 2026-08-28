@@ -1,187 +1,175 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 after **P7B-RQ2 one-shot live session blocked at M2 target-runtime preflight**.
+Last updated: 2026-08-28 during **WP2-P8 P8-E2 RF Hysteresis / Spontaneous Recovery** live manual-reference campaign.
 
 ## Canonical authority
 
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
-This file is the current operational retrieval point. Do not reconstruct state from chat memory.
+This file is the current operational retrieval point. Do not reconstruct current state from chat memory.
 
 ## Executive scientific state
 
 - WP0: **PASS**
 - WP1: **PASS / FROZEN**
-- WP2: **ACTIVE / PRE-SCORE BLOCKED**
+- WP2: **ACTIVE**
+- WP2-P8 manual RF campaign: **ACTIVE / NON-SCORED MANUAL REFERENCE**
 - WP3: **BLOCKED ON WP2**
 - WP4: **BLOCKED**
 - WP5: **PREPARED / NOT EXECUTED**
 - P6 Golden baseline: **VALID / FROZEN**
-- P7B physical qualification: **NOT PASSED**
+- P7B scored physical qualification: **NOT PASSED**
 - scored execution: **NOT AUTHORIZED**
 
-Historical B1 remains exactly:
+Historical P7B state remains unchanged:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
 `HISTORICAL_B1=CONSUMED`
 
-No partial PASS/FAIL credit.
+`SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-## H1/H2
+No P8 exploratory/manual result may be promoted into scored P7B.
 
-`WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
+## Current live lane
 
-`FIRST_TECHNICAL_ROOT_CAUSE=CONTROLLER_SESSION_COLLISION_SERVICE_RESTORE_KILLED_OPERATOR_TMUX_UE`
+Current campaign:
 
-`ROOT_CAUSE_CLASS=CONTROLLER_SESSION_INFRASTRUCTURE`
+`WP2-P8 — Modular Manual RF Experiment Campaign`
 
-`ROOT_CAUSE_CONFIDENCE=HIGH`
+Current experiment:
 
-`WP2_P7B_H2=PASS`
+`P8-E2 — RF Hysteresis / Spontaneous Recovery`
 
-`WP2_P7B_H2_DETAIL=PASS_REQUALIFICATION_REPAIR_CLOSED`
+Current run:
 
-## P7B-RQ2 live attempt — consumed at M2
+`CURRENT_RUN_ID=p8-e2-20260828A`
 
-User explicitly authorized one non-scored P7B-RQ2 session.
+Live topology:
 
-Reservation identity:
+- `nuc1-A / CORE`: visible MQTT receiver.
+- `nuc1-B / CORE`: reverse CORE->UE ping monitor and CORE evidence.
+- `nuc2 / UE`: RF treatment, UE->CORE ping, MQTT publisher and UE evidence.
 
-`EXPERIMENT_ID=41d64b85-e743-4d06-a81d-687c28c58e52`
+Treatment sequence:
 
-`EXPERIMENT_NAME=WP-05-C`
+`0 -> 52 -> 51 -> 50 -> 49 -> 48 -> 46 -> 0 dB`
 
-User confirmed reservation `ready` before dispatch.
+No `srsue`, `srsepc`, `srsenb` or Mosquitto restart is allowed during E2.
 
-GitHub Actions run:
+`P8_E2_STATE=LIVE_RUNNING`
 
-`RUN_ID=33144807486`
+## Completed P8 evidence
 
-Results:
+### P8-E0
 
-`M0=PASS`
+Stable two-node baseline qualification passed:
 
-`M1=PASS`
+- bidirectional ping healthy;
+- UE tunnel stable at `172.16.0.2/24`;
+- LTE services stable;
+- 10/10 MQTT messages visibly delivered nuc2 -> nuc1-A.
 
-`M2=BLOCKED:PINNED_PYTHON_MISSING`
+`P8_E0_BASELINE_QUALIFIED=PASS`
 
-M2 job:
+### P8-E1 initial attempt
 
-`98763460078`
+Evidence preserved but baseline was invalid before treatment.
 
-Exact first named blocker:
+`P8_E1=NULL_ABORTED_INVALID_PRETREATMENT_BASELINE`
 
-`WP2_P7B_TARGET_NODE_PREFLIGHT=BLOCKED:PINNED_PYTHON_MISSING`
+### P8-E1R2
 
-Classification:
+Clean 0-30 dB run; 65/65 MQTT records received, no missing/duplicates, 0% ping loss at all tested points.
 
-`PRE_SCIENCE_TARGET_RUNTIME_INFRASTRUCTURE_BLOCK`
+Off-platform hashes:
 
-This is **not** a scientific failure.
+- CORE `A8DBA3B486FA9E86CCD80E8704DA2AE277BACC6998C5B4292B53C52BBBD62B4A`
+- UE `7A1C2F2F32DF22E6C0B2E0F3A4480C8A7D7B64C290129AE84FC5E47F181E348B`
 
-The controller completed M1 read-only Portal reservation/manifest validation, then M2 contacted and staged source to:
+### P8-E1R3
 
-- `nuc1 / CORE`
-- `nuc2 / UE`
+Clean 30-50 dB extension. 48 dB remained known-good; 50 dB showed first confirmed degradation. Independent 50 dB confirmation: 20 transmitted / 19 received / 5% loss.
 
-The Paho Java JAR hash gate passed. Target-native preflight then stopped on the missing pinned Python runtime before M3.
+Off-platform hashes:
 
-## Downstream state
+- CORE `00699132F302018585972A81503E464272B2BACE3E85DDA9A94D224C844B13E5`
+- UE `0C32700B3A4751EFFA7B7109614E64A9425AB874068E372AC365B5CE3AB4E837`
 
-`M3=SKIPPED`
+### P8-E1R4
 
-`B1_RQ2=NOT_STARTED`
+48-52 dB micro-sweep result:
 
-`B1_EVIDENCE=SKIPPED`
+| Attenuation | UE->CORE ping loss | CORE->UE ping loss | MQTT received | Mean app delay |
+|---:|---:|---:|---:|---:|
+| 48 dB | 0% | 0% | 20/20 | ~98 ms |
+| 49 dB | 0% | 0% | 20/20 | ~92 ms |
+| 50 dB | 0% | ~3.3% | 20/20 | ~170 ms |
+| 51 dB | ~30% | ~30% | 20/20 | ~448 ms |
+| 52 dB | ~60% | ~64% | 13/20 | ~8.0 s |
 
-`W1=NOT_STARTED`
+Independent 52 dB confirmation: 30 transmitted / 6 received / 80% loss.
 
-`W1_EVIDENCE=SKIPPED`
+After RF restore to 0 dB with no service restart: 20/20 ping, 0% loss and 10/10 recovery MQTT messages.
 
-`B2=NOT_STARTED`
+Exploratory interpretation:
 
-`B2_EVIDENCE=SKIPPED`
+- `<=49 dB`: healthy;
+- `50-51 dB`: degrading but application-resilient;
+- `>=52 dB`: severe intermittent region with application loss.
 
-`RECONSTRUCT=SKIPPED`
+Off-platform hashes:
 
-`FINAL_EVIDENCE_JOB=SKIPPED`
+- CORE `70F3CF784517ABB32D98F33118634FD48B736DB5EC5F46C54556E57A2237DD25`
+- UE `4CE3CEBEF0292E8276B46B1249A95E4766CE6E0E060843346E772D811AB8838F`
 
-`SCIENTIFIC_MEASUREMENT_STARTED=NO`
+## Evidence storage policy
 
-`RF_MUTATION=NO`
+Use a three-layer evidence model:
 
-`SERVICE_MUTATION=NO`
+1. **Google Drive = primary durable raw-evidence store** for immutable CORE/UE archives, hashes, manifests and publication evidence bundles.
+2. **GitHub = canonical control/scientific record** for experiment contracts, run manifests, SHA256 values, analysis scripts, derived small tables, reconciliation outputs, result/closure docs, Drive pointer/ID and handovers.
+3. **Home PC = independent temporary third copy** until Drive upload/read-back verification is complete.
 
-`ACTIONS_ARTIFACTS=0`
+Do not commit large `.tgz` raw archives directly into ordinary Git history unless a deliberate Git LFS/release policy is later adopted.
 
-`SCORED=NO`
+Required preservation chain:
 
-`TEARDOWN=NO`
+`POWDER node-local raw -> node SHA256 -> home-PC pull -> PC SHA256 match -> Drive upload -> Drive read-back/hash verification -> GitHub manifest/pointer/results`
 
-## Authority after failure
-
-`RQ2_ONE_SHOT_CONSUMED=YES`
-
-`RERUN_AUTHORIZED=NO`
-
-`AUTOMATIC_RETRY=NO`
-
-`SECOND_RESERVATION_AUTHORIZED=NO`
-
-`RESERVATION_EXTENSION_AUTHORIZED=NO`
-
-`TEARDOWN_AUTHORIZED=NO`
-
-Do not rerun workflow run `33144807486` and do not start another P7B live workflow under the consumed RQ2 authority.
-
-## Canonical failure closure
-
-`docs/WP2_P7B_RQ2_M2_PREFLIGHT_BLOCKED_PINNED_PYTHON_2026-08-28.md`
-
-Activation state:
-
-`experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json`
-
-Frozen target scientific source remains:
-
-`SCIENTIFIC_SOURCE_SHA=2d7eb744f14ad4d5889909dac3cc29236c667190`
-
-Frozen science remains unchanged:
-
-- Q0/Q1/Q2/Q3 = `0/40/52/55 dB`
-- attenuators `[1,33,2,34]`
-- pre-Q0 `60 s`
-- Q3 `120 s`
-- restart `60 s` into Q3
-- cell order `B1 -> W1 -> B2`
-- primary cohort cutoff `t_rf_restore`
-- `H_app=300 s` from `t_service_ready`
-- generator outside gateway restart domain
-- no automatic scientific retry
-
-## Mandatory next-agent read order
+## Mandatory current read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P7B_RQ2_M2_PREFLIGHT_BLOCKED_PINNED_PYTHON_2026-08-28.md`
-3. `experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json`
-4. `.github/workflows/wp2-p7b-rq2-session.yml`
-5. `scripts/wp2_p7b_rq2_controller.sh`
-6. `scripts/wp2_p7b_target_node_preflight.sh`
-7. `scripts/wp2_p7b_rq2_module_adapter.py`
-8. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
-9. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
-10. `experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json`
-11. H2.1–H2.6 closures
-12. current `Research & Grants — Lessons Learned Ledger`
+2. `docs/WP2_P8_E2_LIVE_HANDOVER_2026-08-28.md`
+3. `experiments/WP-PWD01/WP2_P8_MANUAL_RF_EXPERIMENT_CAMPAIGN_2026-08-28.md`
+4. current `Research & Grants — Lessons Learned Ledger`
+5. historical P7B handover/closures only if working on scored P7B rather than P8.
+
+## Immediate next action
+
+Wait for nuc2 to print:
+
+`=== P8-E2 COMPLETE ===`
+
+Then:
+
+1. capture the three-screen final state;
+2. stop nuc1-A receiver and nuc1-B monitor;
+3. freeze independent CORE and UE raw evidence;
+4. hash and archive each node separately;
+5. pull both archives to home PC and verify hashes;
+6. upload to Drive and verify read-back before reservation release;
+7. reconcile/ analyze E2 before beginning E3.
 
 ## Stop state
 
-`NEXT_STATE=OFFLINE_RQ2_PINNED_PYTHON_RECOVERY_DECISION`
+`WP2_P8_STATUS=ACTIVE`
 
-`LIVE_EXECUTION=STOPPED`
+`CURRENT_EXPERIMENT=P8-E2`
 
-`DO_NOT_RERUN=YES`
+`CURRENT_RUN_ID=p8-e2-20260828A`
 
-**STOP — RQ2 CONSUMED AT M2 BEFORE SCIENCE. OFFLINE PINNED-RUNTIME RECOVERY DECISION REQUIRED.**
+`RAW_STORAGE_POLICY=DRIVE_PRIMARY_GITHUB_MANIFEST`
+
+`LIVE_TEARDOWN=NOT_YET`
