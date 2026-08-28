@@ -1,0 +1,69 @@
+{
+  "authority": {
+    "live_service_mutation": false,
+    "network_contact": false,
+    "powder_contact": false,
+    "reservation_creation": false,
+    "retry": false,
+    "rf_mutation": false,
+    "scored": false,
+    "teardown": false,
+    "w1_b2": false,
+    "wp3": false
+  },
+  "contract_handling": {
+    "base_executable_contract_v2_mutated": false,
+    "h2_delta_v1_mutated_by_h2_4": false,
+    "reason": "H2.4 is QA-only; H2.5 owns integrated contract/runtime regression and promotion."
+  },
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "final_qa": {
+    "adversarial_harness_required_cases": 7,
+    "adversarial_harness_required_cases_passed": 7,
+    "commit": "a5854d30d83adcabd520f693b819cab9e59f7fa1",
+    "h2_4_test_methods": 4,
+    "job_id": 98752288778,
+    "paho_mqtt": "2.1.0",
+    "python_validation_host": "3.12.14",
+    "run_id": 33141219303,
+    "suite_result": "PASS",
+    "suite_tests": 163
+  },
+  "first_qa_attempt": {
+    "adversarial_harness_required_cases": 7,
+    "adversarial_harness_required_cases_passed": 7,
+    "classification": "TEST_HARNESS_FORBIDDEN_LITERAL_SELF_REFERENCE",
+    "implementation_failure": false,
+    "job_id": 98752148529,
+    "preserved": true,
+    "run_id": 33141172110,
+    "scientific_failure": false,
+    "suite_result": "FAIL",
+    "suite_tests": 163
+  },
+  "implementation_commit": "410ee10c63b4caeb15d57507f6d6bd29fa0da1d6",
+  "next_patch": "WP2-P7B-H2.5_CONTRACT_RUNTIME_REGRESSION_GATE",
+  "qa_harness": "scripts/wp2_p7b_h2_adversarial_qa.py",
+  "qa_test": "tests/test_wp2_p7b_h2_adversarial_qa.py",
+  "required_cases": {
+    "ALLOWED_CONTROLLER_SURVIVES_SERVICE_CLEANUP": "PASS",
+    "AUTOMATIC_RETRY_NOT_INTRODUCED": "PASS",
+    "CONTROLLER_IN_TMUX_UE_REJECTED_BEFORE_RF": "PASS",
+    "EACH_RESTORE_PHASE_FAILURE_PRESERVES_LAST_FRONTIER": "PASS",
+    "FROZEN_SCIENTIFIC_CONTROLS_UNCHANGED": "PASS",
+    "RESTART_TRANSITION_SURVIVES_SYNTHETIC_FAILURE_AFTER_GATEWAY_RESTART": "PASS",
+    "SERVICE_OWNERSHIP_SELECTION_CANNOT_MATCH_CONTROLLER_PID_OR_SESSION": "PASS"
+  },
+  "restore_fault_injection_matrix": {
+    "CORE_CLEANUP": "LAST_FRONTIER=CORE_CLEANUP_BEGIN",
+    "CORE_STABLE": "LAST_FRONTIER=CORE_START_END",
+    "CORE_START": "LAST_FRONTIER=CORE_START_BEGIN",
+    "SERVICE_READY_PROBE": "LAST_FRONTIER=SERVICE_READY_PROBE_END:FAIL",
+    "UE_CLEANUP": "LAST_FRONTIER=UE_CLEANUP_BEGIN",
+    "UE_READY": "LAST_FRONTIER=UE_START_END",
+    "UE_START": "LAST_FRONTIER=UE_START_BEGIN"
+  },
+  "schema_version": "wp2-p7b-h2-adversarial-qa-result-v1",
+  "scope": "OFFLINE_STATIC_AND_SYNTHETIC_ADVERSARIAL_QA_ONLY",
+  "terminal_verdict": "H2_4_ADVERSARIAL_QA=PASS"
+}
