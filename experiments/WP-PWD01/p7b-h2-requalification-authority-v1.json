@@ -1,0 +1,117 @@
+{
+  "schema_version": "wp2-p7b-h2-requalification-authority-v1",
+  "status": "OFFLINE_H2_PASS_PROSPECTIVE_REQUALIFICATION_AUTHORITY_NOT_LIVE_AUTHORITY",
+  "terminal_h2_verdict": "WP2_P7B_H2=PASS_REQUALIFICATION_REPAIR_CLOSED",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "authority_id": "P7B-RQ2",
+  "decision": {
+    "h2_repair_sufficient_for_future_non_scored_requalification_request": true,
+    "historical_aborted_b1_remains_null_and_consumed": true,
+    "historical_b1_scientific_verdict": "NULL_ABORTED_AFTER_Q3",
+    "future_requalification_is_new_bounded_session_not_continuation_of_aborted_run": true,
+    "scored_execution_eligible": false,
+    "wp3_execution_eligible": false
+  },
+  "current_authority": {
+    "live_powder_authorized": false,
+    "reservation_creation_authorized": false,
+    "reservation_selection_authorized": false,
+    "ssh_to_live_target_authorized": false,
+    "rf_authorized": false,
+    "service_mutation_authorized": false,
+    "b1_requalification_attempt_authorized": false,
+    "w1_b2_authorized": false,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "automatic_reservation_extension": false,
+    "automatic_teardown": false,
+    "scored_authorized": false,
+    "wp3_authorized": false
+  },
+  "future_live_eligibility": {
+    "separate_explicit_user_live_authorization_required": true,
+    "fresh_authorization_must_name_or_unambiguously_authorize_p7b_rq2": true,
+    "then_current_reservation_and_access_validation_required": true,
+    "user_creates_or_selects_reservation_in_powder_portal": true,
+    "github_may_not_create_reservation": true,
+    "maximum_new_reservations_if_later_authorized": 1,
+    "maximum_live_session_attempts_if_later_authorized": 1,
+    "automatic_retry_after_any_live_failure": false,
+    "automatic_second_reservation": false,
+    "teardown_requires_evidence_readback_gates": true,
+    "negative_or_null_scientific_outcome_does_not_trigger_retry": true
+  },
+  "prospective_execution": {
+    "node_entrypoint": "scripts/wp2_p7b_c_node_h2.py",
+    "node_entrypoint_git_blob_sha": "d66bc791455127ef87497cea3e912ee6f46e685b",
+    "inherited_frozen_r2_entrypoint": "scripts/wp2_p7b_c_node_r2.py",
+    "inherited_frozen_r2_git_blob_sha": "fa506e661f90fe9c21418fd2f86c8ca0a9230175",
+    "controller_ownership_library": "src/wellpulse/p7b_session_ownership.py",
+    "controller_ownership_library_git_blob_sha": "7810d1ed603fc305bd419c91a2b14bcca2e95e24",
+    "safe_restore": "scripts/wp2_p7b_service_restore_h2.sh",
+    "safe_restore_git_blob_sha": "72f465f274c86d7ec514f358023074aa26f96551",
+    "target_preflight": "scripts/wp2_p7b_target_node_preflight.sh",
+    "target_preflight_git_blob_sha": "b8c729cb077252ef6ce1ec2a7672f2ca4051e210",
+    "future_live_workflow": ".github/workflows/wp2-p7b-rq2-session.yml",
+    "future_live_workflow_must_not_exist_until_separate_user_live_authorization": true,
+    "workflow_dispatch_only": true,
+    "one_shot_run_number_required": 1,
+    "one_shot_run_attempt_required": 1
+  },
+  "frozen_contract_locks": {
+    "executable_contract": {
+      "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
+      "git_blob_sha": "233aabeaf3081470bc3ebc1ee04168f8932fc415"
+    },
+    "target_runtime_contract": {
+      "path": "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json",
+      "git_blob_sha": "9531893989effb142e694294b95c0c7146353742"
+    },
+    "modular_pipeline_contract": {
+      "path": "experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json",
+      "git_blob_sha": "2c85af21f502c092c2da0ecb1bf615c8f705069b"
+    },
+    "historical_golden_restore": {
+      "path": "scripts/wp2_golden_service_restore.sh",
+      "git_blob_sha": "cdf865eaaaf1c08bc8f7a8896d7f705739e60b9c"
+    }
+  },
+  "h2_evidence_locks": {
+    "h2_4_adversarial_result": {
+      "path": "evidence/powder/wp2-p7b-h2-4-adversarial-qa.json",
+      "git_blob_sha": "92916fc303083b5425232c4deb4f59219a975ee3",
+      "required_gate": "H2_4_ADVERSARIAL_QA=PASS",
+      "required_cases_passed": 7
+    },
+    "h2_5_regression_result": {
+      "path": "evidence/powder/wp2-p7b-h2-5-regression.json",
+      "git_blob_sha": "c6e729cbe11fe7c1688e9015a6c38b3d74fdc69f",
+      "required_gate": "H2_5_REGRESSION=PASS",
+      "required_suite_tests_passed": 168
+    }
+  },
+  "frozen_scientific_controls": {
+    "q_db": [0, 40, 52, 55],
+    "attenuator_ids": [1, 33, 2, 34],
+    "pre_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "cell_order": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
+    "generator_outside_restart_domain": true,
+    "cohort_cutoff": "t_rf_restore",
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "clocks_distinct": ["t_rf_restore", "t_service_ready", "t_app_complete"],
+    "automatic_scientific_retry": false,
+    "negative_null_unfavourable_evidence_retained": true
+  },
+  "future_session_fail_closed_gates": [
+    "M0 exact authority/source/contract SHA freeze",
+    "M1 reservation identity plus EFCC delta read-only",
+    "M2 controller-session disjointness plus target preflight",
+    "M3 known-good Q0 baseline",
+    "paired evidence preservation/readback after each scientific cell"
+  ],
+  "live_session_terminal_rule": "STOP_AT_TEARDOWN_READY_OR_FIRST_BLOCKING_CAUSE_NO_AUTOMATIC_RETRY",
+  "claim_boundary": "H2 repair closure and eligibility for a future separately user-authorized non-scored physical requalification only; no live, scored, WP3, or scientific outcome authority"
+}
