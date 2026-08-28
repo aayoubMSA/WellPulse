@@ -1,0 +1,256 @@
+name: WP2 P7B-H1 Aborted Q3 Evidence Freeze
+
+on:
+  push:
+    branches:
+      - wp2-p7b-h1-freeze-20260828
+    paths:
+      - '.github/workflows/wp2-p7b-h1-abort-freeze.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  freeze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      TARGET_EXPID: f6de95cb-a13a-421e-bd0e-766dfc1d3fb3
+      TARGET_NAME: wp7brq2609012
+      ABORT_RUN_ID: wp2-p7b-manual-20260828T024433Z
+
+    steps:
+      - name: Checkout operational branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 1
+
+      - name: H1 access, freeze, hash, package, and controller pull
+        id: h1
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP=/tmp/wp2-p7b-h1
+          mkdir -p "$TMP/controller/ue" "$TMP/controller/core" "$TMP/meta"
+          fail(){ echo "WP2_P7B_H1_BLOCKED=$1" >&2; exit "${2:-90}"; }
+
+          echo 'H1_AUTHORITY=ABORTED_Q3_EVIDENCE_FREEZE_ONLY'
+          echo 'NEW_RESERVATION=NO'
+          echo 'RF_MUTATION=NO'
+          echo 'SERVICE_RESTART=NO'
+          echo 'B1_RETRY=NO'
+          echo 'W1_B2=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
+
+          bash scripts/wp2_portal_client_bootstrap.sh "$TMP/portal-api" | tee "$TMP/meta/portal-pin.txt"
+          grep -q '^PORTAL_API_PIN_GATE=PASS$' "$TMP/meta/portal-pin.txt" || fail PORTAL_PIN
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > "$TMP/meta/experiment.json" || fail PORTAL_GET
+          python3 - <<'PY'
+          import json, os
+          x=json.load(open('/tmp/wp2-p7b-h1/meta/experiment.json'))
+          assert x.get('id') == os.environ['TARGET_EXPID'], (x.get('id'), os.environ['TARGET_EXPID'])
+          assert x.get('name') == os.environ['TARGET_NAME'], (x.get('name'), os.environ['TARGET_NAME'])
+          assert x.get('project') == 'WellPulse', x.get('project')
+          print('H1_P1_PORTAL_IDENTITY=PASS')
+          print('PORTAL_STATUS=' + str(x.get('status')))
+          PY
+
+          portal-cli experiment manifests get --experiment-id "$TARGET_EXPID" > "$TMP/meta/manifests.json" || fail MANIFEST_FETCH
+          python3 - "$TMP/meta/manifests.json" "$TMP/meta/nodes.json" <<'PY'
+          import json,sys,xml.etree.ElementTree as ET
+          obj=json.load(open(sys.argv[1])); out={}; xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<' in x and ('rspec' in x.lower() or '<node' in x.lower()):
+                  xmls.append(x)
+          walk(obj)
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for node in root.iter():
+                  if node.tag.rsplit('}',1)[-1] != 'node': continue
+                  cid=node.attrib.get('client_id','')
+                  if cid not in {'enb1','rue1'}: continue
+                  row={'client_id':cid,'component_id':node.attrib.get('component_id','')}
+                  for ch in node.iter():
+                      tag=ch.tag.rsplit('}',1)[-1]
+                      if tag=='login' and ch.attrib.get('hostname') and 'login' not in row:
+                          row['login']={'username':ch.attrib.get('username',''),'hostname':ch.attrib['hostname'],'port':int(ch.attrib.get('port','22'))}
+                  out[cid]=row
+          for cid,node in (('enb1','nuc1'),('rue1','nuc2')):
+              r=out.get(cid) or {}
+              assert r.get('login'), f'missing login {cid}'
+              assert r.get('component_id','').endswith('+'+node), (cid,r.get('component_id'))
+          json.dump(out,open(sys.argv[2],'w'),indent=2,sort_keys=True)
+          print('H1_P1_MANIFEST_BINDINGS=PASS')
+          PY
+
+          umask 077
+          mkdir -p "$HOME/.ssh"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          Path('/tmp/wp2-p7b-h1/private.key').write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$TMP/private.key"
+          cat > "$TMP/askpass" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null || fail SSH_KEY_LOAD
+          : > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          SSH=(-A -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+
+          get_login(){ python3 - "$TMP/meta/nodes.json" "$1" <<'PY'
+          import json,sys
+          x=json.load(open(sys.argv[1]))[sys.argv[2]]['login']
+          print(f"{x.get('username','aayoub')}\t{x['hostname']}\t{x.get('port',22)}")
+          PY
+          }
+          IFS=$'\t' read -r CORE_USER CORE_EXT CORE_PORT < <(get_login enb1)
+          IFS=$'\t' read -r UE_USER UE_EXT UE_PORT < <(get_login rue1)
+
+          echo 'MANUAL_COMMAND_BLOCK=nuc1 / CORE'
+          ssh "${SSH[@]}" -p "$CORE_PORT" "$CORE_USER@$CORE_EXT" "printf '%s\n' 'NODE=nuc1 / CORE' 'ACCESS=PASS'" | tee "$TMP/meta/core-access.txt" || fail CORE_SSH
+          grep -q '^ACCESS=PASS$' "$TMP/meta/core-access.txt" || fail CORE_ACCESS_MARKER
+
+          echo 'MANUAL_COMMAND_BLOCK=nuc2 / UE'
+          ssh "${SSH[@]}" -p "$UE_PORT" "$UE_USER@$UE_EXT" "printf '%s\n' 'NODE=nuc2 / UE' 'ACCESS=PASS'" | tee "$TMP/meta/ue-access.txt" || fail UE_SSH
+          grep -q '^ACCESS=PASS$' "$TMP/meta/ue-access.txt" || fail UE_ACCESS_MARKER
+          echo 'H1_P1=PASS_EVIDENCE_ACCESSIBLE'
+
+          freeze_node(){
+            local label="$1" role="$2" user="$3" host="$4" port="$5" home_suffix="$6" dst_name="$7"
+            echo "MANUAL_COMMAND_BLOCK=$label / $role"
+            ssh "${SSH[@]}" -p "$port" "$user@$host" "bash -s -- '$ABORT_RUN_ID' '$TARGET_EXPID' '$GITHUB_RUN_ID' '$home_suffix' '$dst_name' '$label' '$role'" <<'REMOTE'
+          set -euo pipefail
+          RUN_ID=$1
+          EXPID=$2
+          GH_RUN=$3
+          HOME_SUFFIX=$4
+          DST_NAME=$5
+          NODE_LABEL=$6
+          NODE_ROLE=$7
+          printf 'NODE=%s / %s\n' "$NODE_LABEL" "$NODE_ROLE"
+          HOME_SRC="$HOME/wellpulse-powder-evidence/p7b/$HOME_SUFFIX"
+          PROJ_SRC="/proj/WellPulse/evidence/p7b-live-$RUN_ID"
+          BASE="/proj/WellPulse/evidence-escrow/$EXPID/H1-abort-$GH_RUN"
+          DST="$BASE/$DST_NAME"
+          PKG="$BASE/$DST_NAME.tar.gz"
+          PKG_SHA="$PKG.sha256"
+          test -d "$HOME_SRC" || { echo "HOME_EVIDENCE_MISSING=$HOME_SRC" >&2; exit 41; }
+          test ! -e "$DST" || { echo "FREEZE_DEST_ALREADY_EXISTS=$DST" >&2; exit 42; }
+          test ! -e "$PKG" || { echo "FREEZE_PACKAGE_ALREADY_EXISTS=$PKG" >&2; exit 43; }
+          mkdir -p "$DST/home_raw" "$DST/proj_raw"
+          tar -C "$HOME_SRC" -cf - . | tar -C "$DST/home_raw" -xf -
+          if test -d "$PROJ_SRC"; then
+            tar -C "$PROJ_SRC" -cf - . | tar -C "$DST/proj_raw" -xf -
+            PROJ_PRESENT=YES
+          else
+            PROJ_PRESENT=NO
+          fi
+          {
+            printf 'NODE=%s / %s\n' "$NODE_LABEL" "$NODE_ROLE"
+            printf 'HOME_SOURCE=%s\n' "$HOME_SRC"
+            printf 'PROJ_SOURCE=%s\n' "$PROJ_SRC"
+            printf 'PROJ_SOURCE_PRESENT=%s\n' "$PROJ_PRESENT"
+            printf 'ABORT_RUN_ID=%s\n' "$RUN_ID"
+            printf 'FREEZE_GITHUB_RUN_ID=%s\n' "$GH_RUN"
+          } > "$DST/SOURCE_MAP.txt"
+          (
+            cd "$DST"
+            find home_raw proj_raw -type f -print0 | sort -z | xargs -0 -r sha256sum > SOURCE_SHA256SUMS
+            test -s SOURCE_SHA256SUMS
+            sha256sum -c SOURCE_SHA256SUMS >/dev/null
+          )
+          printf 'PRESERVATION_GATE=PASS\n' > "$DST/GATE.PASS"
+          tar -C "$BASE" -cf - "$DST_NAME" | gzip -n > "$PKG"
+          (
+            cd "$BASE"
+            sha256sum "$DST_NAME.tar.gz" > "$DST_NAME.tar.gz.sha256"
+            sha256sum -c "$DST_NAME.tar.gz.sha256" >/dev/null
+          )
+          printf 'FREEZE_NODE_GATE=PASS\n'
+          printf 'FREEZE_PACKAGE=%s\n' "$PKG"
+          REMOTE
+          }
+
+          freeze_node nuc2 UE "$UE_USER" "$UE_EXT" "$UE_PORT" "$ABORT_RUN_ID" ue | tee "$TMP/meta/ue-freeze.txt" || fail UE_EVIDENCE_FREEZE 72
+          grep -q '^FREEZE_NODE_GATE=PASS$' "$TMP/meta/ue-freeze.txt" || fail UE_FREEZE_MARKER
+
+          freeze_node nuc1 CORE "$CORE_USER" "$CORE_EXT" "$CORE_PORT" "$ABORT_RUN_ID-core" core | tee "$TMP/meta/core-freeze.txt" || fail CORE_EVIDENCE_FREEZE 72
+          grep -q '^FREEZE_NODE_GATE=PASS$' "$TMP/meta/core-freeze.txt" || fail CORE_FREEZE_MARKER
+          echo 'H1_P2=PASS_DUAL_NODE_RAW_EVIDENCE_FROZEN'
+
+          BASE="/proj/WellPulse/evidence-escrow/$TARGET_EXPID/H1-abort-$GITHUB_RUN_ID"
+
+          echo 'MANUAL_COMMAND_BLOCK=nuc2 / UE'
+          scp "${SSH[@]}" -P "$UE_PORT" "$UE_USER@$UE_EXT:$BASE/ue.tar.gz" "$UE_USER@$UE_EXT:$BASE/ue.tar.gz.sha256" "$TMP/controller/ue/" || fail UE_CONTROLLER_PULL 73
+          (
+            cd "$TMP/controller/ue"
+            sha256sum -c ue.tar.gz.sha256
+            mkdir extracted
+            tar -xzf ue.tar.gz -C extracted
+            cd extracted/ue
+            sha256sum -c SOURCE_SHA256SUMS
+            test "$(cat GATE.PASS)" = "PRESERVATION_GATE=PASS"
+          ) | tee "$TMP/meta/ue-controller-readback.txt"
+
+          echo 'MANUAL_COMMAND_BLOCK=nuc1 / CORE'
+          scp "${SSH[@]}" -P "$CORE_PORT" "$CORE_USER@$CORE_EXT:$BASE/core.tar.gz" "$CORE_USER@$CORE_EXT:$BASE/core.tar.gz.sha256" "$TMP/controller/core/" || fail CORE_CONTROLLER_PULL 73
+          (
+            cd "$TMP/controller/core"
+            sha256sum -c core.tar.gz.sha256
+            mkdir extracted
+            tar -xzf core.tar.gz -C extracted
+            cd extracted/core
+            sha256sum -c SOURCE_SHA256SUMS
+            test "$(cat GATE.PASS)" = "PRESERVATION_GATE=PASS"
+          ) | tee "$TMP/meta/core-controller-readback.txt"
+
+          cp "$TMP/meta/experiment.json" "$TMP/controller/"
+          cp "$TMP/meta/manifests.json" "$TMP/controller/"
+          cp "$TMP/meta/nodes.json" "$TMP/controller/"
+          cp "$TMP/meta/"*.txt "$TMP/controller/" || true
+          (
+            cd "$TMP/controller"
+            find . -type f -print0 | sort -z | xargs -0 sha256sum > CONTROLLER_SHA256SUMS
+            sha256sum -c CONTROLLER_SHA256SUMS >/dev/null
+          )
+          echo "H1_CONTROLLER_ROOT=$TMP/controller" >> "$GITHUB_OUTPUT"
+          echo 'H1_P3=PASS_HASH_PACKAGE_CONTROLLER_PULL'
+          echo 'H1_P4_PREUPLOAD=PASS_CONTROLLER_INDEPENDENT_READBACK'
+
+      - name: Upload immutable H1 evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp2-p7b-h1-abort-freeze-${{ github.run_id }}
+          path: /tmp/wp2-p7b-h1/controller
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Terminal preservation marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'H1_EVIDENCE_SURVIVAL_CHAIN=PASS_THROUGH_GITHUB_ARTIFACT_UPLOAD'
+          echo 'H1_OFFLINE_RCA=NEXT'
+          echo 'RF_MUTATION=NO'
+          echo 'SERVICE_RESTART=NO'
+          echo 'B1_RETRY=NO'
+          echo 'W1_B2=NO'
+          echo 'TEARDOWN=NO'
+          echo 'SCORED=NO'
