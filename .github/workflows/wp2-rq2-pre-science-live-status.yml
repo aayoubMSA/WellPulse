@@ -1,0 +1,98 @@
+name: WP2 RQ2 Pre-Science Live Status Gate
+
+on:
+  push:
+    paths:
+      - '.github/diagnostics/wp2-rq2-pre-science.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  precheck:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Pre-science runtime/source/evidence gate with live node status
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          TMP="/tmp/wp2-rq2-precheck-${GITHUB_RUN_ID}"
+          mkdir -p "$TMP" "$HOME/.ssh"
+          umask 077
+          python3 - "$TMP/private.key" <<'PY'
+          import os,sys
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          Path(sys.argv[1]).write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$TMP/private.key"
+          cat > "$TMP/askpass" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          SSH_OPTS=(-o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+
+          RUN_ID="wp2-p7b-rq2-manual-$(date -u +%Y%m%dT%H%M%SZ)"
+          echo "RUN_ID=$RUN_ID"
+
+          remote_precheck='set -euo pipefail
+          RUN_ID="$1"
+          ROLE="$2"
+          STATUS_ROOT="$HOME/wellpulse-live-status/p7b-rq2"
+          STATUS_LOG="$STATUS_ROOT/status.log"
+          STATE_FILE="$STATUS_ROOT/current.state"
+          mkdir -p "$STATUS_ROOT"
+          stamp(){ date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+          emit(){ printf "%s HOST=%s ROLE=%s RUN_ID=%s STATE=%s\n" "$(stamp)" "$(hostname)" "$ROLE" "$RUN_ID" "$1" | tee -a "$STATUS_LOG"; printf "%s\n" "$1" > "$STATE_FILE"; }
+          emit PRECHECK_START
+          emit RUNTIME_VERIFY
+          test "$("$HOME/.wp2-golden-venv/bin/python" --version 2>&1)" = "Python 3.11.13"
+          test "$("$HOME/.wp2-golden-venv/bin/python" -c '\''import importlib.metadata as m; print(m.version("paho-mqtt"))'\'')" = "2.1.0"
+          emit SOURCE_VERIFY
+          test -d "$HOME/WellPulse"
+          test "$(git -C /local/repository rev-parse HEAD)" = "a6da96560b6526dc6816761282722c996418fd8c"
+          "$HOME/.wp2-golden-venv/bin/python" - "$HOME/WellPulse/scripts/wp2_p7b_rq2_module_adapter.py" <<'\''PY'\''
+import sys
+p=sys.argv[1]
+compile(open(p,encoding="utf-8").read(),p,"exec")
+print("ADAPTER_SYNTAX=PASS")
+PY
+          emit CONTROLLER_DISJOINTNESS_VERIFY
+          case "$(tmux ls 2>/dev/null || true)" in *"ue:"*|*"srs-ue:"*|*"enb:"*|*"srs-enb:"*|*"srs-epc:"*) echo FORBIDDEN_TMUX_PRESENT >&2; exit 41;; esac
+          test -z "$(pgrep -a -x srsue 2>/dev/null || true)"
+          test -z "$(pgrep -a -x srsenb 2>/dev/null || true)"
+          test -z "$(pgrep -a -x srsepc 2>/dev/null || true)"
+          emit EVIDENCE_ROOT_READY
+          if test "$ROLE" = UE; then
+            ROOT="$HOME/wellpulse-powder-evidence/p7b/$RUN_ID"
+          else
+            ROOT="$HOME/wellpulse-powder-evidence/p7b/$RUN_ID-core"
+          fi
+          mkdir -p "$ROOT"
+          printf "RUN_ID=%s\nHOST=%s\nROLE=%s\nCREATED_UTC=%s\n" "$RUN_ID" "$(hostname)" "$ROLE" "$(stamp)" > "$ROOT/PRE_SCIENCE_IDENTITY.txt"
+          sha256sum "$ROOT/PRE_SCIENCE_IDENTITY.txt" > "$ROOT/PRE_SCIENCE_IDENTITY.txt.sha256"
+          emit PRE_SCIENCE_PASS
+          printf "STATUS_LOG=%s\nSTATE_FILE=%s\nEVIDENCE_ROOT=%s\n" "$STATUS_LOG" "$STATE_FILE" "$ROOT"
+          '
+
+          for spec in "nuc1 CORE" "nuc2 UE"; do
+            set -- $spec
+            host=$1; role=$2
+            echo "=== $host / $role ==="
+            ssh "${SSH_OPTS[@]}" "aayoub@${host}.emulab.net" bash -s -- "$RUN_ID" "$role" <<< "$remote_precheck"
+            echo "=== END $host / $role ==="
+          done
+
+          echo "WP2_RQ2_PRE_SCIENCE_LIVE_STATUS_GATE=PASS"
+          echo "RUN_ID=$RUN_ID"
