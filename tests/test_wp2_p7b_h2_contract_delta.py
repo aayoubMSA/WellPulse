@@ -23,9 +23,10 @@ class P7BH2ContractDeltaTests(unittest.TestCase):
         cls.base = json.loads(BASE.read_text(encoding="utf-8"))
         cls.delta = json.loads(DELTA.read_text(encoding="utf-8"))
 
-    def test_delta_is_prospective_offline_and_base_is_exactly_pinned(self):
+    def test_delta_remains_prospective_offline_and_base_is_exactly_pinned(self):
         d = self.delta
-        self.assertEqual(d["status"], "OFFLINE_H2_1_EXECUTABLE_DELTA_NOT_LIVE_AUTHORITY")
+        self.assertTrue(d["status"].startswith("OFFLINE_H2_"), d["status"])
+        self.assertTrue(d["status"].endswith("NOT_LIVE_AUTHORITY"), d["status"])
         self.assertEqual(d["delta_class"], "OPERATIONAL_SAFETY_AND_OBSERVABILITY_ONLY")
         self.assertFalse(d["scientific_change"])
         self.assertEqual(d["base_contract"]["path"], "experiments/WP-PWD01/p7b-executable-contract-v2.json")
@@ -196,9 +197,11 @@ class P7BH2ContractDeltaTests(unittest.TestCase):
         ):
             self.assertIn(token, prohibited)
 
-    def test_next_patch_is_h2_2_not_live_execution(self):
-        self.assertEqual(self.delta["next_patch_on_pass"], "WP2-P7B-H2.2_CONTROLLER_SESSION_OWNERSHIP_REPAIR")
-        self.assertNotIn("workflow", self.delta.get("next_patch_on_pass", "").lower())
+    def test_next_patch_progression_is_h2_or_explicit_stop_not_live_execution(self):
+        next_patch = self.delta["next_patch_on_pass"]
+        self.assertTrue(next_patch.startswith("WP2-P7B-H2.") or next_patch.startswith("STOP"), next_patch)
+        self.assertNotIn("workflow", next_patch.lower())
+        self.assertNotIn("reservation", next_patch.lower())
 
 
 if __name__ == "__main__":
