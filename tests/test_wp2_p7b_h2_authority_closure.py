@@ -30,7 +30,8 @@ class P7BH2AuthorityClosureTests(unittest.TestCase):
         self.modular = load(MODULAR)
 
     def test_h2_terminal_decision_is_eligibility_not_live_authority(self):
-        self.assertEqual(self.auth["terminal_h2_verdict"], "WP2_P7B_H2=PASS_REQUALIFICATION_REPAIR_CLOSED")
+        self.assertEqual(self.auth["terminal_h2_verdict"], "WP2_P7B_H2=PASS")
+        self.assertEqual(self.auth["terminal_h2_detail"], "PASS_REQUALIFICATION_REPAIR_CLOSED")
         self.assertTrue(self.auth["decision"]["h2_repair_sufficient_for_future_non_scored_requalification_request"])
         self.assertTrue(self.auth["future_live_eligibility"]["separate_explicit_user_live_authorization_required"])
         self.assertTrue(self.auth["future_live_eligibility"]["then_current_reservation_and_access_validation_required"])
