@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: wp2-p7b-rq2-${{ inputs.experiment_id }}
@@ -50,16 +51,16 @@ jobs:
           INPUT_AUTHORITY: ${{ inputs.authority_id }}
           TARGET_EXPID: ${{ inputs.experiment_id }}
           TARGET_NAME: ${{ inputs.experiment_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$GITHUB_RUN_NUMBER" = 1
           test "$GITHUB_RUN_ATTEMPT" = 1
           test "$INPUT_AUTHORITY" = "$AUTHORITY_ID"
           test -n "$TARGET_EXPID"
           test -n "$TARGET_NAME"
           git cat-file -e "$SCIENTIFIC_SOURCE_SHA^{commit}"
           python3 - <<'PY'
-          import json, subprocess
+          import json, os, subprocess, urllib.request
           from pathlib import Path
           a=json.loads(Path('experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json').read_text())
           assert a['authority_id']=='P7B-RQ2'
@@ -73,6 +74,20 @@ jobs:
               ('scripts/wp2_p7b_rq2_module_adapter.py','module_adapter_git_blob_sha')]:
               got=subprocess.check_output(['git','hash-object',rel],text=True).strip()
               assert got==a[key],(rel,got,a[key])
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/workflows/wp2-p7b-rq2-session.yml/runs?event=workflow_dispatch&per_page=100",
+              headers={
+                  'Authorization': 'Bearer '+os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+          )
+          with urllib.request.urlopen(req, timeout=20) as r:
+              runs=json.load(r)
+          ids=[int(x['id']) for x in runs.get('workflow_runs',[])]
+          current=int(os.environ['GITHUB_RUN_ID'])
+          assert ids==[current], f'ONE_SHOT_DISPATCH_CONSUMED:dispatch_ids={ids}:current={current}'
+          print('P7B_RQ2_FIRST_WORKFLOW_DISPATCH=PASS')
           print('P7B_RQ2_M0_ACTIVATION_LOCK=PASS')
           PY
           test "$(git hash-object experiments/WP-PWD01/p7b-executable-contract-v2.json)" = 233aabeaf3081470bc3ebc1ee04168f8932fc415
@@ -204,7 +219,7 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module B1
 
   m5:
-    name: 45 B1 Evidence - Freeze + Off-POWDER Readback
+    name: 45 B1 Evidence - Escrow + Off-POWDER Readback
     needs: [m0, m1, m2, m4]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m4.result == 'success' || needs.m4.result == 'failure') }}
     runs-on: ubuntu-24.04
@@ -214,7 +229,7 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Pull B1 evidence from UE and CORE
+      - name: Escrow and pull B1 evidence from UE and CORE
         id: pull
         shell: bash
         env:
@@ -278,7 +293,7 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module W1
 
   m7:
-    name: 65 W1 Evidence - Freeze + Off-POWDER Readback
+    name: 65 W1 Evidence - Escrow + Off-POWDER Readback
     needs: [m0, m1, m2, m6]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m6.result == 'success' || needs.m6.result == 'failure') }}
     runs-on: ubuntu-24.04
@@ -288,7 +303,7 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Pull W1 evidence
+      - name: Escrow and pull W1 evidence
         id: pull
         shell: bash
         env:
@@ -349,7 +364,7 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module B2
 
   m9:
-    name: 85 B2 Evidence - Freeze + Off-POWDER Readback
+    name: 85 B2 Evidence - Escrow + Off-POWDER Readback
     needs: [m0, m1, m2, m8]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m8.result == 'success' || needs.m8.result == 'failure') }}
     runs-on: ubuntu-24.04
@@ -359,7 +374,7 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Pull B2 evidence
+      - name: Escrow and pull B2 evidence
         id: pull
         shell: bash
         env:
@@ -429,7 +444,7 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Pull final session evidence
+      - name: Escrow and pull final session evidence
         id: pull
         shell: bash
         env:
