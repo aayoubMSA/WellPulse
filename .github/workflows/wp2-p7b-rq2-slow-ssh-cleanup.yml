@@ -61,6 +61,8 @@ jobs:
           export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
           eval "$(ssh-agent -s)" >/dev/null
           setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null || fail SSH_KEY_LOAD
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
           : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
           SSH=(-o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           get_login(){ python3 -c 'import json,sys; x=json.load(open("/tmp/wp2-rq2-cleanup/nodes.json"))[sys.argv[1]]; print("%s\t%s\t%s"%(x.get("username","aayoub"),x["hostname"],x.get("port",22)))' "$1"; }
