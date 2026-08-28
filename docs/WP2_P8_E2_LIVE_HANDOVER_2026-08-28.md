@@ -119,11 +119,11 @@ Off-platform archive hashes:
 `P8_E1R4_OFFPLATFORM_PRESERVATION=PASS`
 `P8_E1R4=FROZEN`
 
-## 5. Current live experiment: P8-E2
+## 5. P8-E2 — RF hysteresis / spontaneous recovery — COMPLETE
 
 Scientific question: does recovery occur at the same RF condition at which degradation appears, or is there hysteresis/state dependence; can the stack recover autonomously without service restart?
 
-Shared run ID:
+Run ID:
 
 `p8-e2-20260828A`
 
@@ -131,39 +131,71 @@ Treatment sequence:
 
 `0 -> 52 -> 51 -> 50 -> 49 -> 48 -> 46 -> 0 dB`
 
-No service restarts are allowed during E2:
+No `srsue`, `srsepc`, `srsenb`, or Mosquitto restart occurred during treatment/recovery.
 
-- no `srsue` restart;
-- no `srsepc` restart;
-- no `srsenb` restart;
-- no Mosquitto restart.
+### UE->CORE ping results on descending recovery path
 
-Live node roles:
+| Attenuation | Received | Loss | Mean RTT |
+|---:|---:|---:|---:|
+| initial 0 dB | 20/20 | 0% | 22.803 ms |
+| 52 dB | 7/20 | 65% | 59.909 ms |
+| 51 dB | 18/20 | 10% | 41.312 ms |
+| 50 dB | 20/20 | 0% | 40.341 ms |
+| 49 dB | 20/20 | 0% | 31.318 ms |
+| 48 dB | 20/20 | 0% | 34.717 ms |
+| 46 dB | 20/20 | 0% | 36.158 ms |
+| final 0 dB | 20/20 | 0% | 24.900 ms |
 
-- `nuc1-A`: `mosquitto_sub` on topic `wellpulse/p8/e2`, timestamping and writing `received.log`.
-- `nuc1-B`: repeated CORE->UE ping monitor writing `core_monitor.log`.
-- `nuc2`: attenuation sequence, 20 UE->CORE ping probes per level, 20 sequenced MQTT sends per level, `events.log`, `sent.log`, per-level ping logs.
+### MQTT reconciliation
 
-At handover creation time, E2 is running. Do not infer results until the loop is complete and raw evidence is frozen.
+160 messages were generated; 151 were received. All 9 missing messages occurred at 52 dB. Every message sent from 51 dB downward was received.
 
-`P8_E2_STATE=LIVE_RUNNING`
-`NEXT_ACTION=WAIT_FOR_E2_COMPLETE_THEN_FREEZE_BOTH_NODES`
+| Attenuation | Sent | Received | Missing | Mean app delay | Median | Max |
+|---:|---:|---:|---:|---:|---:|---:|
+| initial/final 0 dB combined | 40 | 40 | 0 | 68.3 ms | 68.7 ms | 70.1 ms |
+| 52 dB | 20 | 11 | 9 | 2555 ms | 2140 ms | 8088 ms |
+| 51 dB | 20 | 20 | 0 | 454 ms | 347 ms | 1361 ms |
+| 50 dB | 20 | 20 | 0 | 158 ms | 115 ms | 409 ms |
+| 49 dB | 20 | 20 | 0 | 96.8 ms | 93.2 ms | 138 ms |
+| 48 dB | 20 | 20 | 0 | 86.6 ms | 82.4 ms | 129 ms |
+| 46 dB | 20 | 20 | 0 | 69.2 ms | 68.8 ms | 77.6 ms |
 
-## 6. Mandatory post-E2 closure
+UE-side command-level MQTT failures at 52 dB were recorded for sequences `22,23,24,29,33,36,38,39,40`; receiver reconciliation is authoritative for application completeness.
 
-When nuc2 prints `=== P8-E2 COMPLETE ===`:
+### Exploratory interpretation
 
-1. do not change treatment before taking a final visible three-screen snapshot;
-2. stop nuc1-A receiver with one Ctrl+C;
-3. stop nuc1-B monitor with one Ctrl+C;
-4. capture final process/network state on both nodes;
-5. create `SHA256_CORE.txt` and `SHA256_UE.txt` independently;
-6. create separate CORE and UE `.tgz` archives;
-7. print node-side archive SHA256 values;
-8. pull both archives to the home PC using the explicit POWDER key;
-9. independently compute PC SHA256 values and require exact match;
-10. only then classify `P8_E2_OFFPLATFORM_PRESERVATION=PASS`;
-11. upload both archives for reconciliation and analysis before E3.
+E2 demonstrates autonomous cross-layer recovery while attenuation is reduced, without any service restart. Severe impairment is present at 52 dB. By 51 dB, MQTT completeness has recovered to 20/20 while ICMP still shows 10% loss and elevated RTT. By 50 dB, forward ICMP completeness is 20/20 and MQTT remains complete, though latency remains elevated versus baseline. By 49 dB and below, the path is effectively back in the healthy regime.
+
+This supports a recovery transition centered approximately between 52 and 50 dB, with application completeness recovering earlier than full latency normalization. It is evidence of state-dependent recovery behavior, but one manual reference run is not sufficient for a publication-level probabilistic hysteresis claim. P8-E3 repeatability is therefore still required.
+
+`P8_E2_EXECUTION=PASS`
+`P8_E2_SPONTANEOUS_RECOVERY=OBSERVED`
+`P8_E2_SERVICE_RESTART_REQUIRED=NO`
+`P8_E2_MQTT_RECOVERY_BY_51DB=20_OF_20`
+`P8_E2_FORWARD_PING_RECOVERY_BY_50DB=20_OF_20`
+
+## 6. E2 evidence preservation — PASS
+
+The one-end home-PC evidence controller v1.2 was used after experiment writers were quiesced. The first preservation prototype correctly exposed a live-writer race on `CORE/core_monitor.log`; v1.2 closes that race by quiescing experiment-only evidence writers before hashing.
+
+Freeze controller timestamp:
+
+`2026-08-28T19:44:48.0323478Z`
+
+Verified archive SHA256:
+
+- CORE: `DEF0BC6FB44687E5375699932C8EA6C5A5D87B5B43CC333B4C4E82540EA1E719`
+- UE: `8A1AB7F0221A83EFD25827F65D7D6C2398B1CDC02EE7E879F57E3C93D4C6AA73`
+
+The receipt records:
+
+- `EXPERIMENT_WRITERS_QUIESCED=PASS`
+- `PER_FILE_VERIFICATION=PASS`
+- `OFFPLATFORM_PRESERVATION=PASS`
+
+`P8_E2_OFFPLATFORM_PRESERVATION=PASS`
+`P8_E2_RAW_EVIDENCE=FROZEN_VERIFIED`
+`ONE_END_PULL_V1_2=PASS`
 
 ## 7. Evidence storage doctrine
 
@@ -196,31 +228,37 @@ Keep the verified local copy until Drive upload/read-back verification is comple
 
 Recommended preservation chain:
 
-`POWDER node-local raw -> independent per-node hash -> home-PC pull -> PC hash match -> Drive immutable upload -> Drive read-back/hash verification -> GitHub manifest/pointer/results`
+`POWDER node-local raw -> quiesce experiment writers -> remote per-file manifest -> direct SSH stream to home PC -> local archive hash -> local extraction/per-file verification -> Drive immutable upload -> Drive read-back/hash verification -> GitHub manifest/pointer/results`
 
 Do not release a reservation while unique raw evidence exists only on POWDER.
 
-## 8. Current next experiment order
+## 8. Next experiment
 
-After E2 analysis, remain inside the existing P8 WP. Do not drift.
+Remain inside the existing P8 WP. Do not drift.
 
-Planned remaining experiments:
+Next:
 
-1. `P8-E3` near-threshold repeatability;
-2. `P8-E4` RF-only recovery;
-3. `P8-E5` UE-restart recovery;
-4. `P8-E6` CORE-restart recovery;
-5. `P8-E8` broker-only fault control;
-6. `P8-E9` duration-matched no-fault control;
-7. `P8-E7` combined recovery stress case, only if time/value remains.
+`P8-E3 — Near-threshold Repeatability`
 
-E2 may provide some evidence relevant to E4, but do not silently collapse experiment identities; decide after E2 reconciliation whether E4 remains necessary or can be narrowed.
+Purpose: repeat the near-threshold transition enough to determine whether the E1/E2 50-52 dB behavior is reproducible rather than a one-run state artifact.
+
+Remaining planned experiments after E3:
+
+1. `P8-E4` RF-only recovery;
+2. `P8-E5` UE-restart recovery;
+3. `P8-E6` CORE-restart recovery;
+4. `P8-E8` broker-only fault control;
+5. `P8-E9` duration-matched no-fault control;
+6. `P8-E7` combined recovery stress case, only if time/value remains.
+
+E2 already supplies strong RF-only spontaneous recovery evidence. After E3 repeatability, decide whether E4 can be narrowed rather than duplicated.
 
 ## 9. Stop state
 
 `WP2_P8_STATUS=ACTIVE`
-`CURRENT_EXPERIMENT=P8-E2`
-`CURRENT_RUN_ID=p8-e2-20260828A`
+`P8_E2_STATE=COMPLETE_FROZEN_VERIFIED`
+`CURRENT_EXPERIMENT=P8-E3_NEXT`
+`LAST_RUN_ID=p8-e2-20260828A`
 `SCORED_P7B_STATUS=UNCHANGED`
 `RAW_STORAGE_POLICY=DRIVE_PRIMARY_GITHUB_MANIFEST`
 `LIVE_TEARDOWN=NOT_YET`
