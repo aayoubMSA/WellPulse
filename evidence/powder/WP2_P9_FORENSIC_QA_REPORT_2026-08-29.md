@@ -8,7 +8,7 @@ This is a claim-independent evidence audit. It does not draft manuscript languag
 
 Every surviving reconstructed value must follow:
 
-`reported value → derived row → raw file → frozen authority archive → SHA256 → Drive evidence`
+`reported value → run/scope in reconstructed table → raw-file root in forensic trace map → frozen authority archive → SHA256 → Drive evidence`
 
 ## Authority verification
 
@@ -18,7 +18,7 @@ Every surviving reconstructed value must follow:
 | E10/E11 collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | exact match | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` | PASS |
 | Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | exact match | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` | PASS |
 
-For E7/E8/E9, the raw files reside inside standalone frozen run ZIPs preserved redundantly inside the Drive-authoritative private preservation bundle; the standalone hashes are preserved by its manifest and the P8 evidence index.
+For E7/E8/E9, the raw files reside inside standalone frozen run ZIPs preserved redundantly inside the Drive-authoritative private preservation bundle; the standalone hashes are preserved by its manifest, the P8 evidence index and the P9 trace map.
 
 ## Reconstruction QA
 
@@ -30,6 +30,10 @@ For E7/E8/E9, the raw files reside inside standalone frozen run ZIPs preserved r
 - E5 forward recovery ping is absent from frozen evidence and therefore has no reconstructed forward-ping metric.
 - E10-C-A contributes no scientific metric.
 - E11 R1-R3 contribute only UE-side ICMP/IP-transition results because independent CORE collector evidence is absent.
+
+## Census QA
+
+The read-only member walk produced 598 immutable member records. Full hash enumeration remains inside the frozen archive-native manifests (`meta/SHA256_ALL_FILES.txt`, `meta/SHA256_ALL_COLLECTED.txt`, `SHA256_ALL.txt`, `PRESERVATION_MANIFEST.json`), while GitHub holds the canonical census/index, the E10/E11 member-level cross-check and raw-to-Drive trace map. This preserves the Drive-as-binary-authority policy without duplicating private/large raw bundles into ordinary Git history.
 
 ## Negative/failed evidence QA
 
@@ -59,6 +63,6 @@ No P9 output changes either classification.
 
 ## Unsupported-value gate
 
-Every numeric result retained in the reconstructed metric/timing tables has a raw-file pointer in the P9 reconstruction workpaper and a frozen authority pointer. Values blocked by absent evidence are represented as censored/missing/caveated rather than invented.
+Every numeric result retained in the reconstructed metric/timing tables resolves through `WP2_P9_FORENSIC_TRACE_MAP_2026-08-29.md` to raw evidence and a Drive-verified frozen authority. Values blocked by absent evidence are represented as censored/missing/caveated rather than invented.
 
 `P9_F_FORENSIC_QA=PASS`
