@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(cat .wp2-p7b-rq2-slow-ssh-cleanup-trigger)" = $'AUTHORITY=P7B_RQ2_SLOW_SSH_RESIDUE_CLEANUP_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nSSH=YES_BOUNDED\nRESIDUE_CLEANUP=EXACT_SIGNATURES_ONLY\nINTER_NODE_GAP_SECONDS=15\nPOST_CLEANUP_QUIET_SECONDS=90\nRF=NO\nCELLS=NO\nRESTART=NO\nTEARDOWN=NO\nSCORED=NO\nAUTOMATIC_SCIENTIFIC_RETRY=NO'
+          test "$(cat .wp2-p7b-rq2-slow-ssh-cleanup-trigger)" = $'AUTHORITY=P7B_RQ2_SLOW_SSH_RESIDUE_CLEANUP_ONLY\nATTEMPT=2\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nSSH=YES_BOUNDED\nRESIDUE_CLEANUP=EXACT_SIGNATURES_ONLY\nINTER_NODE_GAP_SECONDS=15\nPOST_CLEANUP_QUIET_SECONDS=90\nRF=NO\nCELLS=NO\nRESTART=NO\nTEARDOWN=NO\nSCORED=NO\nAUTOMATIC_SCIENTIFIC_RETRY=NO'
           ! grep -Eq 'experiment[[:space:]]+(create|terminate)|tmcc|attenuator|bin/start.sh|srsue|srsenb|srsepc|wp2_p7b_c_node_r2.py' .github/workflows/wp2-p7b-rq2-slow-ssh-cleanup.yml
           echo 'RQ2_SLOW_CLEANUP_AUTHORITY=PASS'
 
