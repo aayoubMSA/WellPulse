@@ -1,0 +1,94 @@
+{
+  "schema_version": "wp2-p7b-h2-regression-result-v1",
+  "scope": "OFFLINE_CONTRACT_RUNTIME_EFCC_MODULAR_REGRESSION_ONLY",
+  "terminal_verdict": "H2_5_REGRESSION=PASS",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "runtime_gap_found_and_repaired": {
+    "found": true,
+    "classification": "TARGET_PREFLIGHT_DID_NOT_YET_COVER_H2_PROSPECTIVE_SOURCES",
+    "scientific_failure": false,
+    "implementation_failure": false,
+    "repair_commit": "a465a4849df768f57310e9b261e6875a014ac2ce",
+    "repair": [
+      "add scripts/wp2_p7b_c_node_h2.py to pinned-Python target syntax gate",
+      "add src/wellpulse/p7b_session_ownership.py to pinned-Python target syntax gate",
+      "add bash -n gate for scripts/wp2_p7b_service_restore_h2.sh",
+      "add H2 guards against executable system-python and remote-jq dependencies"
+    ]
+  },
+  "regression_gate": {
+    "script": "scripts/wp2_p7b_h2_regression_gate.py",
+    "script_commit": "4057dd53ecc0dd95ffc4c629eba56deada5b0d45",
+    "test": "tests/test_wp2_p7b_h2_regression_gate.py",
+    "test_commit": "2bc8dc775d46438b93de7709ec75ec53c484b3ad",
+    "checks": [
+      "frozen_integrity",
+      "science_equivalence",
+      "runtime_binding",
+      "h2_runtime_preflight",
+      "h2_layering",
+      "modular_pipeline",
+      "h2_4_evidence",
+      "no_live_surface"
+    ]
+  },
+  "frozen_blob_integrity": {
+    "p7b-executable-contract-v2.json": "233aabeaf3081470bc3ebc1ee04168f8932fc415",
+    "p7b-target-runtime-contract-v2.json": "9531893989effb142e694294b95c0c7146353742",
+    "p7b-modular-pipeline-contract-v1.json": "2c85af21f502c092c2da0ecb1bf615c8f705069b",
+    "wp2_golden_service_restore.sh": "cdf865eaaaf1c08bc8f7a8896d7f705739e60b9c"
+  },
+  "integration_findings": {
+    "frozen_scientific_controls_equivalent": true,
+    "profile_revision_equivalent": true,
+    "hardware_and_image_equivalent": true,
+    "core_binding": "nuc1",
+    "ue_binding": "nuc2",
+    "pinned_project_python": "3.11.13",
+    "paho_mqtt": "2.1.0",
+    "b2_java_jar_sha_equivalent": true,
+    "remote_jq_dependency_prohibited": true,
+    "system_python_project_code_prohibited": true,
+    "h2_wrapper_layers_over_frozen_r2": true,
+    "h2_wrapper_promoted_to_live_authority": false,
+    "modular_h2_weights_sum_100": true,
+    "modular_scientific_cell_order_equivalent": true,
+    "automatic_retry": false,
+    "automatic_reservation_creation": false,
+    "automatic_teardown": false,
+    "live_p7b_workflow_present": false,
+    "workflow_count": 6
+  },
+  "github_qa": {
+    "run_id": 33141861113,
+    "job_id": 98754235047,
+    "head_sha": "2bc8dc775d46438b93de7709ec75ec53c484b3ad",
+    "suite_tests": 168,
+    "suite_result": "PASS",
+    "h2_5_specific_tests": 5,
+    "h2_5_specific_tests_passed": 5,
+    "python_validation_host": "3.12.14",
+    "paho_mqtt": "2.1.0"
+  },
+  "authority": {
+    "powder_contact": false,
+    "network_contact": false,
+    "reservation_creation": false,
+    "live_service_mutation": false,
+    "rf_mutation": false,
+    "retry": false,
+    "w1_b2": false,
+    "scored": false,
+    "teardown": false,
+    "wp3": false,
+    "live_powder_authorization": false
+  },
+  "contract_handling": {
+    "base_executable_contract_v2_mutated": false,
+    "target_runtime_contract_v2_mutated": false,
+    "modular_pipeline_contract_v1_mutated": false,
+    "h2_delta_remains_prospective_non_live_authority": true,
+    "promotion_to_future_live_authority_owned_by_h2_6": true
+  },
+  "next_patch": "WP2-P7B-H2.6_REQUALIFICATION_AUTHORITY_DECISION_CANONICAL_CLOSURE"
+}
