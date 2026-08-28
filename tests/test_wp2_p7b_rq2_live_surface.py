@@ -48,24 +48,31 @@ class P7BRQ2LiveSurfaceTests(unittest.TestCase):
         self.assertNotIn("pull_request:", self.w)
         for token in ("experiment_id:", "experiment_name:", "authority_id:", "default: P7B-RQ2"):
             self.assertIn(token, self.w)
-        self.assertIn('test "$GITHUB_RUN_NUMBER" = 1', self.w)
         self.assertIn('test "$GITHUB_RUN_ATTEMPT" = 1', self.w)
+        self.assertNotIn('test "$GITHUB_RUN_NUMBER" = 1', self.w)
+        self.assertIn("event=workflow_dispatch", self.w)
+        self.assertIn("assert ids==[current]", self.w)
+        self.assertIn("actions: read", self.w)
         self.assertIn("cancel-in-progress: false", self.w)
+        fd = self.a["future_dispatch_contract"]
+        self.assertTrue(fd["first_workflow_dispatch_only"])
+        self.assertEqual(fd["prior_workflow_dispatch_count_required"], 0)
+        self.assertEqual(fd["run_attempt_exact"], 1)
 
     def test_workflow_has_exact_modular_hci_spine_and_sequential_dependencies(self):
         for name in (
-            "00 Freeze — Authority + Source + Contract",
-            "10 EFCC — Reservation Identity + Manifest Read-Only",
-            "20 Preflight — Stage Frozen Source + Target Native Gates",
-            "30 Q0 Baseline — H2 Safe Known-Good Preparation",
-            "40 B1 — Same-Implementation Comparator Cell",
-            "45 B1 Evidence — Freeze + Off-POWDER Readback",
-            "60 W1 — Offline-First Architecture Cell",
-            "65 W1 Evidence — Freeze + Off-POWDER Readback",
-            "80 B2 — Durable Standard MQTT Cell",
-            "85 B2 Evidence — Freeze + Off-POWDER Readback",
-            "95 Reconstruct — Non-Scored Physical Qualification Verdict",
-            "99 Session Summary — Final Evidence Readback / Stop Before Teardown",
+            "00 Freeze - Authority + Source + Contract",
+            "10 EFCC - Reservation Identity + Manifest Read-Only",
+            "20 Preflight - Stage Frozen Source + Target Native Gates",
+            "30 Q0 Baseline - H2 Safe Known-Good Preparation",
+            "40 B1 - Same-Implementation Comparator Cell",
+            "45 B1 Evidence - Escrow + Off-POWDER Readback",
+            "60 W1 - Offline-First Architecture Cell",
+            "65 W1 Evidence - Escrow + Off-POWDER Readback",
+            "80 B2 - Durable Standard MQTT Cell",
+            "85 B2 Evidence - Escrow + Off-POWDER Readback",
+            "95 Reconstruct - Non-Scored Physical Qualification Verdict",
+            "99 Session Summary - Final Evidence Readback / Stop Before Teardown",
         ):
             self.assertIn(name, self.w)
         self.assertIn("needs: [m0, m1, m2, m3]", self.w)
@@ -111,14 +118,32 @@ class P7BRQ2LiveSurfaceTests(unittest.TestCase):
         self.assertIn("portal-cli experiment manifests get --experiment-id", self.c)
         self.assertIn("wp2_p7b_target_node_preflight.sh core", self.c)
         self.assertIn("wp2_p7b_target_node_preflight.sh ue", self.c)
+        self.assertIn("P7B_RQ2_ADAPTER_TARGET_SYNTAX=PASS", self.c)
         self.assertIn("git archive --format=tar \"$SCIENTIFIC_SOURCE_SHA\"", self.c)
         self.assertIn("a6da96560b6526dc6816761282722c996418fd8c", self.c)
+
+    def test_evidence_survival_chain_includes_project_escrow_and_partial_failure_marker(self):
+        self.assertIn('/proj/WellPulse/escrow/p7b-rq2/', self.c)
+        self.assertIn('p7b_copy_tree_with_hash_manifest_v2', self.c)
+        self.assertIn('CLASSIFICATION=PARTIAL_FAILURE_EVIDENCE', self.c)
+        self.assertIn('EVIDENCE_CHAIN=node_raw -> /proj escrow -> controller pull -> Actions artifact -> readback', self.c)
+        self.assertEqual(
+            self.a["future_dispatch_contract"]["evidence_chain"],
+            "node_raw -> /proj escrow -> controller pull -> Actions artifact -> readback",
+        )
+        self.assertTrue(self.a["future_dispatch_contract"]["partial_failure_evidence_must_survive_missing_side_tree"])
+
+    def test_prelive_schema_failure_is_classified_as_no_job_no_live_attempt(self):
+        q = self.a["prelive_qa_history"]
+        self.assertEqual(q["invalid_workflow_run_id"], 33143081065)
+        self.assertEqual(q["invalid_workflow_jobs_started"], 0)
+        self.assertFalse(q["scientific_failure"])
+        self.assertFalse(q["live_execution_attempt"])
+        self.assertEqual(q["classification"], "PRELIVE_WORKFLOW_SCHEMA_VALIDATION_FAILURE_NO_JOBS_NO_POWDER_CONTACT")
 
     def test_controller_and_workflow_are_shell_static_safe(self):
         p = subprocess.run(["bash", "-n", str(CONTROLLER)], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertEqual(self.a["future_dispatch_contract"]["run_number_exact"], 1)
-        self.assertEqual(self.a["future_dispatch_contract"]["run_attempt_exact"], 1)
         self.assertFalse(self.a["current_authority"]["automatic_retry"])
         self.assertFalse(self.a["current_authority"]["automatic_teardown"])
 
