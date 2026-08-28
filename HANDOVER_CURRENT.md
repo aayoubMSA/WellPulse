@@ -1,28 +1,28 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 during **WP2-P8 P8-E2 RF Hysteresis / Spontaneous Recovery** live manual-reference campaign.
+Last updated: 2026-08-29 after completion and off-platform preservation of the **WP2-P8 POWDER manual-reference campaign**.
 
 ## Canonical authority
 
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
-This file is the current operational retrieval point. Do not reconstruct current state from chat memory.
+This file is the current operational retrieval point. Do not reconstruct current state from conversation memory.
 
 ## Executive scientific state
 
 - WP0: **PASS**
 - WP1: **PASS / FROZEN**
-- WP2: **ACTIVE**
-- WP2-P8 manual RF campaign: **ACTIVE / NON-SCORED MANUAL REFERENCE**
-- WP3: **BLOCKED ON WP2**
+- WP2: **ACTIVE — OFFLINE ANALYSIS / REPORTING**
+- WP2-P8 manual RF campaign: **COMPLETE / GOLDEN EVIDENCE PRESERVED / NON-SCORED MANUAL REFERENCE**
+- WP3: **BLOCKED ON SCIENTIFIC WP2 CLOSURE / CONFIRMATORY DECISION**
 - WP4: **BLOCKED**
 - WP5: **PREPARED / NOT EXECUTED**
 - P6 Golden baseline: **VALID / FROZEN**
 - P7B scored physical qualification: **NOT PASSED**
 - scored execution: **NOT AUTHORIZED**
 
-Historical P7B state remains unchanged:
+Historical scored state remains unchanged:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -32,144 +32,103 @@ Historical P7B state remains unchanged:
 
 No P8 exploratory/manual result may be promoted into scored P7B.
 
-## Current live lane
+## Completed live lane
 
-Current campaign:
+Campaign:
 
 `WP2-P8 — Modular Manual RF Experiment Campaign`
 
-Current experiment:
+Platform:
 
-`P8-E2 — RF Hysteresis / Spontaneous Recovery`
+- POWDER reservation `WP-07-C`
+- profile `srslte-controlled-rf`
+- `enb1 -> nuc1 / CORE`
+- `rue1 -> nuc2 / UE`
 
-Current run:
+The live campaign is complete. The reservation is no longer required for the current phase.
 
-`CURRENT_RUN_ID=p8-e2-20260828A`
+## Golden campaign coverage
 
-Live topology:
+P8 produced preserved evidence for:
 
-- `nuc1-A / CORE`: visible MQTT receiver.
-- `nuc1-B / CORE`: reverse CORE->UE ping monitor and CORE evidence.
-- `nuc2 / UE`: RF treatment, UE->CORE ping, MQTT publisher and UE evidence.
+- E0 baseline qualification;
+- E1 RF threshold characterization;
+- E2 hysteresis / spontaneous recovery;
+- E3 near-threshold repeatability;
+- E4 RF-only recovery reference;
+- E5 UE-restart recovery;
+- E6 CORE-restart recovery;
+- E7 optional combined recovery stress;
+- E8 broker-only interruption/recovery;
+- E9 no-fault duration-matched control;
+- E10 recovery timing (`A` RF-only, `B` UE restart, `C` CORE restart, `D` broker restart);
+- E11 three UE-restart replications.
 
-Treatment sequence:
+## Canonical current handover
 
-`0 -> 52 -> 51 -> 50 -> 49 -> 48 -> 46 -> 0 dB`
+Read completely:
 
-No `srsue`, `srsepc`, `srsenb` or Mosquitto restart is allowed during E2.
+1. `HANDOVER_CURRENT.md`
+2. `docs/WP2_P8_GOLDEN_EXPERIMENT_HANDOVER_2026-08-29.md`
+3. `evidence/powder/WP2_P8_GOLDEN_EVIDENCE_INDEX_2026-08-29.md`
+4. `experiments/WP-PWD01/WP2_P8_MANUAL_RF_EXPERIMENT_CAMPAIGN_2026-08-28.md`
+5. current Research & Grants Lessons Learned Ledger
 
-`P8_E2_STATE=LIVE_RUNNING`
+Historical P7B material should be read only when explicitly working on the scored lane.
 
-## Completed P8 evidence
+## Immutable caveats
 
-### P8-E0
-
-Stable two-node baseline qualification passed:
-
-- bidirectional ping healthy;
-- UE tunnel stable at `172.16.0.2/24`;
-- LTE services stable;
-- 10/10 MQTT messages visibly delivered nuc2 -> nuc1-A.
-
-`P8_E0_BASELINE_QUALIFIED=PASS`
-
-### P8-E1 initial attempt
-
-Evidence preserved but baseline was invalid before treatment.
-
-`P8_E1=NULL_ABORTED_INVALID_PRETREATMENT_BASELINE`
-
-### P8-E1R2
-
-Clean 0-30 dB run; 65/65 MQTT records received, no missing/duplicates, 0% ping loss at all tested points.
-
-Off-platform hashes:
-
-- CORE `A8DBA3B486FA9E86CCD80E8704DA2AE277BACC6998C5B4292B53C52BBBD62B4A`
-- UE `7A1C2F2F32DF22E6C0B2E0F3A4480C8A7D7B64C290129AE84FC5E47F181E348B`
-
-### P8-E1R3
-
-Clean 30-50 dB extension. 48 dB remained known-good; 50 dB showed first confirmed degradation. Independent 50 dB confirmation: 20 transmitted / 19 received / 5% loss.
-
-Off-platform hashes:
-
-- CORE `00699132F302018585972A81503E464272B2BACE3E85DDA9A94D224C844B13E5`
-- UE `0C32700B3A4751EFFA7B7109614E64A9425AB874068E372AC365B5CE3AB4E837`
-
-### P8-E1R4
-
-48-52 dB micro-sweep result:
-
-| Attenuation | UE->CORE ping loss | CORE->UE ping loss | MQTT received | Mean app delay |
-|---:|---:|---:|---:|---:|
-| 48 dB | 0% | 0% | 20/20 | ~98 ms |
-| 49 dB | 0% | 0% | 20/20 | ~92 ms |
-| 50 dB | 0% | ~3.3% | 20/20 | ~170 ms |
-| 51 dB | ~30% | ~30% | 20/20 | ~448 ms |
-| 52 dB | ~60% | ~64% | 13/20 | ~8.0 s |
-
-Independent 52 dB confirmation: 30 transmitted / 6 received / 80% loss.
-
-After RF restore to 0 dB with no service restart: 20/20 ping, 0% loss and 10/10 recovery MQTT messages.
-
-Exploratory interpretation:
-
-- `<=49 dB`: healthy;
-- `50-51 dB`: degrading but application-resilient;
-- `>=52 dB`: severe intermittent region with application loss.
-
-Off-platform hashes:
-
-- CORE `70F3CF784517ABB32D98F33118634FD48B736DB5EC5F46C54556E57A2237DD25`
-- UE `4CE3CEBEF0292E8276B46B1249A95E4766CE6E0E060843346E772D811AB8838F`
+- E5: forward UE recovery-ping artifact observed live but not frozen.
+- E8: duplicate recovery-send attempt documented.
+- E10-A: no recovery within observation window.
+- E10-C: attempt A invalid setup; attempt B valid.
+- E10-D: observed interval is an upper bound, not exact broker-recovery latency.
+- Departure `CAPTURE_STATUS.txt`: expected post-manifest append on both nodes; all other files verified.
+- Final profile/RSpec capture contains credential-bearing/encrypted portal material; keep private or sanitize before sharing.
+- Runtime UHD probes did not independently expose a USRP device; no runtime radio serial/firmware identity may be claimed.
+- Individual attenuator ID -> physical-path mapping was not conclusively established.
 
 ## Evidence storage policy
 
-Use a three-layer evidence model:
+Three-layer preservation remains mandatory:
 
-1. **Google Drive = primary durable raw-evidence store** for immutable CORE/UE archives, hashes, manifests and publication evidence bundles.
-2. **GitHub = canonical control/scientific record** for experiment contracts, run manifests, SHA256 values, analysis scripts, derived small tables, reconciliation outputs, result/closure docs, Drive pointer/ID and handovers.
-3. **Home PC = independent temporary third copy** until Drive upload/read-back verification is complete.
+1. **Google Drive = primary durable raw-evidence store** for frozen raw bundles, private/sanitized departure archives, hashes, manifests, platform specs and publication evidence packages.
+2. **GitHub = canonical scientific/control record** for experiment contracts, evidence indexes, SHA256 anchors, anomaly register, analysis/reconciliation scripts, derived small tables, results docs, Drive pointer and handovers.
+3. **Home PC = independent third copy** until Drive upload/read-back verification is complete.
 
-Do not commit large `.tgz` raw archives directly into ordinary Git history unless a deliberate Git LFS/release policy is later adopted.
+Do not commit large raw archives or credential-bearing bundles into ordinary Git history.
 
-Required preservation chain:
+## Current evidence anchors
 
-`POWDER node-local raw -> node SHA256 -> home-PC pull -> PC SHA256 match -> Drive upload -> Drive read-back/hash verification -> GitHub manifest/pointer/results`
-
-## Mandatory current read order
-
-1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P8_E2_LIVE_HANDOVER_2026-08-28.md`
-3. `experiments/WP-PWD01/WP2_P8_MANUAL_RF_EXPERIMENT_CAMPAIGN_2026-08-28.md`
-4. current `Research & Grants — Lessons Learned Ledger`
-5. historical P7B handover/closures only if working on scored P7B rather than P8.
+- P8 master evidence: `6952565D8ED630496EB7A801DB90583F2FED2EFCDC81FEACD1A2072F18FA8878`
+- E10/E11 frozen bundle: `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6`
+- platform specs: `5537947B03373FB6869C3E154CCCECAC387FF12481D74634AFB192CA03F26E18`
+- final POWDER documentation: `2B015A8FD4655F5615D570230C8989E54A4BD6EEB6E727D04D219B9013320C19`
+- private departure archive: `7DBA8CE95CF06B254939C692915325E369FFA114080AE10BACA446D4BF62A66E`
+- sanitized departure archive: `236C6E269CDA6F7814B50415917D277CD7D0ED78D7D9DB0C3C4D1FE185EAE7A4`
+- assembled golden handover bundle: `F94951A42C2DF429297CEC888EA81D3DC374B6E47F34D71AA2F3BCE7898642B4`
 
 ## Immediate next action
 
-Wait for nuc2 to print:
+Offline only:
 
-`=== P8-E2 COMPLETE ===`
-
-Then:
-
-1. capture the three-screen final state;
-2. stop nuc1-A receiver and nuc1-B monitor;
-3. freeze independent CORE and UE raw evidence;
-4. hash and archive each node separately;
-5. pull both archives to home PC and verify hashes;
-6. upload to Drive and verify read-back before reservation release;
-7. reconcile/ analyze E2 before beginning E3.
+1. complete Drive preservation and read-back verification;
+2. reconcile E0–E11 raw evidence;
+3. build the anomaly register and claim-evidence matrix;
+4. normalize timing endpoint semantics;
+5. generate threshold/hysteresis/repeatability/recovery tables and figures;
+6. build publication-grade testbed/reproducibility table;
+7. draft internal scientific report;
+8. then prepare manuscript-ready Methods/Results without crossing the non-scored claim boundary.
 
 ## Stop state
 
-`WP2_P8_STATUS=ACTIVE`
+`WP2_P8_STATUS=COMPLETE_GOLDEN_EVIDENCE_PRESERVED`
 
-`CURRENT_EXPERIMENT=P8-E2`
+`P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
 
-`CURRENT_RUN_ID=p8-e2-20260828A`
+`SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-`RAW_STORAGE_POLICY=DRIVE_PRIMARY_GITHUB_MANIFEST`
+`LIVE_POWDER_DEPENDENCY=NONE_FOR_CURRENT_PHASE`
 
-`LIVE_TEARDOWN=NOT_YET`
+`NEXT_PHASE=OFFLINE_EVIDENCE_RECONCILIATION_REPORTING_AND_PRESERVATION`
