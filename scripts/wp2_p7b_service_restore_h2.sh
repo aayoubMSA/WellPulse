@@ -75,11 +75,11 @@ for n in \$NAMES; do
   for p in \$PIDS; do sudo kill -TERM \"\$p\"; done
   for i in \$(seq 1 20); do
     alive=0
-    for p in \$PIDS; do kill -0 \"\$p\" 2>/dev/null && alive=1 || true; done
+    for p in \$PIDS; do sudo kill -0 \"\$p\" 2>/dev/null && alive=1 || true; done
     [ \"\$alive\" -eq 0 ] && break
     sleep 0.5
   done
-  for p in \$PIDS; do kill -0 \"\$p\" 2>/dev/null && sudo kill -KILL \"\$p\" || true; done
+  for p in \$PIDS; do sudo kill -0 \"\$p\" 2>/dev/null && sudo kill -KILL \"\$p\" || true; done
   ! pgrep -x \"\$n\" >/dev/null
 done"
 }
