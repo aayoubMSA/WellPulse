@@ -47,7 +47,7 @@ jobs:
                               login=(c.attrib.get('username','aayoub'),c.attrib['hostname'],c.attrib.get('port','22'))
                               break
           assert login
-          open(sys.argv[2],'w').write('\t'.join(login))
+          open(sys.argv[2],'w').write('\t'.join(login)+'\n')
           PY
           python3 - <<'PY'
           import os,pathlib
