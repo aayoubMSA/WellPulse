@@ -122,6 +122,8 @@ stage_preflight(){
   grep -q '^WP2_P7B_TARGET_NODE_PREFLIGHT=PASS$' "$TMP/core-preflight.txt" || fail CORE_TARGET_PREFLIGHT
   ssh_do "$UE_USER" "$UE_HOST" "$UE_PORT" "cd '$ue_repo'; WP_REPO_ROOT='$ue_repo' WP_B2_JAR_PATH=/tmp/wp2-p7b-rq2-paho.jar bash scripts/wp2_p7b_target_node_preflight.sh ue" | tee "$TMP/ue-preflight.txt"
   grep -q '^WP2_P7B_TARGET_NODE_PREFLIGHT=PASS$' "$TMP/ue-preflight.txt" || fail UE_TARGET_PREFLIGHT
+  ssh_do "$UE_USER" "$UE_HOST" "$UE_PORT" "'$ue_home/.wp2-golden-venv/bin/python' -c \"p='$ue_repo/scripts/wp2_p7b_rq2_module_adapter.py'; compile(open(p,encoding='utf-8').read(),p,'exec'); print('P7B_RQ2_ADAPTER_TARGET_SYNTAX=PASS')\"" | tee "$TMP/adapter-target-syntax.txt"
+  grep -q '^P7B_RQ2_ADAPTER_TARGET_SYNTAX=PASS$' "$TMP/adapter-target-syntax.txt" || fail RQ2_ADAPTER_TARGET_SYNTAX
   for spec in "CORE:$CORE_USER:$CORE_HOST:$CORE_PORT" "UE:$UE_USER:$UE_HOST:$UE_PORT"; do
     IFS=: read -r label user host port <<< "$spec"
     rev=$(ssh_do "$user" "$host" "$port" 'git -C /local/repository rev-parse HEAD')
@@ -149,14 +151,39 @@ pull_evidence(){
   OUT="$TMP/evidence-$LABEL"; mkdir -p "$OUT"
   ue_root="$UE_HOME/wellpulse-powder-evidence/p7b/$RUN_ID"
   core_root="$CORE_HOME/wellpulse-powder-evidence/p7b/$RUN_ID-core"
-  ssh_do "$UE_USER" "$UE_HOST" "$UE_PORT" "test -d '$ue_root'; tar -C '$UE_HOME/wellpulse-powder-evidence/p7b' -cf /tmp/wp2-rq2-$LABEL-ue.tar '$RUN_ID'"
-  ssh_do "$CORE_USER" "$CORE_HOST" "$CORE_PORT" "test -d '$core_root'; tar -C '$CORE_HOME/wellpulse-powder-evidence/p7b' -cf /tmp/wp2-rq2-$LABEL-core.tar '$RUN_ID-core'"
-  scp_from "$UE_USER" "$UE_HOST" "$UE_PORT" "/tmp/wp2-rq2-$LABEL-ue.tar" "$OUT/ue.tar"
-  scp_from "$CORE_USER" "$CORE_HOST" "$CORE_PORT" "/tmp/wp2-rq2-$LABEL-core.tar" "$OUT/core.tar"
-  test -s "$OUT/ue.tar"; test -s "$OUT/core.tar"
-  tar -tf "$OUT/ue.tar" >/dev/null; tar -tf "$OUT/core.tar" >/dev/null
+  escrow_base="/proj/WellPulse/escrow/p7b-rq2/$RUN_ID/$LABEL"
+
+  preserve_side(){
+    local user=$1 host=$2 port=$3 src=$4 side=$5
+    local dst="$escrow_base/$side"
+    local tar_path="/tmp/wp2-rq2-$LABEL-$side-escrow.tar"
+    ssh_do "$user" "$host" "$port" "set -eu
+source \"\$HOME/WellPulse/scripts/wp2_p7b_preservation_helpers_v2.sh\"
+rm -rf '$dst'
+if test -d '$src' && test -n \"\$(find '$src' -type f -print -quit)\"; then
+  p7b_copy_tree_with_hash_manifest_v2 '$src' '$dst'
+  printf '%s\\n' 'SOURCE_PRESENT=YES' > '$dst/PRESERVATION_STATUS.txt'
+else
+  mkdir -p '$dst'
+  printf '%s\\n' 'SOURCE_PRESENT=NO' 'SOURCE_ROOT=$src' 'CLASSIFICATION=PARTIAL_FAILURE_EVIDENCE' > '$dst/PRESERVATION_STATUS.txt'
+fi
+printf '%s\\n' '$src' > '$dst/SOURCE_ROOT.txt'
+tar -C '$escrow_base' -cf '$tar_path' '$side'
+test -s '$tar_path'
+sha256sum '$tar_path' > '$tar_path.sha256'
+"
+    scp_from "$user" "$host" "$port" "$tar_path" "$OUT/$side.tar"
+    scp_from "$user" "$host" "$port" "$tar_path.sha256" "$OUT/$side.remote.sha256"
+    test -s "$OUT/$side.tar"
+    tar -tf "$OUT/$side.tar" >/dev/null
+  }
+
+  preserve_side "$UE_USER" "$UE_HOST" "$UE_PORT" "$ue_root" ue
+  preserve_side "$CORE_USER" "$CORE_HOST" "$CORE_PORT" "$core_root" core
   (cd "$OUT"; sha256sum ue.tar core.tar > SHA256SUMS.txt; sha256sum -c SHA256SUMS.txt)
+  printf 'EVIDENCE_CHAIN=node_raw -> /proj escrow -> controller pull -> Actions artifact -> readback\n' > "$OUT/EVIDENCE_CHAIN.txt"
   echo "evidence_dir=$OUT" >> "$GITHUB_OUTPUT"
+  echo "P7B_RQ2_EVIDENCE_ESCROW=PASS:$LABEL"
   echo "P7B_RQ2_EVIDENCE_PULL=PASS:$LABEL"
 }
 
