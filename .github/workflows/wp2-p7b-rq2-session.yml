@@ -32,7 +32,7 @@ env:
 
 jobs:
   m0:
-    name: 00 Freeze — Authority + Source + Contract
+    name: 00 Freeze - Authority + Source + Contract
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -88,7 +88,7 @@ jobs:
           echo 'AUTOMATIC_TEARDOWN=NO'
 
   m1:
-    name: 10 EFCC — Reservation Identity + Manifest Read-Only
+    name: 10 EFCC - Reservation Identity + Manifest Read-Only
     needs: m0
     runs-on: ubuntu-24.04
     timeout-minutes: 8
@@ -115,7 +115,7 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh portal
 
   m2:
-    name: 20 Preflight — Stage Frozen Source + Target Native Gates
+    name: 20 Preflight - Stage Frozen Source + Target Native Gates
     needs: [m0, m1]
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -144,16 +144,18 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh stage-preflight
 
   m3:
-    name: 30 Q0 Baseline — H2 Safe Known-Good Preparation
+    name: 30 Q0 Baseline - H2 Safe Known-Good Preparation
     needs: [m0, m1, m2]
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Establish Q0 with H2-safe service ownership
         shell: bash
-        env: &live_env
+        env:
           POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
           POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
           RUN_ID: ${{ needs.m0.outputs.run_id }}
@@ -172,31 +174,61 @@ jobs:
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module prepare
 
   m4:
-    name: 40 B1 — Same-Implementation Comparator Cell
+    name: 40 B1 - Same-Implementation Comparator Cell
     needs: [m0, m1, m2, m3]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Execute B1 once
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          EXPIRES_UTC: ${{ needs.m1.outputs.expires_utc }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
+          CORE_REPO: ${{ needs.m2.outputs.core_repo }}
+          UE_REPO: ${{ needs.m2.outputs.ue_repo }}
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module B1
 
   m5:
-    name: 45 B1 Evidence — Freeze + Off-POWDER Readback
+    name: 45 B1 Evidence - Freeze + Off-POWDER Readback
     needs: [m0, m1, m2, m4]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m4.result == 'success' || needs.m4.result == 'failure') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Pull B1 evidence from UE and CORE
         id: pull
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
         run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence b1
       - name: Upload B1 evidence
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
@@ -216,103 +248,214 @@ jobs:
         run: cd /tmp/rq2-readback-b1 && sha256sum -c SHA256SUMS.txt
 
   m6:
-    name: 60 W1 — Offline-First Architecture Cell
+    name: 60 W1 - Offline-First Architecture Cell
     needs: [m0, m1, m2, m4, m5]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Execute W1 once
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          EXPIRES_UTC: ${{ needs.m1.outputs.expires_utc }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
+          CORE_REPO: ${{ needs.m2.outputs.core_repo }}
+          UE_REPO: ${{ needs.m2.outputs.ue_repo }}
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module W1
 
   m7:
-    name: 65 W1 Evidence — Freeze + Off-POWDER Readback
+    name: 65 W1 Evidence - Freeze + Off-POWDER Readback
     needs: [m0, m1, m2, m6]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m6.result == 'success' || needs.m6.result == 'failure') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Pull W1 evidence
         id: pull
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
         run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence w1
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1
+          path: ${{ steps.pull.outputs.evidence_dir }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1, path: /tmp/rq2-readback-w1}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1
+          path: /tmp/rq2-readback-w1
       - shell: bash
         run: cd /tmp/rq2-readback-w1 && sha256sum -c SHA256SUMS.txt
 
   m8:
-    name: 80 B2 — Durable Standard MQTT Cell
+    name: 80 B2 - Durable Standard MQTT Cell
     needs: [m0, m1, m2, m6, m7]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Execute B2 once
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          EXPIRES_UTC: ${{ needs.m1.outputs.expires_utc }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
+          CORE_REPO: ${{ needs.m2.outputs.core_repo }}
+          UE_REPO: ${{ needs.m2.outputs.ue_repo }}
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module B2
 
   m9:
-    name: 85 B2 Evidence — Freeze + Off-POWDER Readback
+    name: 85 B2 Evidence - Freeze + Off-POWDER Readback
     needs: [m0, m1, m2, m8]
     if: ${{ always() && needs.m2.result == 'success' && (needs.m8.result == 'success' || needs.m8.result == 'failure') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Pull B2 evidence
         id: pull
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
         run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence b2
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2
+          path: ${{ steps.pull.outputs.evidence_dir }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2, path: /tmp/rq2-readback-b2}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2
+          path: /tmp/rq2-readback-b2
       - shell: bash
         run: cd /tmp/rq2-readback-b2 && sha256sum -c SHA256SUMS.txt
 
   m10:
-    name: 95 Reconstruct — Non-Scored Physical Qualification Verdict
+    name: 95 Reconstruct - Non-Scored Physical Qualification Verdict
     needs: [m0, m1, m2, m8, m9]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Reconstruct mechanics only
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          EXPIRES_UTC: ${{ needs.m1.outputs.expires_utc }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
+          CORE_REPO: ${{ needs.m2.outputs.core_repo }}
+          UE_REPO: ${{ needs.m2.outputs.ue_repo }}
         run: bash scripts/wp2_p7b_rq2_controller.sh run-module reconstruct
 
   m99:
-    name: 99 Session Summary — Final Evidence Readback / Stop Before Teardown
+    name: 99 Session Summary - Final Evidence Readback / Stop Before Teardown
     needs: [m0, m1, m2, m10]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {fetch-depth: 1, persist-credentials: false}
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - name: Pull final session evidence
         id: pull
         shell: bash
-        env: *live_env
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
         run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence final
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final
+          path: ${{ steps.pull.outputs.evidence_dir }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final, path: /tmp/rq2-readback-final}
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final
+          path: /tmp/rq2-readback-final
       - name: Final readback and stop gate
         shell: bash
         run: |
