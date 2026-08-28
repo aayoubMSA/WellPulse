@@ -1,0 +1,268 @@
+{
+  "schema_version": "wp2-p7b-modular-pipeline-v1",
+  "status": "DESIGN_ONLY_OFFLINE_NO_LIVE_AUTHORITY",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "scored": false,
+  "live_authorized": false,
+  "reservation_creation_authorized": false,
+  "rf_authorized": false,
+  "retry_authorized": false,
+  "teardown_authorized": false,
+  "wp3_authorized": false,
+  "sources": {
+    "handover": "HANDOVER_CURRENT.md",
+    "amendment_draft": "experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md",
+    "scientific_contract": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
+    "workflow_design": "docs/WP2_P7B_MODULAR_EXECUTION_ARCHITECTURE_2026-08-28.md",
+    "experience_ledger": "Research & Grants — Lessons Learned Ledger"
+  },
+  "architecture": {
+    "live_entry_surfaces": 1,
+    "future_workflow": ".github/workflows/wp2-p7b-rq2-session.yml",
+    "future_trigger": "workflow_dispatch_only",
+    "workflow_creation_policy": "CREATE_ONLY_AFTER_H2_PASS_AND_SEPARATE_EXPLICIT_USER_LIVE_AUTHORIZATION",
+    "workflow_retirement_policy": "RETIRE_AFTER_TERMINAL_SESSION_CLOSURE",
+    "path_trigger_sentinel": false,
+    "workflow_run_chaining": false,
+    "automatic_retry": false,
+    "automatic_reservation_create": false,
+    "automatic_reservation_extend": false,
+    "automatic_teardown": false,
+    "one_shot_guards": [
+      "GITHUB_RUN_NUMBER_EQ_1",
+      "GITHUB_RUN_ATTEMPT_EQ_1",
+      "EXACT_AUTHORITY_ID_MATCH",
+      "EXACT_SCIENTIFIC_SOURCE_SHA_MATCH",
+      "EXACT_EXECUTABLE_CONTRACT_SHA256_MATCH"
+    ],
+    "concurrency": {
+      "group_template": "wp2-p7b-{experiment_id}",
+      "cancel_in_progress": false
+    }
+  },
+  "manual_steps": [
+    {
+      "id": "R0",
+      "name": "POWDER_RESERVATION",
+      "when": "AFTER_H2_PASS_AND_SEPARATE_EXPLICIT_LIVE_AUTHORIZATION",
+      "actor": "USER",
+      "action": "CREATE_OR_SELECT_RESERVATION_IN_POWDER_PORTAL",
+      "outputs": ["experiment_id", "experiment_name"],
+      "github_reservation_creation": false
+    },
+    {
+      "id": "T0",
+      "name": "POWDER_TEARDOWN",
+      "when": "ONLY_AFTER_TEARDOWN_READY_YES",
+      "actor": "USER",
+      "action": "TERMINATE_RESERVATION_IN_POWDER_PORTAL",
+      "preconditions": [
+        "M10_PASS",
+        "ALL_REQUIRED_EVIDENCE_READBACK_GATES_PASS"
+      ],
+      "automatic_teardown": false
+    }
+  ],
+  "h2_offline_modules": [
+    {"id": "H2.1", "gate": "H2_1_CONTRACT_DELTA=PASS", "weight_pct": 20},
+    {"id": "H2.2", "gate": "H2_2_SESSION_OWNERSHIP=PASS", "weight_pct": 20},
+    {"id": "H2.3", "gate": "H2_3_FRONTIER_EVIDENCE=PASS", "weight_pct": 15},
+    {"id": "H2.4", "gate": "H2_4_ADVERSARIAL_QA=PASS", "weight_pct": 20},
+    {"id": "H2.5", "gate": "H2_5_REGRESSION=PASS", "weight_pct": 15},
+    {"id": "H2.6", "gate": "WP2_P7B_H2=PASS_OR_BLOCKED", "weight_pct": 10}
+  ],
+  "live_modules": [
+    {
+      "id": "M0",
+      "display_name": "00 Freeze",
+      "mode": "NO_POWDER_CONTACT",
+      "purpose": "freeze one-shot authority and immutable session contract",
+      "required_gate": "M0_SESSION_FREEZE=PASS"
+    },
+    {
+      "id": "M1",
+      "display_name": "10 EFCC",
+      "mode": "POWDER_READ_ONLY",
+      "purpose": "reservation identity, manifest, endpoints, environment-first delta census",
+      "required_gate": "M1_EFCC_DELTA=PASS"
+    },
+    {
+      "id": "M2",
+      "display_name": "20 Preflight",
+      "mode": "READ_ONLY_TARGET_PREFLIGHT",
+      "purpose": "controller/service-session disjointness, path, parser and target-runtime proof",
+      "required_gates": [
+        "CONTROLLER_SERVICE_SESSION_DISJOINTNESS=PASS",
+        "M2_TARGET_PREFLIGHT=PASS"
+      ]
+    },
+    {
+      "id": "M3",
+      "display_name": "30 Q0 Baseline",
+      "mode": "LIVE_BASELINE_PREPARATION",
+      "purpose": "establish exact known-good Q0 service/user-plane baseline with H2-safe ownership logic",
+      "required_gate": "M3_Q0_BASELINE=PASS"
+    },
+    {
+      "id": "M4",
+      "display_name": "40 B1",
+      "mode": "SCIENTIFIC_CELL",
+      "cell": "P7B-B1-S3",
+      "required_gate": "M4_B1_MECHANICS=PASS",
+      "scientific_performance_is_orchestration_gate": false
+    },
+    {
+      "id": "M5",
+      "display_name": "45 B1 Evidence",
+      "mode": "EVIDENCE_SURVIVAL",
+      "runs_after": "M4_ALWAYS",
+      "required_gate": "M5_B1_EVIDENCE=PASS",
+      "failure_action": "LEAVE_EXPERIMENT_LIVE_AND_STOP"
+    },
+    {
+      "id": "M6",
+      "display_name": "60 W1",
+      "mode": "SCIENTIFIC_CELL",
+      "cell": "P7B-W1-S3",
+      "required_gate": "M6_W1_MECHANICS=PASS",
+      "scientific_performance_is_orchestration_gate": false
+    },
+    {
+      "id": "M7",
+      "display_name": "65 W1 Evidence",
+      "mode": "EVIDENCE_SURVIVAL",
+      "runs_after": "M6_ALWAYS",
+      "required_gate": "M7_W1_EVIDENCE=PASS",
+      "failure_action": "LEAVE_EXPERIMENT_LIVE_AND_STOP"
+    },
+    {
+      "id": "M8",
+      "display_name": "80 B2",
+      "mode": "SCIENTIFIC_CELL",
+      "cell": "P7B-B2-S3",
+      "required_gate": "M8_B2_MECHANICS=PASS",
+      "scientific_performance_is_orchestration_gate": false
+    },
+    {
+      "id": "M9",
+      "display_name": "85 B2 Evidence",
+      "mode": "EVIDENCE_SURVIVAL",
+      "runs_after": "M8_ALWAYS",
+      "required_gate": "M9_B2_EVIDENCE=PASS",
+      "failure_action": "LEAVE_EXPERIMENT_LIVE_AND_STOP"
+    },
+    {
+      "id": "M10",
+      "display_name": "95 Reconstruct",
+      "mode": "NO_NEW_SCIENTIFIC_MUTATION",
+      "purpose": "contract reconstruction, generated-vs-received reconciliation and non-scored qualification verdict",
+      "terminal_verdicts": [
+        "WP2_P7B_REQUALIFICATION=PASS_NON_SCORED_PHYSICAL_QUALIFICATION",
+        "WP2_P7B_REQUALIFICATION=BLOCKED:<first-cause>"
+      ],
+      "pass_outputs": [
+        "TEARDOWN_READY=YES",
+        "SCORED_AUTHORIZATION=NO",
+        "WP3_AUTHORIZATION=NO"
+      ]
+    },
+    {
+      "id": "M99",
+      "display_name": "99 Session Summary",
+      "mode": "HCI_ONLY",
+      "runs": "ALWAYS",
+      "authoritative_scientific_data": false
+    }
+  ],
+  "dependencies": [
+    ["M0", "M1"],
+    ["M1", "M2"],
+    ["M2", "M3"],
+    ["M3", "M4"],
+    ["M4", "M5"],
+    ["M5", "M6"],
+    ["M6", "M7"],
+    ["M7", "M8"],
+    ["M8", "M9"],
+    ["M9", "M10"]
+  ],
+  "transition_rules": {
+    "M0_failure": "STOP_NO_POWDER_CONTACT",
+    "M1_or_M2_failure": "STOP_NO_SCIENTIFIC_MUTATION",
+    "M3_failure": "STOP_PRESERVE_DIAGNOSTICS_NO_TREATMENT",
+    "scientific_cell_failure": "RUN_PAIRED_EVIDENCE_MODULE_THEN_STOP",
+    "evidence_failure": "LEAVE_EXPERIMENT_LIVE_AND_STOP",
+    "negative_or_null_scientific_outcome_with_valid_mechanics_and_evidence": "CONTINUE_TO_NEXT_PLANNED_CELL",
+    "automatic_retry": "PROHIBITED",
+    "second_reservation": "PROHIBITED",
+    "teardown_before_readback": "PROHIBITED",
+    "scored_execution": "PROHIBITED",
+    "wp3_execution": "PROHIBITED"
+  },
+  "ci_state_contract": {
+    "ssh_agent_scope": "PER_JOB_ONLY",
+    "cross_job_process_state": "PROHIBITED",
+    "cross_job_tmp_state": "PROHIBITED",
+    "cross_module_handoff": ["JOB_OUTPUTS", "IMMUTABLE_ARTIFACTS"],
+    "module_result_file": "module_result.json"
+  },
+  "module_result_required_fields": [
+    "schema_version",
+    "module_id",
+    "run_id",
+    "experiment_id",
+    "experiment_name",
+    "scientific_source_sha",
+    "executable_contract_sha256",
+    "utc_start",
+    "utc_end",
+    "status",
+    "first_cause",
+    "input_artifact_digests",
+    "output_artifact_digests",
+    "evidence_class",
+    "scored"
+  ],
+  "evidence_survival": {
+    "implementation_baseline": "SHELL_COREUTILS_FIRST",
+    "chain": [
+      "NODE_RAW",
+      "PROJ_PERSISTENT_ESCROW",
+      "CONTROLLER_PULL",
+      "GITHUB_ARTIFACT",
+      "INDEPENDENT_READBACK",
+      "OUTER_AND_INTERNAL_SHA256"
+    ],
+    "paired_after_each_scientific_cell": true,
+    "teardown_requires_all_evidence_gates": true
+  },
+  "frozen_scientific_controls": {
+    "q_db": [0, 40, 52, 55],
+    "attenuator_ids": [1, 33, 2, 34],
+    "pre_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "cell_order": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
+    "generator_outside_restart_domain": true,
+    "cohort_cutoff": "t_rf_restore",
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "clocks_distinct": ["t_rf_restore", "t_service_ready", "t_app_complete"],
+    "automatic_scientific_retry": false,
+    "negative_null_evidence_retained": true
+  },
+  "implementation_order": [
+    "COMPLETE_H2_OFFLINE",
+    "PROMOTE_A1_A7_IN_EXECUTABLE_CONTRACT",
+    "IMPLEMENT_MODULE_SCRIPTS_AND_OFFLINE_TESTS",
+    "PASS_ADVERSARIAL_REGRESSION",
+    "STOP_FOR_EXPLICIT_LIVE_AUTHORIZATION",
+    "USER_CREATES_OR_SELECTS_POWDER_RESERVATION",
+    "CREATE_SINGLE_EPHEMERAL_MANUAL_DISPATCH_WORKFLOW",
+    "EXECUTE_EXACTLY_ONE_FIRST_ATTEMPT_RUN",
+    "STOP_AT_TEARDOWN_READY",
+    "USER_TERMINATES_IN_PORTAL",
+    "RETIRE_LIVE_WORKFLOW",
+    "UPDATE_CANONICAL_HANDOVER"
+  ]
+}
