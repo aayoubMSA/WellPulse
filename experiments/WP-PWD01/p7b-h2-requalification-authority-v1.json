@@ -1,7 +1,8 @@
 {
   "schema_version": "wp2-p7b-h2-requalification-authority-v1",
   "status": "OFFLINE_H2_PASS_PROSPECTIVE_REQUALIFICATION_AUTHORITY_NOT_LIVE_AUTHORITY",
-  "terminal_h2_verdict": "WP2_P7B_H2=PASS_REQUALIFICATION_REPAIR_CLOSED",
+  "terminal_h2_verdict": "WP2_P7B_H2=PASS",
+  "terminal_h2_detail": "PASS_REQUALIFICATION_REPAIR_CLOSED",
   "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
   "authority_id": "P7B-RQ2",
   "decision": {
