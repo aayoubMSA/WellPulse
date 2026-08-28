@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 after **WP2-P7B-H2 COMPLETE / REQUALIFICATION REPAIR CLOSED**.
+Last updated: 2026-08-28 after **P7B-RQ2 LIVE ACTIVATION PASS / MANUAL R0 WAIT**.
 
 ## Authority
 
@@ -29,13 +29,15 @@ Historical B1 remains:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
+`HISTORICAL_B1=CONSUMED`
+
 `W1=NOT_STARTED`
 
 `B2=NOT_STARTED`
 
 No partial B1 PASS/FAIL credit may be inferred.
 
-## H1 root cause — frozen
+## H1/H2 — closed
 
 `WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
 
@@ -45,85 +47,244 @@ No partial B1 PASS/FAIL credit may be inferred.
 
 `ROOT_CAUSE_CONFIDENCE=HIGH`
 
-## H2 — COMPLETE
-
-`H2_1_CONTRACT_DELTA=PASS`
-
-`H2_2_SESSION_OWNERSHIP=PASS`
-
-`H2_3_FRONTIER_EVIDENCE=PASS`
-
-`H2_4_ADVERSARIAL_QA=PASS`
-
-`H2_5_REGRESSION=PASS`
-
 `WP2_P7B_H2=PASS`
 
 `WP2_P7B_H2_DETAIL=PASS_REQUALIFICATION_REPAIR_CLOSED`
 
 `H2_PROGRESS=100%`
 
-Canonical H2.6 closure:
-
-`docs/WP2_P7B_H2_6_REQUALIFICATION_AUTHORITY_DECISION_CANONICAL_CLOSURE_2026-08-28.md`
-
-Machine-readable H2.6 result:
-
-`evidence/powder/wp2-p7b-h2-6-authority-decision.json`
-
-## Prospective P7B-RQ2 authority overlay
-
-Canonical artifact:
+H2 canonical authority overlay:
 
 `experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json`
-
-Exact Git blob:
-
-`76522aa16d9af09d2f3d779a256236f752850245`
 
 Authority ID:
 
 `P7B-RQ2`
 
-Decision:
+## P7B-RQ2 — explicit live authorization received
 
-- H2 repair is sufficient to make a future **non-scored physical requalification request eligible**.
-- This is **not live authority**.
-- The aborted B1 remains NULL and consumed.
-- Any later authorized P7B-RQ2 would be a new bounded one-shot session, not continuation of the aborted run.
-- Maximum if later explicitly authorized: one new reservation and one live session attempt.
-- User remains the manual reservation boundary; GitHub may not create the reservation.
-- no automatic retry, reservation extension, second reservation, teardown, scored work, or WP3.
+The user explicitly authorized execution on 2026-08-28.
 
-Prospective node entrypoint only after future separate live authorization:
+`LIVE_POWDER_AUTHORIZATION=YES_P7B_RQ2`
 
-`scripts/wp2_p7b_c_node_h2.py`
+This authorization is bounded to **one future non-scored P7B-RQ2 physical requalification session** and does not authorize:
 
-Exact blob:
+- automatic reservation creation;
+- automatic reservation selection;
+- automatic retry;
+- a second reservation;
+- reservation extension;
+- automatic teardown;
+- scored execution;
+- WP3.
 
-`d66bc791455127ef87497cea3e912ee6f46e685b`
+## Current stage — MANUAL R0 WAIT
 
-It layers A1–A6 over the frozen r2 implementation.
+`P7B_RQ2_LIVE_ACTIVATION=PASS_CONTROL_PLANE_READY_R0_IDENTITY_REQUIRED`
 
-## Final H2 QA
+`CURRENT_STAGE=AUTHORIZED_AWAITING_MANUAL_R0_RESERVATION_IDENTITY`
 
-Final QA after canonical terminal-gate normalization:
+`R0_RESERVATION_IDENTITY=BLOCKED_MISSING_EXPERIMENT_ID_AND_EXPERIMENT_NAME`
 
-- commit `8735013bedc6d576424b0aa88670cd6ea68caa45`
-- workflow `Local Unit Tests`
-- run `33142326835`
-- job `98755668809`
-- **174/174 tests PASS**
-- **6/6 H2.6-specific PASS**
-- Python validation host `3.12.14`
-- Paho MQTT `2.1.0`
-- POWDER/network contact: **NONE**
+`NEXT_REQUIRED_INPUTS=experiment_id,experiment_name`
 
-Prior H2.6 run `33142248360` also passed 174/174; the final rerun normalized only the exact terminal gate label to `WP2_P7B_H2=PASS`.
+The user must create or select the reservation manually in POWDER and provide those two values.
+
+Current action state:
+
+`WORKFLOW_DISPATCH=NO`
+
+`POWDER_CONTACT=NO`
+
+`PORTAL_CONTACT=NO`
+
+`SSH=NO`
+
+`RF_MUTATION=NO`
+
+`SERVICE_MUTATION=NO`
+
+`B1_RQ2=NOT_STARTED`
+
+`W1=NOT_STARTED`
+
+`B2=NOT_STARTED`
+
+`SCORED=NO`
+
+`TEARDOWN=NO`
+
+No Portal or target contact is permitted before the two R0 identity values are supplied.
+
+## Canonical live-activation closure
+
+`docs/WP2_P7B_RQ2_LIVE_ACTIVATION_R0_WAIT_2026-08-28.md`
+
+Activation record:
+
+`experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json`
+
+Activation blob:
+
+`899318cc8bd625af621f2f023fd8b8b3f2381221`
+
+## Frozen target scientific source
+
+`SCIENTIFIC_SOURCE_SHA=2d7eb744f14ad4d5889909dac3cc29236c667190`
+
+The live target must receive this exact source commit. Later control-plane documentation/test changes do not change the scientific source.
+
+Frozen scientific/runtime artifacts remain:
+
+- executable contract v2: `233aabeaf3081470bc3ebc1ee04168f8932fc415`
+- target-runtime contract v2: `9531893989effb142e694294b95c0c7146353742`
+- modular pipeline v1: `2c85af21f502c092c2da0ecb1bf615c8f705069b`
+- H2 entrypoint: `d66bc791455127ef87497cea3e912ee6f46e685b`
+- frozen r2 entrypoint: `fa506e661f90fe9c21418fd2f86c8ca0a9230175`
+- H2 ownership library: `7810d1ed603fc305bd419c91a2b14bcca2e95e24`
+- H2 safe restore: `72f465f274c86d7ec514f358023074aa26f96551`
+- historical Golden restore: `cdf865eaaaf1c08bc8f7a8896d7f705739e60b9c`
+
+## Modular P7B-RQ2 execution surface
+
+Target-side module adapter:
+
+`scripts/wp2_p7b_rq2_module_adapter.py`
+
+Blob:
+
+`ccb3b86493bb16611bdf8e7947d0241e8c85d83a`
+
+GitHub control helper:
+
+`scripts/wp2_p7b_rq2_controller.sh`
+
+Blob:
+
+`b990a0cfa52bd23b1771857cbf938ac5aac7f0bd`
+
+Authorized workflow:
+
+`.github/workflows/wp2-p7b-rq2-session.yml`
+
+Blob:
+
+`6df75614b9b68050c1645e1b603cb946e7b4f5cd`
+
+Trigger:
+
+`workflow_dispatch` only.
+
+Required inputs:
+
+- `experiment_id`
+- `experiment_name`
+- `authority_id=P7B-RQ2`
+
+One-shot semantics:
+
+- `GITHUB_RUN_ATTEMPT=1`;
+- M0 read-only GitHub API check requires the current run to be the first/only `workflow_dispatch` run for this workflow;
+- experiment-scoped concurrency;
+- `cancel-in-progress=false`.
+
+The obsolete idea `GITHUB_RUN_NUMBER=1` was removed because pre-live schema-validation history had already consumed run numbers before any live dispatch.
+
+## Live DAG / simple HCI
+
+If and only if R0 identity is supplied and bound, the authorized DAG is:
+
+1. M0 — authority/source/contract freeze;
+2. M1 — existing reservation + manifest read-only validation;
+3. M2 — exact source stage + target-native runtime/EFCC preflight;
+4. M3 — H2-safe Q0 known-good baseline;
+5. M4 — B1;
+6. M5 — B1 evidence escrow/readback;
+7. M6 — W1;
+8. M7 — W1 evidence escrow/readback;
+9. M8 — B2;
+10. M9 — B2 evidence escrow/readback;
+11. M10 — non-scored reconstruction;
+12. M99 — final evidence readback and STOP before manual teardown.
+
+No later scientific cell may run unless the preceding cell and evidence job permit it.
+
+## Evidence survival
+
+Required chain:
+
+`node_raw -> /proj escrow -> controller pull -> Actions artifact -> readback`
+
+Each post-cell evidence job writes project escrow before controller pull. If one side has no evidence tree after an early failure, the absence is preserved as:
+
+`CLASSIFICATION=PARTIAL_FAILURE_EVIDENCE`
+
+instead of discarding the available evidence.
+
+M2 additionally syntax-compiles `scripts/wp2_p7b_rq2_module_adapter.py` under the pinned target Python before RF mutation can occur.
+
+## Pre-live QA history
+
+### Preserved schema-validation failure
+
+Run `33143081065`:
+
+- workflow schema validation failure;
+- **0 jobs started**;
+- no Portal/POWDER/SSH contact;
+- no live execution;
+- classification `PRELIVE_WORKFLOW_SCHEMA_VALIDATION_FAILURE_NO_JOBS_NO_POWDER_CONTACT`.
+
+The YAML alias/schema surface was removed.
+
+### Preserved stale-test failure
+
+Run `33143425295`:
+
+- 193 tests executed;
+- 2 failures;
+- both classified as stale test-harness assumptions after legitimate post-H2 activation;
+- no implementation/scientific/live failure.
+
+### Final activation QA — PASS
+
+Commit:
+
+`48361df6dbba0277cc6969e05971a593784fa580`
+
+Run:
+
+`33143509011`
+
+Job:
+
+`98759435090`
+
+Result:
+
+**193/193 tests PASS**
+
+Validation host:
+
+- Ubuntu 24.04.4
+- Python 3.12.14
+- Paho MQTT 2.1.0
+
+The final suite covers H2 regression/adversarial gates, authority boundaries, modular adapter, live workflow structure, first-dispatch semantics, target syntax gating, project escrow, partial-failure preservation, and prohibition of automatic reservation/retry/teardown.
+
+Post-QA:
+
+`ACTIONS_IN_PROGRESS=0`
+
+`ACTIONS_QUEUED=0`
+
+`P7B_RQ2_WORKFLOW_DISPATCH_COUNT=0`
+
+No workflow-schema validation run was generated by the final workflow-control-plane commit, confirming the earlier invalid YAML surface is gone.
 
 ## Frozen scientific controls
 
-No H1/H2 patch changed:
+No activation patch changed:
 
 - Q0/Q1/Q2/Q3 = `0/40/52/55 dB`
 - attenuators `[1,33,2,34]`, coupled
@@ -138,90 +299,52 @@ No H1/H2 patch changed:
 - no automatic scientific retry
 - negative/null/unfavourable evidence remains valid
 
-Frozen blobs:
+## Manual/automatic boundary after R0
 
-- executable contract v2 `233aabeaf3081470bc3ebc1ee04168f8932fc415`
-- target-runtime contract v2 `9531893989effb142e694294b95c0c7146353742`
-- modular pipeline v1 `2c85af21f502c092c2da0ecb1bf615c8f705069b`
-- historical Golden restore `cdf865eaaaf1c08bc8f7a8896d7f705739e60b9c`
+Once the user provides `experiment_id` and `experiment_name`:
 
-## Current live authority — all NO
+1. bind both values into the activation state;
+2. preserve the first-dispatch one-shot lock;
+3. begin M0;
+4. M1 may contact the Portal **read-only** to verify exact reservation/name/project/status/expiry/manifest/nuc1/nuc2/image/hardware;
+5. M2 may then SSH/stage only if M1 passes;
+6. RF/service mutation remains prohibited until M2 passes and M3 begins under the same authority.
 
-`LIVE_POWDER_AUTHORIZATION=NO`
-
-`NEW_RESERVATION_AUTHORIZATION=NO`
-
-`RESERVATION_SELECTION_AUTHORIZATION=NO`
-
-`SSH_LIVE_TARGET_AUTHORIZATION=NO`
-
-`RF_AUTHORIZATION=NO`
-
-`SERVICE_MUTATION_AUTHORIZATION=NO`
-
-`B1_REQUALIFICATION_AUTHORIZATION=NO`
-
-`W1_B2_AUTHORIZATION=NO`
-
-`SCORED_AUTHORIZATION=NO`
-
-`TEARDOWN_AUTHORIZATION=NO`
-
-`WP3_EXECUTION_AUTHORIZATION=NO`
-
-## Future live boundary — only if separately authorized later
-
-A future live session may begin only after a new explicit user instruction authorizing `P7B-RQ2`.
-
-After such authorization, the manual/automatic boundary remains:
-
-1. user creates or selects the POWDER reservation;
-2. user supplies `experiment_id` and `experiment_name`;
-3. then-current reservation/access state is validated;
-4. M0 freezes authority/source/contract SHAs;
-5. M1 runs read-only reservation/EFCC delta;
-6. M2 runs controller/session disjointness + target preflight;
-7. only after those gates may Q0/live scientific work be considered under that same explicit authority.
-
-Future live workflow name remains reserved but **absent**:
-
-`.github/workflows/wp2-p7b-rq2-session.yml`
-
-It must not be created until separate explicit live authorization exists.
+GitHub must never create the reservation.
 
 ## Mandatory next-agent read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P7B_H2_6_REQUALIFICATION_AUTHORITY_DECISION_CANONICAL_CLOSURE_2026-08-28.md`
-3. `evidence/powder/wp2-p7b-h2-6-authority-decision.json`
-4. `experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json`
-5. `docs/WP2_P7B_H1_ABORT_EVIDENCE_FREEZE_ROOT_CAUSE_CLOSURE_2026-08-28.md`
-6. `evidence/powder/wp2-p7b-h1-abort-root-cause.json`
-7. `experiments/WP-PWD01/p7b-h2-controller-restore-contract-delta-v1.json`
-8. H2.1–H2.5 closure documents in order
-9. `evidence/powder/wp2-p7b-h2-4-adversarial-qa.json`
-10. `evidence/powder/wp2-p7b-h2-5-regression.json`
-11. `scripts/wp2_p7b_h2_adversarial_qa.py`
-12. `scripts/wp2_p7b_h2_regression_gate.py`
-13. `src/wellpulse/p7b_session_ownership.py`
-14. `scripts/wp2_p7b_service_restore_h2.sh`
-15. `scripts/wp2_p7b_c_node_h2.py`
-16. `scripts/wp2_p7b_target_node_preflight.sh`
-17. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
-18. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
-19. `experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json`
-20. `docs/WP2_P7B_MODULAR_EXECUTION_ARCHITECTURE_2026-08-28.md`
-21. current `Research & Grants — Lessons Learned Ledger`
+2. `docs/WP2_P7B_RQ2_LIVE_ACTIVATION_R0_WAIT_2026-08-28.md`
+3. `experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json`
+4. `.github/workflows/wp2-p7b-rq2-session.yml`
+5. `scripts/wp2_p7b_rq2_controller.sh`
+6. `scripts/wp2_p7b_rq2_module_adapter.py`
+7. `experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json`
+8. `docs/WP2_P7B_H2_6_REQUALIFICATION_AUTHORITY_DECISION_CANONICAL_CLOSURE_2026-08-28.md`
+9. H2.1–H2.5 closures and H2.4/H2.5 machine-readable evidence
+10. `scripts/wp2_p7b_c_node_h2.py`
+11. `scripts/wp2_p7b_target_node_preflight.sh`
+12. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
+13. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
+14. `experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json`
+15. current `Research & Grants — Lessons Learned Ledger`
 
 ## Stop state
 
-`WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
-
 `WP2_P7B_H2=PASS`
 
-`H2_PROGRESS=100%`
+`P7B_RQ2_LIVE_AUTHORIZATION=YES`
 
-`B1=NULL_ABORTED_AFTER_Q3`
+`P7B_RQ2_CONTROL_PLANE=PASS_READY`
+
+`R0_RESERVATION_IDENTITY=BLOCKED_MISSING_EXPERIMENT_ID_AND_EXPERIMENT_NAME`
+
+`WORKFLOW_DISPATCH=NO`
+
+`POWDER_CONTACT=NO`
+
+`B1_RQ2=NOT_STARTED`
 
 `W1=NOT_STARTED`
 
@@ -229,8 +352,10 @@ It must not be created until separate explicit live authorization exists.
 
 `SCORED=NO`
 
-`LIVE_POWDER_AUTHORIZATION=NO`
+`TEARDOWN=NO`
 
-`NEXT_STATE=STOP_H2_COMPLETE_AWAIT_SEPARATE_EXPLICIT_USER_LIVE_AUTHORIZATION_P7B_RQ2`
+`NEXT_STATE=P7B_RQ2_MANUAL_R0_WAIT`
 
-**STOP — H2 COMPLETE. P7B-RQ2 LIVE EXECUTION NOT AUTHORIZED.**
+`NEXT_REQUIRED_INPUTS=experiment_id,experiment_name`
+
+**STOP — LIVE AUTHORIZATION RECORDED; CONTROL PLANE READY; MANUAL R0 RESERVATION IDENTITY REQUIRED.**
