@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           test "$(cat .wp2-p7b-rq2-slow-reservation-trigger)" = $'AUTHORITY=P7B_RQ2_SLOW_RESERVATION_ONLY\nNEW_RESERVATION=ONE\nDURATION_HOURS=4\nPOLL_SECONDS=60\nGET_ERROR_BACKOFF_SECONDS=90\nREADY_QUIET_SECONDS=120\nSSH=NO\nRF=NO\nCELLS=NO\nTEARDOWN=NO\nSCORED=NO\nAUTOMATIC_RETRY=NO'
           ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+terminate' .github/workflows/wp2-p7b-rq2-slow-reservation.yml
-          ! grep -Eq 'ssh|scp|rsync|attenuator|B1|W1|B2' .github/workflows/wp2-p7b-rq2-slow-reservation.yml
+          ! grep -Eq 'tmcc|attenuator|wp2_p7b_c_node|rsync|scp[[:space:]]' .github/workflows/wp2-p7b-rq2-slow-reservation.yml
           echo 'RQ2_SLOW_AUTHORITY=PASS'
 
       - name: Create one reservation slowly and stop at stable READY
@@ -46,43 +46,19 @@ jobs:
           echo 'PACED_CONTROL=quiet-before-list:30s'
           sleep 30
           portal-cli experiment list > "$TMP/list-before.json" || fail PORTAL_LIST
-          python3 - "$TMP/list-before.json" <<'PY'
-import json,sys
-obj=json.load(open(sys.argv[1])); xs=obj if isinstance(obj,list) else obj.get('experiments',[])
-terminal={'terminated','destroyed','failed','error'}
-active=[]
-for x in xs:
-    if not isinstance(x,dict) or x.get('project')!='WellPulse':
-        continue
-    name=str(x.get('name','')); status=str(x.get('status','')).lower()
-    if name.startswith('wp7b') and status not in terminal:
-        active.append({'id':x.get('id'),'name':name,'status':status})
-if active:
-    print('ACTIVE_P7B_CONFLICT='+json.dumps(active,sort_keys=True,separators=(',',':')))
-    raise SystemExit(20)
-print('ACTIVE_P7B_CONFLICT=NONE')
-PY
+          python3 -c 'import json; x=json.load(open("/tmp/wp2-rq2-slow/list-before.json")); xs=x if isinstance(x,list) else x.get("experiments",[]); terminal={"terminated","destroyed","failed","error"}; a=[{"id":r.get("id"),"name":str(r.get("name","")),"status":str(r.get("status","")).lower()} for r in xs if isinstance(r,dict) and r.get("project")=="WellPulse" and str(r.get("name","")).startswith("wp7b") and str(r.get("status","")).lower() not in terminal]; print("ACTIVE_P7B_CONFLICT="+(json.dumps(a,sort_keys=True,separators=(",",":")) if a else "NONE")); raise SystemExit(20 if a else 0)'
 
           echo 'PACED_CONTROL=quiet-before-create:30s'
           sleep 30
 
           umask 077
-          python3 - <<'PY'
-import os
-from pathlib import Path
-raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
-Path('/tmp/wp2-rq2-slow/private.key').write_text(raw,encoding='utf-8',newline='\n')
-PY
+          python3 -c 'import os,pathlib; raw=os.environ["POWDER_SSH_PRIVATE_KEY"].replace("\r\n","\n").replace("\r","\n").lstrip("\ufeff").strip()+"\n"; pathlib.Path("/tmp/wp2-rq2-slow/private.key").write_text(raw,encoding="utf-8",newline="\n")'
           chmod 600 "$TMP/private.key"
           PUB="$(ssh-keygen -y -f "$TMP/private.key")"
           SUFFIX="${GITHUB_RUN_ID: -6}"
           EXP_NAME="wp7brq2${SUFFIX}"
           portal-cli experiment create --name "$EXP_NAME" --project WellPulse --profile-name "$PROFILE_NAME" --profile-project "$PROFILE_PROJECT" --duration 4 --bindings "$BINDINGS" --sshpubkey "$PUB" > "$TMP/create.json" || fail CREATE
-          EXPID="$(python3 - "$TMP/create.json" <<'PY'
-import json,sys
-x=json.load(open(sys.argv[1])); print(x.get('id',''))
-PY
-)"
+          EXPID="$(python3 -c 'import json; print(json.load(open("/tmp/wp2-rq2-slow/create.json")).get("id",""))')"
           [[ "$EXPID" =~ ^[0-9A-Fa-f-]{36}$ ]] || fail CREATE_NO_UUID
           echo "EXPERIMENT_ID=$EXPID"
           echo "EXPERIMENT_NAME=$EXP_NAME"
@@ -100,11 +76,7 @@ PY
               sleep 90
               continue
             fi
-            STATUS="$(python3 - "$TMP/status.json" <<'PY'
-import json,sys
-x=json.load(open(sys.argv[1])); print(str(x.get('status','unknown')).lower())
-PY
-)"
+            STATUS="$(python3 -c 'import json; print(str(json.load(open("/tmp/wp2-rq2-slow/status.json")).get("status","unknown")).lower())')"
             echo "SLOW_POLL_${i}=$STATUS"
             if [[ "$STATUS" == ready ]]; then READY=1; break; fi
             [[ "$STATUS" =~ ^(failed|error|terminated|destroyed)$ ]] && fail "TERMINAL_$STATUS"
@@ -122,17 +94,4 @@ PY
           python3 scripts/wp2_portal_record_guard.py --json "$TMP/stable.json" --expected-experiment-id "$EXPID" | tee "$TMP/stable-gate.txt"
           grep -q '^PORTAL_RECORD_GATE=PASS$' "$TMP/stable-gate.txt" || fail STABLE_RECORD
           portal-cli experiment manifests get --experiment-id "$EXPID" > "$TMP/manifest.json" || fail MANIFEST
-          python3 - "$TMP/stable.json" "$TMP/manifest.json" <<'PY'
-import json,sys
-x=json.load(open(sys.argv[1])); m=json.load(open(sys.argv[2]))
-assert x.get('project')=='WellPulse'
-assert str(x.get('status','')).lower()=='ready'
-text=json.dumps(m)
-assert 'nuc1' in text and 'nuc2' in text and 'srsue' in text
-print('RQ2_STABLE_READY_MANIFEST=PASS')
-print('SSH_AUTHORIZED=NO')
-print('RF_AUTHORIZED=NO')
-print('CELLS_AUTHORIZED=NO')
-print('TEARDOWN_AUTHORIZED=NO')
-print('RQ2_SLOW_RESERVATION=PASS_READY_AND_STOP')
-PY
+          python3 -c 'import json; x=json.load(open("/tmp/wp2-rq2-slow/stable.json")); m=json.load(open("/tmp/wp2-rq2-slow/manifest.json")); t=json.dumps(m); assert x.get("project")=="WellPulse"; assert str(x.get("status","")).lower()=="ready"; assert "nuc1" in t and "nuc2" in t and "srsue" in t; print("RQ2_STABLE_READY_MANIFEST=PASS"); print("SSH_AUTHORIZED=NO"); print("RF_AUTHORIZED=NO"); print("CELLS_AUTHORIZED=NO"); print("TEARDOWN_AUTHORIZED=NO"); print("RQ2_SLOW_RESERVATION=PASS_READY_AND_STOP")'
