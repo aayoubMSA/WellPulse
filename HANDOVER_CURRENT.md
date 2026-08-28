@@ -1,446 +1,263 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-27 after **WP2-P7B-R2 one-replacement requalification contract freeze PASS / stopped before live R3**.
+Last updated: 2026-08-28 after **WP2-P7B-H1 aborted-Q3 evidence freeze + offline first-cause classification PASS**.
 
-## Executive state
+## Authority
 
-- Canonical repository: `aayoubMSA/WellPulse`, branch `main`.
-- Last accepted checkpoint: **P7B-R2 PASS_ONE_REPLACEMENT_CONTRACT_FREEZE / STOPPED**.
-- Scientific weighted completion: **20%**.
-- WP2 management/readiness: **95/100**; no partial scientific credit.
-- WP0: **PASS**, 8/8.
-- WP1: **PASS / FROZEN**, 12/12.
+This is the current canonical operational handover for `aayoubMSA/WellPulse`, branch `main`.
+
+It supersedes the operational next-step state in earlier handovers, including `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`, while retaining those records as historical provenance.
+
+Do not reconstruct current state from chat memory.
+
+## Executive scientific state
+
+- WP0: **PASS**.
+- WP1: **PASS / FROZEN**.
 - WP2: **ACTIVE / PRE-SCORE BLOCKED**.
-- WP3: **BLOCKED ON WP2**, 0/30.
-- WP4: **BLOCKED**, 0/15.
-- WP5: **PREPARED / NOT EXECUTED**, 0/20.
-- FIT IoT-LAB: **FINAL PASS**.
-- POWDER G0-G5: **PASS**.
-- RF calibration: **PASS / FROZEN**.
-- K1-K8 compatibility: **PASS / CLOSED**.
-- `PRE_INTEGRATION_COMPATIBILITY_GATE=PASS`.
-- `AUDIT_R1=PASS`.
-- `LIVE_HCI_AND_RAW_EVIDENCE_GATE=PASS`.
-- `WP2_P6=PASS_RECOVERED_SINGLE_RUN`.
-- `WP2_P7_HARDENING_QA=PASS`.
-- `WP2_P7B_A=PASS_OFFLINE_CONTRACT_FREEZE`.
-- `WP2_P7B_B=PASS_OFFLINE_IMPLEMENTATION_PREMUTATION_QA`.
-- `WP2_P7B_C=BLOCKED:RECEIVER_CONNECT_TIMEOUT`.
-- `WP2_P7B_D=BLOCKED_STRICT_COMPLETENESS_RECEIVER_EVENT_LEDGER_NOT_RECOVERED`.
-- `WP2_P7B_E=PASS_CANONICAL_BLOCKED_CLOSURE`.
-- `WP2_P7B_R1=PASS_OFFLINE_RECEIVER_PATH_OBSERVABILITY_QA`.
-- `WP2_P7B_R2=PASS_ONE_REPLACEMENT_CONTRACT_FREEZE`.
-- `REQUALIFICATION_DECISION=GO_ONE_REPLACEMENT_NON_SCORED`.
-- `P7B_RQ1_AUTHORITY_CONTRACT=FROZEN`.
-- `P7B_RQ1_LIVE_AUTHORIZED=false`.
-- successful P7B physical-qualification credit remains **40/100** from A+B only.
-- `SCORED_AUTHORIZATION=BLOCKED:PRE_SCORE_PHYSICAL_QUALIFICATION_REQUIRED`.
-- `scored_runs_authorized=false`.
-- `HCI_CONTROL_ACTIONS_ENABLED=false`.
+- WP3: **BLOCKED ON WP2**.
+- WP4: **BLOCKED**.
+- WP5: **PREPARED / NOT EXECUTED**.
+- P6 Golden baseline: **VALID / FROZEN**.
+- P7/P7B offline hardening/runtime/EFCC work: retained and valid unless explicitly superseded.
+- P7B physical qualification: **NOT PASSED**.
+- Scored execution: **NOT AUTHORIZED**.
 
-## P6 — final non-scored Golden baseline
+Latest attempted B1 state is frozen exactly as:
 
-Canonical record:
+`P7B_B1_ATTEMPT=ABORTED_AFTER_SCIENTIFIC_IMPAIRMENT`
 
-`docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
+`B1_SCIENTIFIC_VERDICT=NULL`
 
-Accepted Golden evidence:
+`B1=NULL_ABORTED_AFTER_Q3`
 
-- reservation UUID `5579cf25-dbb1-4d04-87e3-ff558e3be2af`;
-- name `wpg7498036`;
-- profile `PowderProfiles/srslte-controlled-rf`;
-- profile revision `a6da96560b6526dc6816761282722c996418fd8c`;
-- valid non-scored run `wp2-p6r-33099648133-20260827T174149Z`;
-- scientific source SHA `bd1b5e12f3d2eca27ec81ccadbeec5afaa2f2159`;
-- one reservation only; no scientific rerun;
-- `t_rf_restore=2026-08-27T17:45:06.913285Z`;
-- `t_service_ready=2026-08-27T17:45:32.001525Z`;
-- `T_service=25.088240 s`;
-- `t_app_complete=2026-08-27T17:45:37.295360Z`;
-- `T_app=5.293835 s`;
-- `T_total=30.382075 s`;
-- primary cohort 181;
-- valid by 300 s 181/181;
-- `completeness_300=1.0`;
-- missing/checksum/duplicate/late = 0/0/0/0;
-- raw evidence + `/proj` escrow + controller pull + independent artifact round-trip PASS;
-- deterministic TAR SHA-256 `ff72a50fd11db1d308f4049b49fffa317c8220c9290845434dbadc8dbef847cf`;
-- GitHub artifact ID `9658678808`;
-- teardown confirmed `2026-08-27T18:04:31Z`.
+`W1=NOT_STARTED`
 
-P6 Attempt 1 and later evidence-pipeline failures remain provenance and did not create a second scientific run/reservation.
+`B2=NOT_STARTED`
 
-## P7 — reusable-path hardening / scored authorization decision
+`AUTOMATIC_RETRY=PROHIBITED`
 
-Canonical record:
+`MANUAL_RETRY=PROHIBITED_UNDER_CURRENT_FROZEN_CONTRACT`
 
-`docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
+`SCORED=NO`
 
-- management alias preparation hardened;
-- receiver evidence collection uses live-qualified tar-stream semantics;
-- planned post-cohort traffic separated from truly unexpected identities;
-- clock/post-cohort/transport/retirement regressions executable under unittest discovery;
-- Actions run `33103997677`, job `98628861177`: **36/36 PASS**;
-- Golden offline reconstruction/escrow/interlock PASS;
-- corruption fail-closed;
-- no POWDER contact or scientific/scored run during P7.
+`TEARDOWN=NOT_AUTHORIZED_BY_H1`
 
-P7 left scored authorization blocked because physical arm/restart/B2/washout qualification remained mandatory.
+No partial scientific PASS/FAIL credit may be inferred from the aborted B1 attempt.
 
-## P7B-A/B — original qualification contract and implementation
+## Last observed reservation
 
-Canonical records:
+Historical live target used for the aborted attempt:
 
-- `docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`
-- `docs/WP2_P7B_B_OFFLINE_IMPLEMENTATION_CLOSURE_2026-08-27.md`
-- `experiments/WP-PWD01/P7B_PHYSICAL_QUALIFICATION_PLAN_v1.md`
-- `experiments/WP-PWD01/p7b-qualification-contract.json`
+- UUID: `f6de95cb-a13a-421e-bd0e-766dfc1d3fb3`
+- name: `wp7brq2609012`
+- profile: `srslte-controlled-rf`
+- frozen profile revision: `a6da96560b6526dc6816761282722c996418fd8c`
+- CORE: `nuc1`
+- UE: `nuc2`
+- run ID: `wp2-p7b-manual-20260828T024433Z`
 
-Original frozen design:
+Do not assume that this reservation remains live. No new reservation is authorized by this handover.
 
-- reservation limit = exactly 1;
-- automatic replacement = NO;
-- automatic retry = NO;
-- exactly three sequential non-scored S3 cells:
-  `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
-- fail-closed Q0 washout/readiness before every cell;
-- generator outside gateway restart domain;
-- gateway/client restart 60 s into Q3;
-- exact B1/W1 low-level runtime/config matching except intended application-level persistence difference;
-- B1 accepted/PUBACK/unacknowledged reconstruction;
-- W1 SQLite WAL synchronous=FULL survival/replay;
-- B2 Eclipse Paho Java 1.2.5 file persistence/disconnected buffer;
-- deterministic reconstruction;
-- strict raw-evidence survival/read-back before teardown.
-
-Accepted offline QA:
-
-- P7B-A run `33106623492`, job `98638079325`: **41/41 PASS**;
-- P7B-B run `33108767123`, job `98645668213`: **56/56 PASS**;
-- initial B2 Java API run `33108767171` FAILED and retained;
-- compatibility correction commit `6892ad26810d598965dfbe85ecb38f53b1097a5c`;
-- accepted B2 semantics run `33108848011`, job `98645950042`: three independent 5/5 restart-recovery trials, zero missing/duplicates.
-
-## P7B-C — first authorized live qualification
-
-Authoritative retained status:
-
-`evidence/powder/wp2-p7b-c-live-status.md`
-
-Reservation:
-
-- UUID `26b6f315-459d-4a56-9167-69228e339f24`;
-- name `wp7b3016138`;
-- GitHub run `33113016138`;
-- node run ID `wp2-p7b-c-33113016138-20260827T203140Z`;
-- evidence class NON-SCORED PRE-SCORE PHYSICAL QUALIFICATION.
-
-Passed before block:
-
-- Portal READY;
-- core/UE SSH;
-- frozen profile revision;
-- B1 Q0 route via `tun_srsue` to `172.16.0.1`;
-- five Q0 probes with 0% loss;
-- TLS/MQTT readiness publish;
-- broker later proved receiver client `wp-hcrx-885b10cacb1c` connected, got CONNACK, subscribed to the exact B1 topic and remained alive through MQTT keepalive exchanges.
-
-Controller result:
-
-- first failure `RECEIVER_CONNECT_TIMEOUT`;
-- completed cells: NONE;
-- scientific measurement started: NO;
-- W1: NOT STARTED;
-- B2: NOT STARTED;
-- controller RC 70;
-- scored: NO.
-
-Retained verdict:
-
-`WP2_P7B_C=BLOCKED:RECEIVER_CONNECT_TIMEOUT`
-
-Root cause is classified as an orchestration/evidence-path quoting defect, not demonstrated LTE/MQTT failure. The historical node runner passed receiver `--output-dir` through a single-quoted path containing literal `$HOME`, while the readiness watcher used the expanded expected path.
-
-## P7B-D — first evidence survival/read-back/teardown
-
-Authoritative retained status:
-
-`evidence/powder/wp2-p7b-d-live-status.md`
-
-- first preservation attempt run `33114265831`: fail-closed before persistent copy because of a preservation-path quoting defect;
-- same-reservation retry run `33114517583`, job `98665610066`: workflow SUCCESS;
-- `/proj` persistence for captured declared roots PASS;
-- controller pull/internal SHA-256 verification PASS;
-- GitHub artifact ID `9663926250`;
-- ZIP digest `0bd31f534712d2f1fe3793008e7b00c1e6df85f58277686b3de5ffb5fd6455bb`;
-- deterministic inner TAR SHA-256 `f49263f77d673cf5961dd6efb3b0ce2a3d7dde5969d48f20e0c383f105693877`;
-- inner TAR bytes `296960`;
-- independent artifact download and internal read-back PASS;
-- teardown confirmed after off-POWDER verification.
-
-Strict gap:
-
-- expected core receiver `console.txt` existed;
-- expected `receiver_events.jsonl` was not recovered before teardown;
-- complete raw-evidence survival cannot be claimed.
-
-Retained verdict:
-
-`WP2_P7B_D=BLOCKED_STRICT_COMPLETENESS_RECEIVER_EVENT_LEDGER_NOT_RECOVERED`
-
-## P7B-E — canonical blocked closure
-
-Canonical record:
-
-`docs/WP2_P7B_E_CANONICAL_BLOCKED_CLOSURE_2026-08-27.md`
-
-Verdict:
-
-`WP2_P7B_E=PASS_CANONICAL_BLOCKED_CLOSURE`
-
-This freezes the failed/partial physical evidence without relabelling it. It does not mean P7B physical qualification passed.
-
-All temporary P7B-C/D live workflows/triggers were retired. Retirement deletion runs `33115086371` and `33115100803` failed closed before live actions and created no new reservation/POWDER contact.
-
-## P7B-R1 — receiver-path repair + observability QA
-
-Canonical record:
-
-`docs/WP2_P7B_R1_RECEIVER_PATH_OBSERVABILITY_CLOSURE_2026-08-27.md`
-
-Verdict:
-
-`WP2_P7B_R1=PASS_OFFLINE_RECEIVER_PATH_OBSERVABILITY_QA`
-
-R1 implementation:
-
-1. `scripts/wp2_p7b_path_contract.py`
-   - absolute remote-path contract;
-   - rejects literal `$HOME`, `~`, relative paths and unsafe path tokens;
-   - derives one receiver path tree;
-   - proves writer/watcher event path equality.
-
-2. `scripts/wp2_p7b_c_node_r1.py`
-   - wraps frozen base node runner rather than rewriting scientific cell logic;
-   - resolves remote core home to an absolute path;
-   - uses one receiver writer/watcher path;
-   - writes `receiver_path_contract.json`;
-   - checks receiver PID liveness while awaiting connect;
-   - emits `RECEIVER_EXITED_BEFORE_CONNECT` on early exit;
-   - emits bounded GitHub-compatible diagnostics before timeout/exit verdicts.
-
-3. `scripts/wp2_p7b_preservation_helpers.sh`
-   - no POWDER/SSH authority itself;
-   - requires resolved absolute paths;
-   - rejects literal shell-expansion paths;
-   - source-hash manifests and verifies copied trees.
-
-Accepted R1 QA:
-
-- implementation/regression SHA `695b31cba6c0256b3637223abdfef4f4b11bf6ca`;
-- Actions run `33116073295`, job `98670934415`;
-- Python 3.12.14;
-- paho-mqtt 2.1.0;
-- **65/65 PASS**.
-
-R1 recommendation:
-
-`FUTURE_PHYSICAL_REQUALIFICATION_RECOMMENDATION=GO_CONDITIONAL`
-
-R1 created no reservation/live authority.
-
-## P7B-R2 — one-replacement requalification authority freeze
+## WP2-P7B-H1 — PASS
 
 Canonical closure:
 
-`docs/WP2_P7B_R2_REQUALIFICATION_CONTRACT_FREEZE_2026-08-27.md`
+`docs/WP2_P7B_H1_ABORT_EVIDENCE_FREEZE_ROOT_CAUSE_CLOSURE_2026-08-28.md`
 
-Machine-readable contract:
+Machine-readable root-cause record:
 
-`experiments/WP-PWD01/p7b-requalification-r2-contract.json`
+`evidence/powder/wp2-p7b-h1-abort-root-cause.json`
 
-Contract Git blob SHA:
+Terminal verdict:
 
-`2a5b7b4ca025811da665dd0159403abc12d4f4a8`
+`WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
 
-Verdict:
+### H1 evidence survival
 
-`WP2_P7B_R2=PASS_ONE_REPLACEMENT_CONTRACT_FREEZE`
+One preservation-only execution was performed after explicit user authorization. It did not alter RF, restart services, retry B1, execute W1/B2, create a reservation, teardown, or perform scored work.
 
-Decision:
+- operational branch: `wp2-p7b-h1-freeze-20260828`
+- preservation workflow commit: `118a8c025ef0be5a643f710ff9c620abdcb5698b`
+- Actions run: `33138161593`
+- job: `98742778306`
+- GitHub artifact ID: `9672862285`
+- artifact bytes: `1,972,916`
+- artifact SHA-256: `a7e3b06d27f46729fcf0ce57aab217a1cf2c1e9edb71211db58d0a7f9063d09d`
+- independent downloaded artifact SHA-256: exact match
+- controller manifest/hash verification: PASS
+- UE internal source-hash verification: PASS
+- CORE internal source-hash verification: PASS
+- canonical durable Drive file ID: `1mE3GX6lm5k6DeUXaYqOmz7N74rKgYBJ3`
+- canonical Drive filename: `wp2-p7b-h1-abort-freeze-33138161593.zip`
 
-`REQUALIFICATION_DECISION=GO_ONE_REPLACEMENT_NON_SCORED`
+Two accidental Drive duplicate uploads were renamed with explicit `NONCANONICAL_DUPLICATE` prefixes and must not be used as evidence. They are not deleted by this handover.
 
-Frozen replacement authority:
+The frozen tree also revealed a prior local abort bundle that had been executed after the earlier handover wording was written:
 
-- authority ID `P7B-RQ1`;
-- experiment name prefix `wp7brq1`;
-- maximum new reservations = 1;
-- second replacement = NO;
-- automatic retry = NO;
-- automatic new reservation = NO;
-- requires separate explicit live authorization = YES;
-- current live authorization = NO;
-- scored authorization = NO.
+- prior bundle SHA-256: `a2f9e4a8677bc5b3488da6bf0aad76ad9c67eea2a755009d7cad745228b2b836`
 
-Execution lock:
+The contradiction with the earlier statement that the abort-freeze sprint had not yet executed is retained as provenance. H1 independently closes evidence survival through off-POWDER pull and read-back.
 
-- tested R1 implementation commit `695b31cba6c0256b3637223abdfef4f4b11bf6ca`;
-- only permitted node entrypoint `scripts/wp2_p7b_c_node_r1.py`;
-- node entrypoint blob `6d28468c93742046d952668b9df1cad8e6ea78c0`;
-- path contract blob `2e77e7e355e25c6e3f747956e2f2b0ac5ad46161`;
-- preservation helper blob `9063ec2e97e9cbf7a9f76d6ea10920236d8370ef`;
-- legacy `scripts/wp2_p7b_c_node.py` prohibited for replacement authority.
+## Exact aborted-run execution frontier
 
-Future-controller static gate:
+Authoritative frozen evidence establishes:
 
-`scripts/wp2_p7b_r2_validate_controller.py`
+1. B1 Q0/readiness passed.
+2. Q3 started at approximately `2026-08-28T02:45:46.961547Z`.
+3. The intended B1 gateway process was destroyed at the frozen restart point.
+4. The replacement gateway started at approximately `2026-08-28T02:46:51.402954Z`.
+5. The generator remained alive and continued generating records.
+6. At Q3 end, Q0 restore was commanded and `t_rf_restore` was written at approximately `02:47:47Z`.
+7. `wp2_golden_service_restore.sh` began at `2026-08-28T02:47:47.138928511Z`.
+8. Its evidence stops inside the first phase: `Stopping UE and clearing profile session/tunnel`.
+9. `T_UE_STOPPED` was never written.
+10. No CORE cleanup/start phase was reached.
+11. The parent runner disappeared while detached generator/gateway children survived.
+12. Later RCA observed `srsue` absent and `tun_srsue` missing, while CORE `srsepc`/`srsenb` were still running.
 
-- Git blob `92961f476ddab32f1df33756d3857ef27df92323`;
-- requires exactly one reservation create;
-- requires `P7B-RQ1` marker;
-- requires repaired R1 entrypoint;
-- rejects legacy entrypoint;
-- requires `AUTOMATIC_RETRY=NO` and `SECOND_REPLACEMENT=NO`;
-- requires resolved-path preservation helper;
-- forbids scored authorization;
-- requires evidence/off-POWDER gates before the single terminate operation.
+Therefore `restart_proof.json=MISSING` must not be interpreted as `gateway restart did not occur`. The gateway restart occurred; the final proof file had simply not yet reached its later write point.
 
-Accepted R2 QA:
+## Classified first technical root cause
 
-- regression SHA `b77609bfb9256a0eb189c0e5dd29a2f1f68c3bc2`;
-- Actions run `33117108893`, job `98674462071`;
-- Python 3.12.14;
-- paho-mqtt 2.1.0;
-- **73/73 PASS**;
-- retired historical controller fails the R2 static gate;
-- synthetic compliant future controller passes;
-- no P7B live workflow/trigger exists after R2.
+`FIRST_TECHNICAL_ROOT_CAUSE=CONTROLLER_SESSION_COLLISION_SERVICE_RESTORE_KILLED_OPERATOR_TMUX_UE`
 
-R2 contacted no POWDER system and created no reservation, SSH session, workflow, trigger, scientific run or scored run.
+`ROOT_CAUSE_CLASS=CONTROLLER_SESSION_INFRASTRUCTURE`
 
-## Replacement evidence-survival contract
+`ROOT_CAUSE_CONFIDENCE=HIGH`
 
-If `P7B-RQ1` is later explicitly live-authorized, its live patch must combine physical qualification with evidence survival so the earlier manual C->D gap is not repeated.
+Proof chain:
 
-Required chain:
+- `scripts/wp2_golden_service_restore.sh` begins its UE cleanup with `tmux kill-session -t ue` on the UE host.
+- frozen `q0_radio_capture.txt` proves tmux session `ue` on `nuc2 / UE` contained the human/operator controller shell that launched the manual P7B runner;
+- the alternative `srs-ue` session was absent in that capture;
+- the restore log ends at this exact first UE-cleanup boundary;
+- the controller/runner disappears while detached child processes continue;
+- UE service/tunnel are removed but CORE is untouched because the restore helper never reaches CORE cleanup.
 
-`node raw -> /proj persistent escrow -> controller pull -> GitHub artifact -> independent controller read-back -> outer/internal SHA-256 -> teardown`
+The exact Unix signal is not recorded, so no specific signal is claimed.
 
-Rules:
+RLF/RRC reconnects and `SECURITY_MODE_REJECT`/NAS-integrity messages remain retained observations. They are not promoted to the first cause of the controller disappearance and do not convert B1 into a scientific failure.
 
-- resolved absolute paths only;
-- literal `$HOME`/`~` preservation paths prohibited;
-- complete raw evidence required;
-- `TEARDOWN_AUTHORIZED=YES` only after both `EVIDENCE_ESCROW_GATE=PASS` and `CONTROLLER_OFFPOWDER_GATE=PASS`;
-- evidence-gate failure leaves the experiment live and STOPs;
-- no automatic retry or second replacement follows any failure.
+## Draft future amendment — not authority
 
-## Frozen scientific controls
+Offline draft:
 
-No scientific control changed in C/D/E/R1/R2:
-
-- Q0/Q1/Q2/Q3 = `0/40/52/55 dB`;
-- attenuation IDs `1 33 2 34` coupled;
-- pre-impairment Q0 = 60 s;
-- Q3 = 120 s;
-- gateway/client restart = 60 s into Q3;
-- exact cell order `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
-- generator remains outside gateway restart domain;
-- primary cohort cutoff = `t_rf_restore`;
-- `t_rf_restore`, `t_service_ready`, `t_app_complete` distinct;
-- `H_app=300 s` from `t_service_ready`;
-- primary endpoint remains `completeness_300` at `t_service_ready + 300 s`;
-- preserve `T_service`, `T_app`, `T_total`;
-- no outcome/W1/Golden/scored-derived H re-estimation;
-- S2/S3 clean restore order frozen;
-- H1 remains valid adverse non-scored evidence;
-- K1-K8 remain closed absent material interface change;
-- negative/null/unfavorable outcomes never justify protocol drift.
-
-## Current workflow surface
-
-Canonical registry:
-
-`docs/WORKFLOW_REGISTRY.md`
-
-Exactly six workflows remain and all are offline/local. Exactly four standing offline sentinels remain. There is no P7B-RQ1 live workflow/trigger and no active P7B live execution surface.
-
-## Exact next bounded patch
-
-`WP2-P7B-R3 — ONE REPLACEMENT NON-SCORED PHYSICAL REQUALIFICATION + EVIDENCE SURVIVAL`
+`experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
 
 Status:
 
-`P7B_RQ1_LIVE_AUTHORIZED=false`
+`DRAFT_OFFLINE_ONLY`
 
-R3 is **LIVE / NOT AUTHORIZED** and requires separate explicit user authorization. The R2 GO decision is only a prospective contract decision and does not itself authorize POWDER contact.
+`LIVE_AUTHORIZATION=NO`
 
-If and only if R3 is explicitly authorized, it may:
+`RETRY_AUTHORIZATION=NO`
 
-1. create exactly one replacement reservation under authority ID `P7B-RQ1`;
-2. use the frozen profile/revision and verify live bindings/manifest/runtime before mutation;
-3. execute exactly `P7B-B1-S3 -> P7B-W1-S3 -> P7B-B2-S3`;
-4. require the independent Q0 fail-closed readiness gate before each cell;
-5. stop later cells on any cell failure;
-6. use only `scripts/wp2_p7b_c_node_r1.py`;
-7. expose bounded first-cause diagnostics directly in GitHub Actions;
-8. preserve complete evidence using resolved absolute paths;
-9. complete `/proj` escrow, controller pull, artifact upload, independent read-back and hashes before teardown;
-10. leave the experiment live if evidence gates fail;
-11. create no automatic retry or second replacement;
-12. keep `scored_runs_authorized=false` throughout.
+`NEW_RESERVATION_AUTHORIZATION=NO`
 
-After terminal R3 evidence, STOP for offline canonical closure and immutable pre-score snapshot/scored-authorization decision. Do not proceed directly to WP3.
+`RF_AUTHORIZATION=NO`
 
-## Prohibited until separate R3 live authorization
+`TEARDOWN_AUTHORIZATION=NO`
 
-- no POWDER contact/reservation/SSH;
-- no `P7B-RQ1` reservation;
-- no physical B1/W1/B2 requalification;
+`SCORED_AUTHORIZATION=NO`
+
+The draft proposes controller/service-session disjointness, ownership proof before tmux destruction, controller execution outside the restoration failure domain, incremental restart-transition evidence, restoration frontier markers, and adversarial offline QA.
+
+It changes no scientific control.
+
+## Frozen scientific controls
+
+No H1 action changed these controls:
+
+- Q0/Q1/Q2/Q3 = `0/40/52/55 dB`.
+- attenuator IDs `[1,33,2,34]`, coupled.
+- primary cohort cutoff = `t_rf_restore`.
+- `t_rf_restore`, `t_service_ready`, `t_app_complete` are distinct clocks.
+- `H_app=300 s` from `t_service_ready`.
+- primary endpoint = `completeness_300` at `t_service_ready + 300 s`.
+- preserve `T_service`, `T_app`, `T_total`.
+- no outcome/W1/Golden/scored-derived re-estimation of H.
+- pre-Q0 = `60 s`.
+- Q3 duration = `120 s`.
+- gateway/client restart offset = `60 s` into Q3.
+- exact cell order = `B1 -> W1 -> B2`.
+- generator remains outside gateway restart domain.
+- no automatic scientific retry.
+- negative/null/unfavourable evidence remains valid evidence.
+
+## Manual-operation doctrine
+
+For any future human-operated command block, label it explicitly as either:
+
+- `nuc1 / CORE`, or
+- `nuc2 / UE`.
+
+Do not add diagnostic sleep/wait delays to manual scripts. Frozen scientific timing inside an authorized runner is separate and remains mandatory.
+
+Evidence survival must remain simpler than the application path: shell/coreutils primitives, explicit per-node ownership, persistent escrow, originating-node pull, immutable artifact, and independent hash/read-back before teardown.
+
+## Exact next bounded patch
+
+`WP2-P7B-H2 — CONTROLLER/RESTORE-DOMAIN CONTRACT AMENDMENT QA + FUTURE REQUALIFICATION AUTHORITY DECISION`
+
+H2 is **OFFLINE / NOT STARTED**.
+
+H2 may only:
+
+1. translate the H1 draft into a finite executable contract delta;
+2. repair controller/session ownership boundaries offline;
+3. add incremental restart/restoration frontier evidence offline;
+4. add static/adversarial tests that prove the controller cannot be killed by service cleanup;
+5. run offline contract-delta/runtime regression QA;
+6. decide whether a future non-scored requalification can be scientifically authorized under a newly frozen contract.
+
+Even an H2 PASS does not itself contact POWDER. Any future live action must still require separate explicit user authority and must first establish the then-current reservation/access situation without assuming this historical reservation survives.
+
+## Prohibited until a later explicit authority decision
+
+- no POWDER contact;
+- no reservation creation;
+- no RF mutation;
+- no service restart;
+- no B1 retry;
+- no W1/B2;
 - no Golden rerun;
-- no H calibration;
-- no RF recalibration;
+- no H recalibration;
 - no scored B1/W1/B2;
-- no OTA replication;
+- no teardown;
 - no WP3;
-- no `scored_runs_authorized=true`;
-- no immutable pre-score snapshot claiming physical readiness.
+- no scientific-control drift.
 
-## Mandatory read order for next agent
+## Mandatory next-agent read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P7B_R2_REQUALIFICATION_CONTRACT_FREEZE_2026-08-27.md`
-3. `experiments/WP-PWD01/p7b-requalification-r2-contract.json`
-4. `docs/NEXT_GATE.md`
-5. `docs/MILESTONE_STATUS.md`
-6. `docs/WP2_P7B_R1_RECEIVER_PATH_OBSERVABILITY_CLOSURE_2026-08-27.md`
-7. `scripts/wp2_p7b_c_node_r1.py`
-8. `scripts/wp2_p7b_path_contract.py`
-9. `scripts/wp2_p7b_preservation_helpers.sh`
-10. `scripts/wp2_p7b_r2_validate_controller.py`
-11. `tests/test_wp2_p7b_r2_contract.py`
-12. `docs/WP2_P7B_E_CANONICAL_BLOCKED_CLOSURE_2026-08-27.md`
-13. `evidence/powder/wp2-p7b-c-live-status.md`
-14. `evidence/powder/wp2-p7b-d-live-status.md`
-15. `docs/WP2_P7B_B_OFFLINE_IMPLEMENTATION_CLOSURE_2026-08-27.md`
-16. `docs/WP2_P7B_A_OFFLINE_CONTRACT_FREEZE_2026-08-27.md`
-17. `experiments/WP-PWD01/P7B_PHYSICAL_QUALIFICATION_PLAN_v1.md`
-18. `experiments/WP-PWD01/p7b-qualification-contract.json`
-19. `docs/WP2_P7_SCORED_AUTHORIZATION_2026-08-27.md`
-20. `docs/WP2_P6_GOLDEN_CLOSURE_2026-08-27.md`
-21. `experiments/WP-PWD01/PRE_SCORE_P0_AMENDMENT_2026-08-26.md`
-22. `experiments/WP-PWD01/PRE_SCORE_P1_AMENDMENT_2026-08-26.md`
-23. `experiments/WP-PWD01/run-matrix.yaml`
-24. `experiments/WP-PWD01/RECOVERY_SEMANTICS_AMENDMENT_v1.md`
-25. `experiments/WP-PWD01/protocol.md`
-26. `experiments/WP-PWD01/B2_SEMANTICS_GATE_v1.md`
-27. `evidence/local/wp2-b2-semantics-latest.md`
-28. `docs/WORKFLOW_REGISTRY.md`
-29. `AGENTS.md`
+2. `docs/WP2_P7B_H1_ABORT_EVIDENCE_FREEZE_ROOT_CAUSE_CLOSURE_2026-08-28.md`
+3. `evidence/powder/wp2-p7b-h1-abort-root-cause.json`
+4. `experiments/WP-PWD01/P7B_CONTROLLER_SESSION_DISJOINTNESS_AMENDMENT_DRAFT_2026-08-28.md`
+5. `docs/WP2_P7B_MANUAL_ABORT_HANDOVER_2026-08-28.md`
+6. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
+7. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
+8. `scripts/wp2_p7b_c_node_r2.py`
+9. `scripts/wp2_p7b_c_node_r1.py`
+10. `scripts/wp2_p7b_c_node.py`
+11. `scripts/wp2_golden_service_restore.sh`
+12. `scripts/wp2_p7b_target_node_preflight.sh`
+13. current `Research & Grants — Lessons Learned Ledger` in Drive
 
-## Shortest path
+## Stop state
 
-`P6 PASS -> P7 hardening PASS -> P7B-A/B offline PASS -> first P7B-C blocked before measurement -> P7B-D strict completeness blocked / teardown complete -> P7B-E blocked closure PASS -> R1 receiver-path/observability repair PASS -> R2 one-replacement contract freeze PASS -> STOP -> separate explicit R3 live authorization -> one P7B-RQ1 physical requalification + evidence survival -> STOP -> immutable pre-score snapshot + scored authorization -> WP3 -> WP4 -> WP5`
+`WP2_P7B_H1=PASS_ABORT_EVIDENCE_FROZEN_ROOT_CAUSE_CLASSIFIED`
 
-**STOP / HANDOVER READY — P7B-R3 LIVE NOT AUTHORIZED.**
+`B1=NULL_ABORTED_AFTER_Q3`
+
+`W1=NOT_STARTED`
+
+`B2=NOT_STARTED`
+
+`SCORED=NO`
+
+`RETRY=NO_UNDER_CURRENT_CONTRACT`
+
+`TEARDOWN=NO`
+
+**STOP — H1 CLOSED. H2 OFFLINE NOT STARTED.**
