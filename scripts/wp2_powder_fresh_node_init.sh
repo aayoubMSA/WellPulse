@@ -16,12 +16,14 @@ if [[ "$ROLE" == core ]]; then
   sudo apt-get install -y mosquitto mosquitto-clients
   sudo systemctl start mosquitto
 else
-  sudo apt-get install -y openjdk-11-jre-headless mosquitto-clients
+  sudo apt-get install -y openjdk-11-jdk-headless mosquitto-clients
 fi
 
 bash scripts/wp2_a3_runtime_bootstrap.sh
 
 if [[ "$ROLE" == ue ]]; then
+  command -v javac >/dev/null || { echo 'INIT=BLOCKED:JAVAC_MISSING'; exit 20; }
+  javac -version
   curl -fsSL "$JAR_URL" -o "$JAR"
   printf '%s  %s\n' "$JAR_SHA" "$JAR" | sha256sum -c -
   WP_B2_JAR_PATH="$JAR" bash scripts/wp2_p7b_target_node_preflight.sh ue
