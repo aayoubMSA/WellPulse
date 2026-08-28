@@ -1,0 +1,25 @@
+{
+  "schema_version": "wp2-p7b-rq2-manual-frontier-artifact-index-v1",
+  "run_id": "wp2-p7b-rq2-manual-20260828T060000Z",
+  "experiment_id": "41d64b85-e743-4d06-a81d-687c28c58e52",
+  "frontier": "M3_Q0",
+  "gate": "PASS",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "github_actions_run_id": 33147590610,
+  "github_actions_job_id": 98771953555,
+  "artifact_id": 9676371519,
+  "artifact_name": "wp2-p7b-rq2-manual-20260828T060000Z-m3-q0-escrow",
+  "artifact_size_bytes": 4092,
+  "artifact_zip_sha256": "667a331c0f39c2247297d624d131e3928cdd754aa1e15dada6dc659594f37bff",
+  "inner_escrow_tgz_sha256": "12750c9d3c402b291ed9b7ae0ca7ca9dd8a86a5aec8e12e30898cf99d797872c",
+  "content_gate": "PASS",
+  "required_content_verified": [
+    "core_q0_precheck.txt",
+    "ue_q0_precheck.txt",
+    "attenuator_q0_set.txt",
+    "broker_start.txt",
+    "q0_user_plane_probes.txt",
+    "tls_mqtt_probe.txt"
+  ],
+  "teardown_authorized": false
+}
