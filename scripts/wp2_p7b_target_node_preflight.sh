@@ -57,10 +57,13 @@ test -d /proj/WellPulse || fail PROJ_WELLPULSE_MISSING
 test -w /proj/WellPulse || fail PROJ_WELLPULSE_NOT_WRITABLE
 
 # Syntax-compile exact runtime sources with the execution interpreter; never system Python.
+# H2 prospective sources are included here so a future authority decision cannot bypass
+# target-image syntax verification of the controller/session repair layer.
 SOURCES=(
   scripts/wp2_p7b_c_node.py
   scripts/wp2_p7b_c_node_r1.py
   scripts/wp2_p7b_c_node_r2.py
+  scripts/wp2_p7b_c_node_h2.py
   scripts/wp2_p7b_python_gateway.py
   scripts/wp2_p7b_generator.py
   scripts/wp_pwd01_h_receiver.py
@@ -70,6 +73,7 @@ SOURCES=(
   src/wellpulse/p7b.py
   src/wellpulse/p7b_contract_v2.py
   src/wellpulse/p7b_runtime_compat.py
+  src/wellpulse/p7b_session_ownership.py
 )
 for rel in "${SOURCES[@]}"; do
   test -s "$REPO/$rel" || fail "SOURCE_MISSING_$rel"
@@ -80,12 +84,25 @@ compile(p.read_text(encoding='utf-8'), str(p), 'exec')
 PY
 done
 
+# H2 service restoration is shell-only on the target and must be syntax-valid under
+# the observed Bash family before any future RF mutation.
+h2_restore="$REPO/scripts/wp2_p7b_service_restore_h2.sh"
+test -s "$h2_restore" || fail H2_SAFE_RESTORE_MISSING
+bash -n "$h2_restore" || fail H2_SAFE_RESTORE_BASH_SYNTAX
+
 # Runtime gate must not depend on pkg_resources, which EFCC observed absent.
-for rel in scripts/wp2_p7b_c_node_r2.py scripts/wp2_p7b_validate_readiness_v2.py scripts/reconstruct_wp2_p7b_v2.py src/wellpulse/p7b_contract_v2.py src/wellpulse/p7b_runtime_compat.py; do
+for rel in scripts/wp2_p7b_c_node_r2.py scripts/wp2_p7b_c_node_h2.py scripts/wp2_p7b_validate_readiness_v2.py scripts/reconstruct_wp2_p7b_v2.py src/wellpulse/p7b_contract_v2.py src/wellpulse/p7b_runtime_compat.py src/wellpulse/p7b_session_ownership.py; do
   if grep -Eq '(^|[^A-Za-z0-9_])pkg_resources([^A-Za-z0-9_]|$)' "$REPO/$rel"; then
     fail "PKG_RESOURCES_RUNTIME_DEPENDENCY_$rel"
   fi
 done
+
+# H2 repair surfaces must not introduce remote jq or executable system-python calls.
+# A python3 shebang is tolerated because target execution is contractually required to
+# invoke repo Python through $PY; executable body calls to python3 remain prohibited.
+h2_exec="$(grep -Ev '^[[:space:]]*(#|$)' "$REPO/scripts/wp2_p7b_c_node_h2.py" "$REPO/scripts/wp2_p7b_service_restore_h2.sh" "$REPO/src/wellpulse/p7b_session_ownership.py" || true)"
+if grep -Eq '(^|[;&|()[:space:]])python3([;&|()[:space:]]|$)' <<<"$h2_exec"; then fail H2_DEPENDS_ON_SYSTEM_PYTHON; fi
+if grep -Eq '(^|[;&|()[:space:]])jq([;&|()[:space:]]|$)' <<<"$h2_exec"; then fail H2_DEPENDS_ON_REMOTE_JQ; fi
 
 # Preservation is shell/coreutils-only and must not require system Python or jq.
 helper="$REPO/scripts/wp2_p7b_preservation_helpers_v2.sh"
@@ -101,5 +118,7 @@ printf 'PROJECT_CODE_SYSTEM_PYTHON=PROHIBITED\n'
 printf 'PYTHON_METADATA_INTERFACE=importlib.metadata\n'
 printf 'REMOTE_JQ_DEPENDENCY=PROHIBITED\n'
 printf 'PRESERVATION_REMOTE_PYTHON=PROHIBITED\n'
+printf 'H2_PROSPECTIVE_SOURCE_SYNTAX_GATE=PASS\n'
+printf 'H2_SAFE_RESTORE_SHELL_GATE=PASS\n'
 printf 'EFCC_RUNTIME_BINDING=PASS\n'
 printf 'WP2_P7B_TARGET_NODE_PREFLIGHT=PASS\n'
