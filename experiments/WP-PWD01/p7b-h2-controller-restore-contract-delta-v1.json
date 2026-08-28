@@ -1,12 +1,12 @@
 {
   "schema_version": "wp2-p7b-h2-controller-restore-contract-delta-v1",
-  "status": "OFFLINE_H2_1_EXECUTABLE_DELTA_NOT_LIVE_AUTHORITY",
+  "status": "OFFLINE_H2_2_SESSION_OWNERSHIP_PASS_NOT_LIVE_AUTHORITY",
   "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
   "base_contract": {
     "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
     "schema_version": "wp2-p7b-executable-contract-v2",
     "git_blob_sha": "233aabeaf3081470bc3ebc1ee04168f8932fc415",
-    "mutation_policy": "DO_NOT_EDIT_BASE_AS_PART_OF_H2_1"
+    "mutation_policy": "DO_NOT_EDIT_BASE_DURING_H2"
   },
   "authority": {
     "live_authorized": false,
@@ -163,6 +163,47 @@
       "required_gate": "H2_4_ADVERSARIAL_QA=PASS"
     }
   },
+  "h2_2_implementation": {
+    "status": "PASS_OFFLINE",
+    "prospective_entrypoint": "scripts/wp2_p7b_c_node_h2.py",
+    "controller_ownership_library": "src/wellpulse/p7b_session_ownership.py",
+    "safe_restore_script": "scripts/wp2_p7b_service_restore_h2.sh",
+    "historical_restore_preserved_for_provenance": "scripts/wp2_golden_service_restore.sh",
+    "controller_identity_required": [
+      "controller_pid",
+      "controller_session",
+      "controller_process_name",
+      "controller_host_role"
+    ],
+    "allowed_controller_host_roles": ["UE", "EXTERNAL"],
+    "controller_session_none_literal": "NONE",
+    "cleanup_policy": {
+      "destructive_tmux_session_kill_authorized": false,
+      "approved_service_process_targets": ["srsue", "srsenb", "srsepc"],
+      "termination_mode": "EXACT_PID_SCOPED_TERM_THEN_KILL_IF_STILL_ALIVE",
+      "controller_pid_collision": "BLOCK_BEFORE_KILL",
+      "stale_service_tmux_after_pid_cleanup": "BLOCK_DO_NOT_DESTROY_SESSION",
+      "generic_pkill_f_or_killall": "PROHIBITED"
+    },
+    "required_runtime_markers": [
+      "CONTROLLER_SERVICE_SESSION_DISJOINTNESS=PASS",
+      "CONTROLLER_RESTORE_FAILURE_DOMAIN_SEPARATION=PASS",
+      "DESTRUCTIVE_TMUX_SESSION_KILL_AUTHORIZED=NO",
+      "SERVICE_PID_OWNERSHIP_PROOF=PASS"
+    ],
+    "qa": {
+      "implementation_commit": "989162cdc82fb0233cceee89e8e39e6780c2e728",
+      "qa_trigger_commit": "1eeb8771d0cc36f10f6684b55e499d0f3f071d38",
+      "github_run_id": 33140208485,
+      "github_job_id": 98749151195,
+      "total_tests": 147,
+      "h2_2_specific_tests": 12,
+      "result": "PASS",
+      "powder_contact": false,
+      "live_service_mutation": false
+    },
+    "terminal_gate": "H2_2_SESSION_OWNERSHIP=PASS"
+  },
   "future_implementation_bindings": {
     "H2.2": ["A1", "A2", "A3"],
     "H2.3": ["A4", "A5", "A6"],
@@ -188,5 +229,14 @@
     "machine_readable_qa_required": true,
     "terminal_gate": "H2_1_CONTRACT_DELTA=PASS"
   },
-  "next_patch_on_pass": "WP2-P7B-H2.2_CONTROLLER_SESSION_OWNERSHIP_REPAIR"
+  "h2_2_acceptance": {
+    "controller_session_disjointness_implemented": true,
+    "controller_pid_excluded_from_service_cleanup": true,
+    "destructive_tmux_session_kill_removed_from_prospective_restore": true,
+    "historical_golden_restore_unchanged": true,
+    "scientific_controls_unchanged": true,
+    "authority_must_remain_all_false": true,
+    "terminal_gate": "H2_2_SESSION_OWNERSHIP=PASS"
+  },
+  "next_patch_on_pass": "WP2-P7B-H2.3_INCREMENTAL_RESTART_RESTORATION_FRONTIER_EVIDENCE"
 }
