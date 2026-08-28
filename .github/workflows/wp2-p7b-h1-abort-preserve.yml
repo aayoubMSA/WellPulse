@@ -1,6 +1,7 @@
 name: WP2 P7B-H1 Abort Evidence Preservation
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - '.wp2-p7b-h1-preserve-trigger'
@@ -31,7 +32,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(cat .wp2-p7b-h1-preserve-trigger)" = $'AUTHORITY=P7B_H1_ABORT_PRESERVATION_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nRUN_ID=wp2-p7b-manual-20260828T024433Z\nSCIENTIFIC_RETRY=NO\nRF_MUTATION=NO\nRESTART=NO\nTEARDOWN=NO'
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            test "$(cat .wp2-p7b-h1-preserve-trigger)" = $'AUTHORITY=P7B_H1_ABORT_PRESERVATION_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nRUN_ID=wp2-p7b-manual-20260828T024433Z\nSCIENTIFIC_RETRY=NO\nRF_MUTATION=NO\nRESTART=NO\nTEARDOWN=NO'
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo 'H1_MANUAL_DISPATCH_AUTHORITY=ACCEPTED'
+          else
+            echo "H1_AUTHORITY_GATE=FAIL:UNEXPECTED_EVENT:$GITHUB_EVENT_NAME" >&2
+            exit 90
+          fi
           ! grep -Eq 'tmcc[[:space:]]+attenuator|killall[[:space:]]+srs|bin/start\.sh|experiment[[:space:]]+create|experiment[[:space:]]+terminate' .github/workflows/wp2-p7b-h1-abort-preserve.yml
           echo 'H1_AUTHORITY_GATE=PASS_PRESERVATION_ONLY'
           echo 'SCIENTIFIC_RETRY=NO'
