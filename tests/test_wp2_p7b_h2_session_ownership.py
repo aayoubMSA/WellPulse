@@ -1,3 +1,4 @@
+# H2.2 offline QA gate: controller/session ownership repair.
 from __future__ import annotations
 
 from pathlib import Path
