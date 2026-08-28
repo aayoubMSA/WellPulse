@@ -7,6 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 AUTH = ROOT / "experiments/WP-PWD01/p7b-h2-requalification-authority-v1.json"
+ACTIVATION = ROOT / "experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json"
 BASE = ROOT / "experiments/WP-PWD01/p7b-executable-contract-v2.json"
 RUNTIME = ROOT / "experiments/WP-PWD01/p7b-target-runtime-contract-v2.json"
 MODULAR = ROOT / "experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json"
@@ -92,10 +93,10 @@ class P7BH2AuthorityClosureTests(unittest.TestCase):
         self.assertFalse(self.base["authority"]["automatic_retry"])
         self.assertFalse(self.modular["architecture"]["automatic_retry"])
 
-    def test_no_live_workflow_exists_and_modular_manual_boundary_is_preserved(self):
+    def test_live_workflow_requires_post_h2_explicit_activation_and_preserves_manual_boundary(self):
         p = self.auth["prospective_execution"]
+        workflow = ROOT / p["future_live_workflow"]
         self.assertTrue(p["future_live_workflow_must_not_exist_until_separate_user_live_authorization"])
-        self.assertFalse((ROOT / p["future_live_workflow"]).exists())
         self.assertEqual(self.modular["architecture"]["future_trigger"], "workflow_dispatch_only")
         self.assertEqual(
             self.modular["architecture"]["workflow_creation_policy"],
@@ -105,6 +106,19 @@ class P7BH2AuthorityClosureTests(unittest.TestCase):
         self.assertFalse(self.modular["architecture"]["automatic_teardown"])
         self.assertFalse(self.runtime["live_authorized"])
         self.assertTrue(self.runtime["future_execution"]["fresh_explicit_live_authorization_still_required"])
+        if not ACTIVATION.exists():
+            self.assertFalse(workflow.exists())
+            return
+        activation = load(ACTIVATION)
+        self.assertTrue(activation["user_live_authorization_received"])
+        self.assertEqual(activation["authority_id"], "P7B-RQ2")
+        self.assertTrue(workflow.exists())
+        text = workflow.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", text)
+        self.assertNotIn("push:", text)
+        self.assertNotIn("schedule:", text)
+        self.assertFalse(activation["reservation_creation_by_github"])
+        self.assertTrue(activation["manual_r0_reservation_identity_required"])
 
 
 if __name__ == "__main__":
