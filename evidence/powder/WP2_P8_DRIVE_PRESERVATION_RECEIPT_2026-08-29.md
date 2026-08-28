@@ -40,19 +40,36 @@ This folder is under the existing WellPulse Drive workspace.
 - `WELLPULSE_POWDER_GOLDEN_HANDOVER_2026-08-29.md`
   - Drive ID: `1DOfHD18qlG0L8gzI_62b8Qtfbiah2uQA`
 
-## Remaining local-PC-only archives to place in the same Drive folder
-
-These exact archives were created and verified on the home PC but their bytes were not available to the connected runtime during this preservation pass:
-
 - `WellPulse-POWDER-Departure-Capture-PRIVATE-FROZEN.zip`
-  - SHA256 `7DBA8CE95CF06B254939C692915325E369FFA114080AE10BACA446D4BF62A66E`
-  - PRIVATE
+  - Drive ID: `1ApIoF5CGphcvsFvMnuoizgZf1u_lQpZI`
+  - SHA256: `7DBA8CE95CF06B254939C692915325E369FFA114080AE10BACA446D4BF62A66E`
+  - Drive raw read-back size: `66942` bytes
+  - Drive raw read-back SHA256: **PASS**
+  - Classification: **PRIVATE / access controlled**
 
 - `WellPulse-POWDER-Departure-Capture-SANITIZED-FROZEN.zip`
-  - SHA256 `236C6E269CDA6F7814B50415917D277CD7D0ED78D7D9DB0C3C4D1FE185EAE7A4`
+  - Drive ID: `1lhiw_HR-rQ1e9yugKe7GxhCPfewBXDji`
+  - SHA256: `236C6E269CDA6F7814B50415917D277CD7D0ED78D7D9DB0C3C4D1FE185EAE7A4`
+  - Drive raw read-back size: `66400` bytes
+  - Drive raw read-back SHA256: **PASS**
+  - Classification: shareable research preservation archive
 
-Until those two home-PC-only archives are uploaded and read-back verified, the Drive preservation state is **PASS_FOR_ALL_RUNTIME_AVAILABLE_EVIDENCE / TWO_LOCAL_ARCHIVES_PENDING**.
+## Final preservation state
+
+The two previously local-PC-only departure archives were found, locally re-hashed, uploaded to the golden Drive folder, downloaded back from Drive, and re-hashed again. Both matched exactly.
+
+`GOLDEN_EXPERIMENT_PRESERVATION=COMPLETE`
+
+`LOCAL_HASH_VERIFICATION=PASS`
+
+`DRIVE_UPLOAD=PASS`
+
+`DRIVE_RAW_READBACK_HASH_VERIFICATION=PASS`
+
+`GITHUB_MANIFEST=PASS`
+
+`RAW_EVIDENCE_CHAIN=CLOSED`
 
 ## Repository policy
 
-Do not commit the raw/private ZIPs to ordinary Git history. GitHub preserves this receipt, evidence hashes, handover, anomaly register, analysis code and derived small outputs; Drive preserves raw/frozen binary evidence.
+Do not commit raw/private ZIPs to ordinary Git history. GitHub preserves this receipt, evidence hashes, handover, anomaly register, analysis code and derived small outputs; Drive preserves raw/frozen binary evidence.
