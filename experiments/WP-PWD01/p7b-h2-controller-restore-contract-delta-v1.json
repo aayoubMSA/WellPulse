@@ -1,0 +1,192 @@
+{
+  "schema_version": "wp2-p7b-h2-controller-restore-contract-delta-v1",
+  "status": "OFFLINE_H2_1_EXECUTABLE_DELTA_NOT_LIVE_AUTHORITY",
+  "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
+  "base_contract": {
+    "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
+    "schema_version": "wp2-p7b-executable-contract-v2",
+    "git_blob_sha": "233aabeaf3081470bc3ebc1ee04168f8932fc415",
+    "mutation_policy": "DO_NOT_EDIT_BASE_AS_PART_OF_H2_1"
+  },
+  "authority": {
+    "live_authorized": false,
+    "reservation_creation_authorized": false,
+    "rf_authorized": false,
+    "retry_authorized": false,
+    "w1_b2_authorized": false,
+    "teardown_authorized": false,
+    "scored_authorized": false,
+    "wp3_authorized": false,
+    "automatic_retry": false,
+    "automatic_new_reservation": false,
+    "promotion_requires": [
+      "H2_2_SESSION_OWNERSHIP=PASS",
+      "H2_3_FRONTIER_EVIDENCE=PASS",
+      "H2_4_ADVERSARIAL_QA=PASS",
+      "H2_5_REGRESSION=PASS",
+      "WP2_P7B_H2=PASS"
+    ],
+    "future_live_action_requires_separate_explicit_user_authorization": true
+  },
+  "delta_class": "OPERATIONAL_SAFETY_AND_OBSERVABILITY_ONLY",
+  "scientific_change": false,
+  "frozen_scientific_controls": {
+    "q0_db": 0,
+    "q1_db": 40,
+    "q2_db": 52,
+    "q3_db": 55,
+    "attenuator_ids": [1, 33, 2, 34],
+    "pre_impairment_q0_s": 60,
+    "q3_s": 120,
+    "restart_offset_into_q3_s": 60,
+    "h_app_s": 300,
+    "h_app_anchor": "t_service_ready",
+    "cohort_cutoff": "t_rf_restore",
+    "cell_sequence": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
+    "generator_outside_restart_domain": true,
+    "clocks_distinct": ["t_rf_restore", "t_service_ready", "t_app_complete"],
+    "automatic_scientific_retry": false,
+    "negative_null_unfavourable_evidence_retained": true
+  },
+  "controls": {
+    "A1": {
+      "name": "CONTROLLER_SESSION_DISJOINTNESS_PRE_RF_GATE",
+      "phase": "PRE_RF",
+      "required": true,
+      "controller_identity_capture_required": true,
+      "forbidden_service_cleanup_namespaces": ["ue", "srs-ue", "enb", "srs-enb", "srs-epc"],
+      "additional_cleanup_namespace_discovery_required": true,
+      "fail_closed_if_controller_in_cleanup_namespace": true,
+      "required_marker": "CONTROLLER_SERVICE_SESSION_DISJOINTNESS=PASS",
+      "failure_effect": "STOP_BEFORE_RF_MUTATION"
+    },
+    "A2": {
+      "name": "OWNERSHIP_PROOF_BEFORE_DESTRUCTIVE_CLEANUP",
+      "required": true,
+      "generic_tmux_kill_session_without_ownership_proof_prohibited": true,
+      "ownership_proof_must_exclude_controller_pid": true,
+      "ownership_proof_must_exclude_controller_session": true,
+      "preferred_termination": "PID_SCOPED_SERVICE_PROCESS_TERMINATION",
+      "session_kill_allowed_only_if": [
+        "SERVICE_OWNERSHIP_EXCLUSIVE=PASS",
+        "CONTROLLER_NOT_PRESENT=PASS"
+      ],
+      "failure_effect": "STOP_BEFORE_DESTRUCTIVE_CLEANUP"
+    },
+    "A3": {
+      "name": "CONTROLLER_OUTSIDE_RESTORATION_FAILURE_DOMAIN",
+      "required": true,
+      "preferred_controller_domains": [
+        "GITHUB_ACTIONS_CONTROLLER_HOST",
+        "DEDICATED_CONTROL_SESSION_NOT_OWNED_BY_SERVICE_CLEANUP"
+      ],
+      "self_ssh_allowed_only_if_cleanup_cannot_destroy_caller_or_supervisor": true,
+      "cross_module_hidden_process_state_prohibited": true,
+      "required_marker": "CONTROLLER_RESTORE_FAILURE_DOMAIN_SEPARATION=PASS"
+    },
+    "A4": {
+      "name": "INCREMENTAL_RESTART_TRANSITION_EVIDENCE",
+      "required": true,
+      "path_template": "ue:cells/{cell}/restart_transition.json",
+      "write_point": "IMMEDIATELY_AFTER_REPLACEMENT_GATEWAY_START_GATE_BEFORE_Q3_COMPLETION_OR_LTE_RESTORE",
+      "required_fields": [
+        "generator_pid_before",
+        "generator_pid_after",
+        "old_gateway_pid",
+        "old_gateway_exit_observed",
+        "new_gateway_pid",
+        "new_gateway_start_observed",
+        "client_identity",
+        "topic_identity",
+        "restart_request_utc",
+        "restart_request_monotonic",
+        "old_exit_utc",
+        "old_exit_monotonic",
+        "new_start_utc",
+        "new_start_monotonic",
+        "new_ready_utc",
+        "new_ready_monotonic",
+        "source_generation_continuity_status"
+      ],
+      "final_restart_proof_remains_required": true,
+      "restart_transition_does_not_replace_final_restart_proof": true
+    },
+    "A5": {
+      "name": "INCREMENTAL_RESTORATION_FRONTIER_EVIDENCE",
+      "required": true,
+      "observability_only_no_artificial_scientific_delay": true,
+      "frontier_file_template": "ue:cells/{cell}/restoration_frontier.jsonl",
+      "ordered_markers": [
+        "RESTORE_REQUESTED",
+        "UE_CLEANUP_BEGIN",
+        "UE_CLEANUP_END",
+        "CORE_CLEANUP_BEGIN",
+        "CORE_CLEANUP_END",
+        "CORE_START_BEGIN",
+        "CORE_START_END",
+        "CORE_STABLE_READY",
+        "UE_START_BEGIN",
+        "UE_START_END",
+        "UE_PROCESS_READY",
+        "SERVICE_READY_PROBE_BEGIN",
+        "SERVICE_READY_PROBE_END"
+      ],
+      "marker_fields": [
+        "phase",
+        "utc",
+        "monotonic",
+        "status"
+      ],
+      "failure_requirement": "LAST_DURABLY_WRITTEN_FRONTIER_MUST_SURVIVE"
+    },
+    "A6": {
+      "name": "PARENT_CONTROLLER_SURVIVAL_HANDLING",
+      "required_as_supplementary_evidence": true,
+      "trap_candidates": ["EXIT", "TERM", "HUP"],
+      "flush_latest_frontier_before_exit_when_reliable": true,
+      "correctness_must_not_depend_on_trap_execution": true,
+      "abrupt_loss_must_remain_diagnosable_from_incremental_evidence": true
+    },
+    "A7": {
+      "name": "STATIC_AND_ADVERSARIAL_QA_BEFORE_FUTURE_LIVE_AUTHORITY",
+      "required": true,
+      "required_cases": [
+        "CONTROLLER_IN_TMUX_UE_REJECTED_BEFORE_RF",
+        "ALLOWED_CONTROLLER_SURVIVES_SERVICE_CLEANUP",
+        "SERVICE_OWNERSHIP_SELECTION_CANNOT_MATCH_CONTROLLER_PID_OR_SESSION",
+        "RESTART_TRANSITION_SURVIVES_SYNTHETIC_FAILURE_AFTER_GATEWAY_RESTART",
+        "EACH_RESTORE_PHASE_FAILURE_PRESERVES_LAST_FRONTIER",
+        "FROZEN_SCIENTIFIC_CONTROLS_UNCHANGED",
+        "AUTOMATIC_RETRY_NOT_INTRODUCED"
+      ],
+      "live_powder_contact_for_qa_prohibited": true,
+      "required_gate": "H2_4_ADVERSARIAL_QA=PASS"
+    }
+  },
+  "future_implementation_bindings": {
+    "H2.2": ["A1", "A2", "A3"],
+    "H2.3": ["A4", "A5", "A6"],
+    "H2.4": ["A7"],
+    "H2.5": ["A1", "A2", "A3", "A4", "A5", "A6", "A7"]
+  },
+  "prohibited_deltas": [
+    "RF_LEVEL_CHANGE",
+    "ATTENUATOR_ID_CHANGE",
+    "TIMING_CHANGE",
+    "CELL_ORDER_CHANGE",
+    "H_APP_REESTIMATION",
+    "PRIMARY_COHORT_CUTOFF_CHANGE",
+    "SCIENTIFIC_ENDPOINT_CHANGE",
+    "AUTOMATIC_RETRY_ENABLEMENT",
+    "SCORED_AUTHORIZATION",
+    "LIVE_AUTHORIZATION"
+  ],
+  "h2_1_acceptance": {
+    "exact_controls_required": ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
+    "base_science_equivalence_required": true,
+    "authority_must_remain_all_false": true,
+    "machine_readable_qa_required": true,
+    "terminal_gate": "H2_1_CONTRACT_DELTA=PASS"
+  },
+  "next_patch_on_pass": "WP2-P7B-H2.2_CONTROLLER_SESSION_OWNERSHIP_REPAIR"
+}
