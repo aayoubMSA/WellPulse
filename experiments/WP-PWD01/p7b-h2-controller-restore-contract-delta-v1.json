@@ -1,6 +1,6 @@
 {
   "schema_version": "wp2-p7b-h2-controller-restore-contract-delta-v1",
-  "status": "OFFLINE_H2_2_SESSION_OWNERSHIP_PASS_NOT_LIVE_AUTHORITY",
+  "status": "OFFLINE_H2_3_FRONTIER_EVIDENCE_PASS_NOT_LIVE_AUTHORITY",
   "evidence_class": "NON_SCORED_PRE_SCORE_PHYSICAL_QUALIFICATION",
   "base_contract": {
     "path": "experiments/WP-PWD01/p7b-executable-contract-v2.json",
@@ -131,12 +131,7 @@
         "SERVICE_READY_PROBE_BEGIN",
         "SERVICE_READY_PROBE_END"
       ],
-      "marker_fields": [
-        "phase",
-        "utc",
-        "monotonic",
-        "status"
-      ],
+      "marker_fields": ["phase", "utc", "monotonic", "status"],
       "failure_requirement": "LAST_DURABLY_WRITTEN_FRONTIER_MUST_SURVIVE"
     },
     "A6": {
@@ -169,12 +164,7 @@
     "controller_ownership_library": "src/wellpulse/p7b_session_ownership.py",
     "safe_restore_script": "scripts/wp2_p7b_service_restore_h2.sh",
     "historical_restore_preserved_for_provenance": "scripts/wp2_golden_service_restore.sh",
-    "controller_identity_required": [
-      "controller_pid",
-      "controller_session",
-      "controller_process_name",
-      "controller_host_role"
-    ],
+    "controller_identity_required": ["controller_pid", "controller_session", "controller_process_name", "controller_host_role"],
     "allowed_controller_host_roles": ["UE", "EXTERNAL"],
     "controller_session_none_literal": "NONE",
     "cleanup_policy": {
@@ -203,6 +193,39 @@
       "live_service_mutation": false
     },
     "terminal_gate": "H2_2_SESSION_OWNERSHIP=PASS"
+  },
+  "h2_3_implementation": {
+    "status": "PASS_OFFLINE",
+    "prospective_entrypoint": "scripts/wp2_p7b_c_node_h2.py",
+    "safe_restore_script": "scripts/wp2_p7b_service_restore_h2.sh",
+    "restart_transition_path": "ue:cells/{cell}/restart_transition.json",
+    "restoration_frontier_path": "ue:cells/{cell}/restoration_frontier.jsonl",
+    "supplementary_controller_exit_path": "ue:orchestration/controller_survival_frontier.jsonl",
+    "restart_transition_write_point": "IMMEDIATELY_AFTER_REPLACEMENT_GATEWAY_READY_BEFORE_Q3_COMPLETION_OR_RESTORE",
+    "final_restart_proof_still_required": true,
+    "controller_exit_hooks_supplementary_only": true,
+    "durability": {
+      "restart_transition": "TEMP_WRITE_FSYNC_ATOMIC_REPLACE_DIRECTORY_FSYNC_BEST_EFFORT",
+      "frontier": "APPEND_PLUS_FSYNC_OR_SYNC_BEFORE_NEXT_DESTRUCTIVE_PHASE",
+      "service_probe_end_marker_written_before_failure_raise": true
+    },
+    "qa": {
+      "implementation_commit": "550db6af5a1c3a919448fe659d72ccc80c8d16b0",
+      "first_qa_run_id": 33140578317,
+      "first_qa_result": "FAIL_STALE_H2_1_STATE_ASSERTIONS_ONLY",
+      "second_qa_run_id": 33140641978,
+      "second_qa_result": "FAIL_STALE_STRENGTHENED_MUTATION_POLICY_ASSERTION_ONLY",
+      "final_qa_commit": "7e9a8c946ae2eee0781002f15c011c0207ae3ad2",
+      "final_qa_run_id": 33140704668,
+      "final_qa_job_id": 98750703203,
+      "total_tests": 159,
+      "h2_3_specific_tests": 12,
+      "result": "PASS",
+      "powder_contact": false,
+      "live_service_mutation": false,
+      "scientific_mutation": false
+    },
+    "terminal_gate": "H2_3_FRONTIER_EVIDENCE=PASS"
   },
   "future_implementation_bindings": {
     "H2.2": ["A1", "A2", "A3"],
@@ -238,5 +261,14 @@
     "authority_must_remain_all_false": true,
     "terminal_gate": "H2_2_SESSION_OWNERSHIP=PASS"
   },
-  "next_patch_on_pass": "WP2-P7B-H2.3_INCREMENTAL_RESTART_RESTORATION_FRONTIER_EVIDENCE"
+  "h2_3_acceptance": {
+    "a4_restart_transition_incremental": true,
+    "a5_restore_frontier_incremental_and_durable": true,
+    "a6_parent_hooks_supplementary_only": true,
+    "final_restart_proof_remains_required": true,
+    "scientific_controls_unchanged": true,
+    "authority_must_remain_all_false": true,
+    "terminal_gate": "H2_3_FRONTIER_EVIDENCE=PASS"
+  },
+  "next_patch_on_pass": "WP2-P7B-H2.4_STATIC_ADVERSARIAL_QA"
 }
