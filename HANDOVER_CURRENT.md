@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-28 after **WP2-P7B-H2.4 STATIC + ADVERSARIAL QA PASS**.
+Last updated: 2026-08-28 after **WP2-P7B-H2.5 CONTRACT/RUNTIME REGRESSION PASS**.
 
 ## Authority
 
@@ -71,7 +71,7 @@ Prospective restore no longer uses `tmux kill-session`; service cleanup is exact
 
 `H2_3_FRONTIER_EVIDENCE=PASS`
 
-Prospective execution now preserves:
+Prospective execution preserves:
 
 - incremental `restart_transition.json`;
 - durable `restoration_frontier.jsonl`;
@@ -89,10 +89,6 @@ Machine-readable result:
 
 `evidence/powder/wp2-p7b-h2-4-adversarial-qa.json`
 
-Reusable harness:
-
-`scripts/wp2_p7b_h2_adversarial_qa.py`
-
 Final QA:
 
 - commit `a5854d30d83adcabd520f693b819cab9e59f7fa1`
@@ -102,9 +98,65 @@ Final QA:
 - **7/7 A7 adversarial cases PASS**
 - POWDER/network contact: **NONE**
 
-The earlier run `33141172110` is preserved as a QA failure classified `TEST_HARNESS_FORBIDDEN_LITERAL_SELF_REFERENCE`; the adversarial harness itself passed 7/7 A7 cases in that run. It was not a scientific or implementation failure.
+The earlier run `33141172110` remains preserved as `TEST_HARNESS_FORBIDDEN_LITERAL_SELF_REFERENCE`; it was not a scientific or implementation failure.
 
-`H2_PROGRESS=75%`
+### H2.5 — PASS
+
+`H2_5_REGRESSION=PASS`
+
+Canonical closure:
+
+`docs/WP2_P7B_H2_5_CONTRACT_RUNTIME_REGRESSION_GATE_CLOSURE_2026-08-28.md`
+
+Machine-readable result:
+
+`evidence/powder/wp2-p7b-h2-5-regression.json`
+
+Reusable gate:
+
+`scripts/wp2_p7b_h2_regression_gate.py`
+
+H2.5 found and repaired one prospective preflight gap before PASS:
+
+`TARGET_PREFLIGHT_DID_NOT_YET_COVER_H2_PROSPECTIVE_SOURCES`
+
+Repair commit:
+
+`a465a4849df768f57310e9b261e6875a014ac2ce`
+
+The target preflight now:
+
+- syntax-compiles `scripts/wp2_p7b_c_node_h2.py` under pinned project Python;
+- syntax-compiles `src/wellpulse/p7b_session_ownership.py` under pinned project Python;
+- runs `bash -n` on `scripts/wp2_p7b_service_restore_h2.sh`;
+- rejects executable system-`python3` or remote-`jq` dependencies in the H2 repair surfaces.
+
+No live target preflight was executed.
+
+Final H2.5 QA:
+
+- regression script commit `4057dd53ecc0dd95ffc4c629eba56deada5b0d45`
+- regression test commit `2bc8dc775d46438b93de7709ec75ec53c484b3ad`
+- Local Unit Tests run `33141861113`
+- job `98754235047`
+- **168/168 tests PASS**
+- H2.5-specific tests: **5/5 PASS**
+- Python validation host `3.12.14`
+- Paho MQTT `2.1.0`
+- POWDER/network contact: **NONE**
+
+H2.5 verified exact frozen blob integrity:
+
+- executable contract v2: `233aabeaf3081470bc3ebc1ee04168f8932fc415`
+- target-runtime contract v2: `9531893989effb142e694294b95c0c7146353742`
+- modular pipeline v1: `2c85af21f502c092c2da0ecb1bf615c8f705069b`
+- historical Golden restore: `cdf865eaaaf1c08bc8f7a8896d7f705739e60b9c`
+
+Therefore H2.5 did not rewrite frozen scientific/runtime authority to make the regression pass.
+
+The H2 wrapper remains **prospective only** and layered over frozen r2. H2.5 does not promote it to live authority. H2.6 owns that finite future-authority decision.
+
+`H2_PROGRESS=90%`
 
 ## Frozen scientific controls
 
@@ -125,22 +177,21 @@ No H1/H2 patch has changed:
 
 ## Exact next bounded patch
 
-`WP2-P7B-H2.5 — CONTRACT/RUNTIME REGRESSION GATE`
+`WP2-P7B-H2.6 — REQUALIFICATION AUTHORITY DECISION + CANONICAL CLOSURE`
 
-H2.5 is **OFFLINE ONLY**.
+H2.6 is **OFFLINE ONLY** and is the final H2 patch.
 
-It may:
+It may only:
 
-1. verify A1–A7 against the executable contract v2 and target-runtime contract v2;
-2. verify controller/session repair and frontier instrumentation against EFCC/runtime assumptions;
-3. verify the modular GitHub pipeline contract remains compatible;
-4. verify historical/frozen files remain intact;
-5. run the complete offline unit/static/adversarial suite;
-6. issue exactly `H2_5_REGRESSION=PASS` or `H2_5_REGRESSION=BLOCKED:<reason>`.
+1. consume H1 and H2.1–H2.5 evidence;
+2. decide whether the prospective H2 repair is sufficient for a future **non-scored** physical requalification request;
+3. define the exact prospective authority artifact/entrypoint if PASS;
+4. ensure any future live action still requires separate explicit user authorization and then-current reservation/access validation;
+5. issue the terminal H2 verdict and canonical closure.
 
-H2.5 must not contact POWDER, create/select a reservation, SSH to a live target, mutate RF, restart services, retry B1, execute W1/B2, teardown, score, or start WP3.
+H2.6 must not contact POWDER, create/select a reservation, SSH to a live target, mutate RF, restart services, retry B1, execute W1/B2, teardown, score, or start WP3.
 
-H2.6 remains after H2.5 and owns only the future non-scored requalification authority decision. Even terminal H2 PASS does not itself grant live authority; a separate explicit user authorization is mandatory.
+Even terminal H2 PASS does **not** itself authorize live execution.
 
 ## Live authority — all NO
 
@@ -171,15 +222,19 @@ H2.6 remains after H2.5 and owns only the future non-scored requalification auth
 7. `docs/WP2_P7B_H2_3_INCREMENTAL_RESTART_RESTORATION_FRONTIER_EVIDENCE_CLOSURE_2026-08-28.md`
 8. `docs/WP2_P7B_H2_4_STATIC_ADVERSARIAL_QA_CLOSURE_2026-08-28.md`
 9. `evidence/powder/wp2-p7b-h2-4-adversarial-qa.json`
-10. `scripts/wp2_p7b_h2_adversarial_qa.py`
-11. `src/wellpulse/p7b_session_ownership.py`
-12. `scripts/wp2_p7b_service_restore_h2.sh`
-13. `scripts/wp2_p7b_c_node_h2.py`
-14. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
-15. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
-16. `experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json`
-17. `docs/WP2_P7B_MODULAR_EXECUTION_ARCHITECTURE_2026-08-28.md`
-18. current `Research & Grants — Lessons Learned Ledger`
+10. `docs/WP2_P7B_H2_5_CONTRACT_RUNTIME_REGRESSION_GATE_CLOSURE_2026-08-28.md`
+11. `evidence/powder/wp2-p7b-h2-5-regression.json`
+12. `scripts/wp2_p7b_h2_regression_gate.py`
+13. `scripts/wp2_p7b_h2_adversarial_qa.py`
+14. `src/wellpulse/p7b_session_ownership.py`
+15. `scripts/wp2_p7b_service_restore_h2.sh`
+16. `scripts/wp2_p7b_c_node_h2.py`
+17. `scripts/wp2_p7b_target_node_preflight.sh`
+18. `experiments/WP-PWD01/p7b-executable-contract-v2.json`
+19. `experiments/WP-PWD01/p7b-target-runtime-contract-v2.json`
+20. `experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json`
+21. `docs/WP2_P7B_MODULAR_EXECUTION_ARCHITECTURE_2026-08-28.md`
+22. current `Research & Grants — Lessons Learned Ledger`
 
 ## Stop state
 
@@ -193,9 +248,11 @@ H2.6 remains after H2.5 and owns only the future non-scored requalification auth
 
 `H2_4_ADVERSARIAL_QA=PASS`
 
-`H2_PROGRESS=75%`
+`H2_5_REGRESSION=PASS`
 
-`NEXT_PATCH=WP2-P7B-H2.5_CONTRACT_RUNTIME_REGRESSION_GATE`
+`H2_PROGRESS=90%`
+
+`NEXT_PATCH=WP2-P7B-H2.6_REQUALIFICATION_AUTHORITY_DECISION_CANONICAL_CLOSURE`
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -211,4 +268,4 @@ H2.6 remains after H2.5 and owns only the future non-scored requalification auth
 
 `LIVE_POWDER_AUTHORIZATION=NO`
 
-**STOP — H2.4 CLOSED. H2.5 NOT STARTED.**
+**STOP — H2.5 CLOSED. H2.6 NOT STARTED.**
