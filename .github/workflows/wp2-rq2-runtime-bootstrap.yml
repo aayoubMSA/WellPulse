@@ -1,0 +1,84 @@
+name: WP2 RQ2 Runtime Bootstrap
+
+on:
+  push:
+    paths:
+      - '.github/diagnostics/wp2-rq2-runtime-bootstrap.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Bootstrap Python 3.11.13 + Paho 2.1.0 on nuc1 CORE and nuc2 UE
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          TMP="/tmp/wp2-rq2-bootstrap-${GITHUB_RUN_ID}"
+          mkdir -p "$TMP" "$HOME/.ssh"
+          umask 077
+          python3 - "$TMP/private.key" <<'PY'
+          import os,sys
+          from pathlib import Path
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          Path(sys.argv[1]).write_text(raw,encoding='utf-8',newline='\n')
+          PY
+          chmod 600 "$TMP/private.key"
+          cat > "$TMP/askpass" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "$POWDER_SSH_KEY_PASSPHRASE"
+          EOF
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          SSH_OPTS=(-o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+
+          read -r -d '' REMOTE <<'EOS' || true
+          set -euo pipefail
+          echo "BOOTSTRAP_HOST=$(hostname)"
+          if test -x "$HOME/.wp2-golden-venv/bin/python"; then
+            ver=$("$HOME/.wp2-golden-venv/bin/python" --version 2>&1 || true)
+            paho=$("$HOME/.wp2-golden-venv/bin/python" -c 'import importlib.metadata as m; print(m.version("paho-mqtt"))' 2>/dev/null || true)
+            if test "$ver" = "Python 3.11.13" && test "$paho" = "2.1.0"; then
+              echo "RUNTIME_ALREADY_VALID=YES"
+              exit 0
+            fi
+          fi
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential wget ca-certificates libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev tk-dev libffi-dev uuid-dev
+          rm -rf "$HOME/.wp2-python-3.11.13" "$HOME/.wp2-golden-venv" "$HOME/.cache/wp2-python-build"
+          mkdir -p "$HOME/.cache/wp2-python-build"
+          cd "$HOME/.cache/wp2-python-build"
+          wget -q https://www.python.org/ftp/python/3.11.13/Python-3.11.13.tgz
+          sha256sum Python-3.11.13.tgz | tee Python-3.11.13.tgz.sha256
+          tar -xzf Python-3.11.13.tgz
+          cd Python-3.11.13
+          ./configure --prefix="$HOME/.wp2-python-3.11.13" --with-ensurepip=install
+          make -j2
+          make install
+          "$HOME/.wp2-python-3.11.13/bin/python3.11" -m venv "$HOME/.wp2-golden-venv"
+          "$HOME/.wp2-golden-venv/bin/python" -m pip install --upgrade pip
+          "$HOME/.wp2-golden-venv/bin/python" -m pip install 'paho-mqtt==2.1.0'
+          "$HOME/.wp2-golden-venv/bin/python" --version
+          "$HOME/.wp2-golden-venv/bin/python" -c 'import importlib.metadata as m,ssl,sqlite3; print("PAHO="+m.version("paho-mqtt")); print("OPENSSL="+ssl.OPENSSL_VERSION); print("SQLITE="+sqlite3.sqlite_version)'
+          test "$("$HOME/.wp2-golden-venv/bin/python" --version 2>&1)" = "Python 3.11.13"
+          test "$("$HOME/.wp2-golden-venv/bin/python" -c 'import importlib.metadata as m; print(m.version("paho-mqtt"))')" = "2.1.0"
+          echo "WP2_RQ2_RUNTIME_BOOTSTRAP=PASS"
+          EOS
+
+          for host in nuc1 nuc2; do
+            echo "=== $host ==="
+            ssh "${SSH_OPTS[@]}" "aayoub@${host}.emulab.net" "$REMOTE"
+            echo "=== END $host ==="
+          done
+          echo "WP2_RQ2_RUNTIME_BOOTSTRAP_BOTH=PASS"
