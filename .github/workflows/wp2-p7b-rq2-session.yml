@@ -1,0 +1,325 @@
+name: WP2 P7B-RQ2 One-Shot Non-Scored Requalification
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_id:
+        description: Existing POWDER reservation experiment ID
+        required: true
+        type: string
+      experiment_name:
+        description: Existing POWDER reservation experiment name
+        required: true
+        type: string
+      authority_id:
+        description: Frozen authority ID
+        required: true
+        default: P7B-RQ2
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp2-p7b-rq2-${{ inputs.experiment_id }}
+  cancel-in-progress: false
+
+env:
+  AUTHORITY_ID: P7B-RQ2
+  SCIENTIFIC_SOURCE_SHA: 2d7eb744f14ad4d5889909dac3cc29236c667190
+  EXPECTED_PROFILE_REVISION: a6da96560b6526dc6816761282722c996418fd8c
+  PORTAL_HTTP: https://boss.emulab.net:43794
+
+jobs:
+  m0:
+    name: 00 Freeze — Authority + Source + Contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run_id: ${{ steps.freeze.outputs.run_id }}
+    steps:
+      - name: Checkout control plane and provenance
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Freeze one-shot authority
+        id: freeze
+        shell: bash
+        env:
+          INPUT_AUTHORITY: ${{ inputs.authority_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          TARGET_NAME: ${{ inputs.experiment_name }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$INPUT_AUTHORITY" = "$AUTHORITY_ID"
+          test -n "$TARGET_EXPID"
+          test -n "$TARGET_NAME"
+          git cat-file -e "$SCIENTIFIC_SOURCE_SHA^{commit}"
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          a=json.loads(Path('experiments/WP-PWD01/p7b-rq2-live-authorization-2026-08-28.json').read_text())
+          assert a['authority_id']=='P7B-RQ2'
+          assert a['user_live_authorization_received'] is True
+          assert a['scientific_source_sha']=='2d7eb744f14ad4d5889909dac3cc29236c667190'
+          assert a['reservation_creation_by_github'] is False
+          assert a['manual_r0_reservation_identity_required'] is True
+          for rel,key in [
+              ('.github/workflows/wp2-p7b-rq2-session.yml','workflow_git_blob_sha'),
+              ('scripts/wp2_p7b_rq2_controller.sh','controller_helper_git_blob_sha'),
+              ('scripts/wp2_p7b_rq2_module_adapter.py','module_adapter_git_blob_sha')]:
+              got=subprocess.check_output(['git','hash-object',rel],text=True).strip()
+              assert got==a[key],(rel,got,a[key])
+          print('P7B_RQ2_M0_ACTIVATION_LOCK=PASS')
+          PY
+          test "$(git hash-object experiments/WP-PWD01/p7b-executable-contract-v2.json)" = 233aabeaf3081470bc3ebc1ee04168f8932fc415
+          test "$(git hash-object experiments/WP-PWD01/p7b-target-runtime-contract-v2.json)" = 9531893989effb142e694294b95c0c7146353742
+          test "$(git hash-object experiments/WP-PWD01/p7b-modular-pipeline-contract-v1.json)" = 2c85af21f502c092c2da0ecb1bf615c8f705069b
+          ! grep -Eq 'portal-cli[[:space:]]+experiment[[:space:]]+(create|terminate)' scripts/wp2_p7b_rq2_controller.sh
+          ! grep -Eq 'tmux[[:space:]]+kill-session|killall' scripts/wp2_p7b_rq2_module_adapter.py
+          RUN_ID="wp2-p7b-rq2-${GITHUB_RUN_ID}"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo 'P7B_RQ2_M0=PASS_ONE_SHOT_AUTHORITY_FREEZE'
+          echo 'SCORED=NO'
+          echo 'AUTOMATIC_RETRY=NO'
+          echo 'AUTOMATIC_TEARDOWN=NO'
+
+  m1:
+    name: 10 EFCC — Reservation Identity + Manifest Read-Only
+    needs: m0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    outputs:
+      expires_utc: ${{ steps.portal.outputs.expires_utc }}
+      core_user: ${{ steps.portal.outputs.core_user }}
+      core_host: ${{ steps.portal.outputs.core_host }}
+      core_port: ${{ steps.portal.outputs.core_port }}
+      ue_user: ${{ steps.portal.outputs.ue_user }}
+      ue_host: ${{ steps.portal.outputs.ue_host }}
+      ue_port: ${{ steps.portal.outputs.ue_port }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Read existing reservation and manifest only
+        id: portal
+        shell: bash
+        env:
+          PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          TARGET_NAME: ${{ inputs.experiment_name }}
+        run: bash scripts/wp2_p7b_rq2_controller.sh portal
+
+  m2:
+    name: 20 Preflight — Stage Frozen Source + Target Native Gates
+    needs: [m0, m1]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    outputs:
+      core_home: ${{ steps.preflight.outputs.core_home }}
+      ue_home: ${{ steps.preflight.outputs.ue_home }}
+      core_repo: ${{ steps.preflight.outputs.core_repo }}
+      ue_repo: ${{ steps.preflight.outputs.ue_repo }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Stage exact source and run read-only target preflight
+        id: preflight
+        shell: bash
+        env:
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+        run: bash scripts/wp2_p7b_rq2_controller.sh stage-preflight
+
+  m3:
+    name: 30 Q0 Baseline — H2 Safe Known-Good Preparation
+    needs: [m0, m1, m2]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Establish Q0 with H2-safe service ownership
+        shell: bash
+        env: &live_env
+          POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+          POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+          RUN_ID: ${{ needs.m0.outputs.run_id }}
+          TARGET_EXPID: ${{ inputs.experiment_id }}
+          EXPIRES_UTC: ${{ needs.m1.outputs.expires_utc }}
+          CORE_USER: ${{ needs.m1.outputs.core_user }}
+          CORE_HOST: ${{ needs.m1.outputs.core_host }}
+          CORE_PORT: ${{ needs.m1.outputs.core_port }}
+          UE_USER: ${{ needs.m1.outputs.ue_user }}
+          UE_HOST: ${{ needs.m1.outputs.ue_host }}
+          UE_PORT: ${{ needs.m1.outputs.ue_port }}
+          CORE_HOME: ${{ needs.m2.outputs.core_home }}
+          UE_HOME: ${{ needs.m2.outputs.ue_home }}
+          CORE_REPO: ${{ needs.m2.outputs.core_repo }}
+          UE_REPO: ${{ needs.m2.outputs.ue_repo }}
+        run: bash scripts/wp2_p7b_rq2_controller.sh run-module prepare
+
+  m4:
+    name: 40 B1 — Same-Implementation Comparator Cell
+    needs: [m0, m1, m2, m3]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Execute B1 once
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh run-module B1
+
+  m5:
+    name: 45 B1 Evidence — Freeze + Off-POWDER Readback
+    needs: [m0, m1, m2, m4]
+    if: ${{ always() && needs.m2.result == 'success' && (needs.m4.result == 'success' || needs.m4.result == 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Pull B1 evidence from UE and CORE
+        id: pull
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence b1
+      - name: Upload B1 evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b1
+          path: ${{ steps.pull.outputs.evidence_dir }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Read back B1 artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b1
+          path: /tmp/rq2-readback-b1
+      - name: Verify B1 readback hashes
+        shell: bash
+        run: cd /tmp/rq2-readback-b1 && sha256sum -c SHA256SUMS.txt
+
+  m6:
+    name: 60 W1 — Offline-First Architecture Cell
+    needs: [m0, m1, m2, m4, m5]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Execute W1 once
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh run-module W1
+
+  m7:
+    name: 65 W1 Evidence — Freeze + Off-POWDER Readback
+    needs: [m0, m1, m2, m6]
+    if: ${{ always() && needs.m2.result == 'success' && (needs.m6.result == 'success' || needs.m6.result == 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Pull W1 evidence
+        id: pull
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence w1
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-w1, path: /tmp/rq2-readback-w1}
+      - shell: bash
+        run: cd /tmp/rq2-readback-w1 && sha256sum -c SHA256SUMS.txt
+
+  m8:
+    name: 80 B2 — Durable Standard MQTT Cell
+    needs: [m0, m1, m2, m6, m7]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Execute B2 once
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh run-module B2
+
+  m9:
+    name: 85 B2 Evidence — Freeze + Off-POWDER Readback
+    needs: [m0, m1, m2, m8]
+    if: ${{ always() && needs.m2.result == 'success' && (needs.m8.result == 'success' || needs.m8.result == 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Pull B2 evidence
+        id: pull
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence b2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-b2, path: /tmp/rq2-readback-b2}
+      - shell: bash
+        run: cd /tmp/rq2-readback-b2 && sha256sum -c SHA256SUMS.txt
+
+  m10:
+    name: 95 Reconstruct — Non-Scored Physical Qualification Verdict
+    needs: [m0, m1, m2, m8, m9]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Reconstruct mechanics only
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh run-module reconstruct
+
+  m99:
+    name: 99 Session Summary — Final Evidence Readback / Stop Before Teardown
+    needs: [m0, m1, m2, m10]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {fetch-depth: 1, persist-credentials: false}
+      - name: Pull final session evidence
+        id: pull
+        shell: bash
+        env: *live_env
+        run: bash scripts/wp2_p7b_rq2_controller.sh pull-evidence final
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final, path: '${{ steps.pull.outputs.evidence_dir }}', if-no-files-found: error, compression-level: 0, retention-days: 30}
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with: {name: wp2-p7b-rq2-${{ needs.m0.outputs.run_id }}-final, path: /tmp/rq2-readback-final}
+      - name: Final readback and stop gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rq2-readback-final
+          sha256sum -c SHA256SUMS.txt
+          echo 'P7B_RQ2_FINAL_EVIDENCE_READBACK=PASS'
+          echo 'TEARDOWN_READY=YES'
+          echo 'TEARDOWN_AUTHORIZED=NO_MANUAL_T0_REQUIRED'
+          echo 'SCORED_AUTHORIZATION=BLOCKED'
