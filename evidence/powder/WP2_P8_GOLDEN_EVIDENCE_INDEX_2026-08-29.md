@@ -19,14 +19,17 @@ This index records immutable evidence anchors for the completed POWDER manual-re
 | `WellPulse-p8-e8-manual-20260829A-FROZEN.zip` | `CA71214B12392C7349511B4400E288D59E6DE3A1507C043DB876E4642C227AFA` | E8 standalone frozen run |
 | `WellPulse-p8-e9-manual-20260829A-FROZEN.zip` | `B89906139DD87EC2AF18CEF15072EFC065C8DA104C433F7FFAA431B41DCF0118` | E9 standalone frozen run |
 
-## Departure archives currently anchored by home-PC hash
+## Departure archives — Drive preservation CLOSED
 
-These were created and verified locally but were not available as uploaded runtime bytes when this index was written:
+| Artifact | SHA256 | Drive ID | Policy / verification |
+|---|---|---|---|
+| `WellPulse-POWDER-Departure-Capture-PRIVATE-FROZEN.zip` | `7DBA8CE95CF06B254939C692915325E369FFA114080AE10BACA446D4BF62A66E` | `1ApIoF5CGphcvsFvMnuoizgZf1u_lQpZI` | PRIVATE; local hash PASS; Drive raw read-back hash PASS |
+| `WellPulse-POWDER-Departure-Capture-SANITIZED-FROZEN.zip` | `236C6E269CDA6F7814B50415917D277CD7D0ED78D7D9DB0C3C4D1FE185EAE7A4` | `1lhiw_HR-rQ1e9yugKe7GxhCPfewBXDji` | Shareable research archive; local hash PASS; Drive raw read-back hash PASS |
 
-| Artifact | SHA256 | Policy |
-|---|---|---|
-| `WellPulse-POWDER-Departure-Capture-PRIVATE-FROZEN.zip` | `7DBA8CE95CF06B254939C692915325E369FFA114080AE10BACA446D4BF62A66E` | PRIVATE / access controlled |
-| `WellPulse-POWDER-Departure-Capture-SANITIZED-FROZEN.zip` | `236C6E269CDA6F7814B50415917D277CD7D0ED78D7D9DB0C3C4D1FE185EAE7A4` | Shareable research preservation archive |
+Drive read-back sizes:
+
+- PRIVATE: `66942` bytes
+- SANITIZED: `66400` bytes
 
 ## Integrity observations
 
@@ -51,13 +54,23 @@ The expected exception is `CAPTURE_STATUS.txt`, whose final completion line was 
 
 ## Golden handover package
 
-Local handover bundle assembled from all evidence bytes available in the ChatGPT runtime plus tooling and manifests:
-
 - `WellPulse_POWDER_Golden_Handover_2026-08-29.zip`
 - SHA256 `F94951A42C2DF429297CEC888EA81D3DC374B6E47F34D71AA2F3BCE7898642B4`
 
-The Drive copy must additionally include the two departure archives listed above from the home PC.
+## Final preservation state
+
+`GOLDEN_EXPERIMENT_PRESERVATION=COMPLETE`
+
+`LOCAL=PASS`
+
+`DRIVE=PASS`
+
+`DRIVE_READBACK=PASS`
+
+`GITHUB_MANIFEST=PASS`
+
+`RAW_EVIDENCE_CHAIN=CLOSED`
 
 ## Storage policy
 
-Raw/frozen binaries belong in Google Drive, with home-PC third copy retained until read-back verification. GitHub stores this index, hashes, handover, scripts, derived tables and analysis outputs only.
+Raw/frozen binaries belong in Google Drive, with home-PC third copy retained. GitHub stores this index, hashes, handover, scripts, derived tables and analysis outputs only.
