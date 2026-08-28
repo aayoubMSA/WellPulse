@@ -7,9 +7,9 @@
   "current_stage": "AUTHORIZED_AWAITING_MANUAL_R0_RESERVATION_IDENTITY",
   "scientific_source_sha": "2d7eb744f14ad4d5889909dac3cc29236c667190",
   "module_adapter_git_blob_sha": "ccb3b86493bb16611bdf8e7947d0241e8c85d83a",
-  "controller_helper_git_blob_sha": "bdef1788ee91a68ab8bc7096496166962e3bff4d",
+  "controller_helper_git_blob_sha": "b990a0cfa52bd23b1771857cbf938ac5aac7f0bd",
   "workflow_path": ".github/workflows/wp2-p7b-rq2-session.yml",
-  "workflow_git_blob_sha": "65d6c8270519044c8fa8d4ff84a3be386065e8bc",
+  "workflow_git_blob_sha": "6df75614b9b68050c1645e1b603cb946e7b4f5cd",
   "manual_r0_reservation_identity_required": true,
   "experiment_id": null,
   "experiment_name": null,
@@ -36,11 +36,14 @@
     "trigger": "workflow_dispatch_only",
     "required_inputs": ["experiment_id", "experiment_name", "authority_id"],
     "authority_id_exact": "P7B-RQ2",
-    "run_number_exact": 1,
+    "first_workflow_dispatch_only": true,
+    "prior_workflow_dispatch_count_required": 0,
     "run_attempt_exact": 1,
     "maximum_session_attempts": 1,
     "cell_order": ["P7B-B1-S3", "P7B-W1-S3", "P7B-B2-S3"],
     "paired_evidence_required_after_each_cell": true,
+    "evidence_chain": "node_raw -> /proj escrow -> controller pull -> Actions artifact -> readback",
+    "partial_failure_evidence_must_survive_missing_side_tree": true,
     "final_stop": "TEARDOWN_READY=YES_WITH_TEARDOWN_AUTHORIZED=NO_MANUAL_T0_REQUIRED"
   },
   "scientific_boundary": {
@@ -50,6 +53,14 @@
     "negative_null_unfavourable_outcome_valid": true,
     "scored_authority": false,
     "wp3_authority": false
+  },
+  "prelive_qa_history": {
+    "invalid_workflow_run_id": 33143081065,
+    "invalid_workflow_jobs_started": 0,
+    "classification": "PRELIVE_WORKFLOW_SCHEMA_VALIDATION_FAILURE_NO_JOBS_NO_POWDER_CONTACT",
+    "cause": "YAML_ALIAS_OR_SCHEMA_SURFACE_REMOVED_BEFORE_R0",
+    "scientific_failure": false,
+    "live_execution_attempt": false
   },
   "powder_contact_so_far": false,
   "live_service_mutation_so_far": false,
