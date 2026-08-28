@@ -8,13 +8,21 @@ CONTROLLER_PID="${WP_CONTROLLER_PID:?WP_CONTROLLER_PID is required}"
 CONTROLLER_SESSION="${WP_CONTROLLER_SESSION:?WP_CONTROLLER_SESSION is required}"
 CONTROLLER_HOST_ROLE="${WP_CONTROLLER_HOST_ROLE:?WP_CONTROLLER_HOST_ROLE is required}"
 OUT="${WP_RESTORE_OUT:-/tmp/wp2-p7b-h2-service-restore.txt}"
+FRONTIER="${WP_RESTORE_FRONTIER:?WP_RESTORE_FRONTIER is required}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
 
-mkdir -p "$(dirname "$OUT")"
+mkdir -p "$(dirname "$OUT")" "$(dirname "$FRONTIER")"
 exec > >(tee -a "$OUT") 2>&1
 
 utc(){ date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
+mono(){ awk '{print $1}' /proc/uptime; }
 ssh_do(){ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@$1" "${@:2}"; }
+frontier(){
+  local phase="$1" status="$2" line
+  line=$(printf '{"phase":"%s","utc":"%s","monotonic":"%s","status":"%s"}' "$phase" "$(utc)" "$(mono)" "$status")
+  printf '%s\n' "$line" >> "$FRONTIER"
+  sync "$FRONTIER" 2>/dev/null || sync
+}
 
 case "$CONTROLLER_PID" in
   ''|*[!0-9]*) echo "H2_OWNERSHIP=BLOCKED:INVALID_CONTROLLER_PID"; exit 61;;
@@ -91,32 +99,43 @@ RESTORE_START_EPOCH=$(date +%s)
 printf '=== WP2 P7B H2 ownership-safe LTE restoration ===\n'
 printf 'T_RESTORE_START=%s\nRESTORE_START_EPOCH=%s\n' "$(utc)" "$RESTORE_START_EPOCH"
 printf 'CORE_HOST=%s\nUE_HOST=%s\n' "$CORE_HOST" "$UE_HOST"
+frontier RESTORE_REQUESTED BEGIN
 
 printf 'PHASE=UE_PID_SCOPED_CLEANUP_BEGIN\n'
+frontier UE_CLEANUP_BEGIN BEGIN
 stop_exact_processes "$UE_HOST" UE srsue
 ssh_do "$UE_HOST" "ip link show tun_srsue >/dev/null 2>&1 && sudo ip link delete tun_srsue 2>/dev/null || true"
 assert_no_stale_service_tmux "$UE_HOST" ue srs-ue
 printf 'T_UE_STOPPED=%s\n' "$(utc)"
+frontier UE_CLEANUP_END PASS
 printf 'PHASE=UE_PID_SCOPED_CLEANUP_END\n'
 
 printf 'PHASE=CORE_PID_SCOPED_CLEANUP_BEGIN\n'
+frontier CORE_CLEANUP_BEGIN BEGIN
 stop_exact_processes "$CORE_HOST" CORE srsenb srsepc
 assert_no_stale_service_tmux "$CORE_HOST" enb srs-enb srs-epc
 printf 'T_CORE_RAN_STOPPED=%s\n' "$(utc)"
+frontier CORE_CLEANUP_END PASS
 printf 'PHASE=CORE_PID_SCOPED_CLEANUP_END\n'
 
 printf 'PHASE=CORE_START\n'
+frontier CORE_START_BEGIN BEGIN
 ssh_do "$CORE_HOST" "set +e; /local/repository/bin/start.sh >/tmp/wp2-p7b-h2-core-start.console 2>&1; rc=\$?; printf '%s\\n' \"\$rc\" >/tmp/wp2-p7b-h2-core-start.rc; exit 0"
 printf 'T_CORE_START_COMMAND_DONE=%s\n' "$(utc)"
+frontier CORE_START_END PASS
 
 ssh_do "$CORE_HOST" "deadline=\$((\$(date +%s)+40)); stable=0; while [ \$(date +%s) -lt \$deadline ]; do if pgrep -x srsepc >/dev/null && pgrep -x srsenb >/dev/null; then stable=\$((stable+1)); [ \$stable -ge 10 ] && exit 0; else stable=0; fi; sleep 1; done; echo 'CORE_RAN_READY=FAIL' >&2; exit 31"
 printf 'T_CORE_RAN_READY=%s\n' "$(utc)"
+frontier CORE_STABLE_READY PASS
 
 printf 'PHASE=UE_START\n'
+frontier UE_START_BEGIN BEGIN
 ssh_do "$UE_HOST" "set +e; /local/repository/bin/start.sh >/tmp/wp2-p7b-h2-ue-start.console 2>&1; rc=\$?; printf '%s\\n' \"\$rc\" >/tmp/wp2-p7b-h2-ue-start.rc; exit 0"
 printf 'T_UE_START_COMMAND_DONE=%s\n' "$(utc)"
+frontier UE_START_END PASS
 
 ssh_do "$UE_HOST" "deadline=\$((\$(date +%s)+30)); while [ \$(date +%s) -lt \$deadline ]; do pgrep -x srsue >/dev/null && exit 0; sleep 1; done; echo 'UE_PROCESS_READY=FAIL' >&2; exit 32"
 printf 'T_UE_PROCESS_READY=%s\n' "$(utc)"
+frontier UE_PROCESS_READY PASS
 printf 'WP_RESTORE_START_EPOCH=%s\n' "$RESTORE_START_EPOCH"
 printf 'H2_SAFE_RESTORE_SEQUENCE=PASS\n'
