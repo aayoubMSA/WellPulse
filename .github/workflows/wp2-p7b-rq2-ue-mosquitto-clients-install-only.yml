@@ -1,0 +1,105 @@
+name: WP2 P7B-RQ2 UE Mosquitto Clients Install Only
+on:
+  push:
+    paths:
+      - '.wp2-p7b-rq2-ue-mosquitto-clients-install-trigger'
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PORTAL_HTTP: https://boss.emulab.net:43794
+      PORTAL_TOKEN: ${{ secrets.POWDER_API_TOKEN }}
+      POWDER_SSH_PRIVATE_KEY: ${{ secrets.POWDER_SSH_PRIVATE_KEY }}
+      POWDER_SSH_KEY_PASSPHRASE: ${{ secrets.POWDER_SSH_KEY_PASSPHRASE }}
+      TARGET_EXPID: f6de95cb-a13a-421e-bd0e-766dfc1d3fb3
+      TARGET_NAME: wp7brq2609012
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Freeze install-only authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat .wp2-p7b-rq2-ue-mosquitto-clients-install-trigger)" = $'AUTHORITY=P7B_RQ2_UE_MOSQUITTO_CLIENTS_INSTALL_ONLY\nEXPERIMENT_ID=f6de95cb-a13a-421e-bd0e-766dfc1d3fb3\nEXPERIMENT_NAME=wp7brq2609012\nUE_ONLY=YES\nPACKAGE=mosquitto-clients\nSERVICE_START=NO\nQUIET_SECONDS=90\nRF=NO\nCELLS=NO\nRESTART=NO\nTEARDOWN=NO\nSCORED=NO'
+          ! grep -Eq 'experiment[[:space:]]+(create|terminate)|tmcc|attenuator|wp2_p7b_c_node|mosquitto[[:space:]]+-c' .github/workflows/wp2-p7b-rq2-ue-mosquitto-clients-install-only.yml
+          echo 'RQ2_UE_MOSQUITTO_CLIENTS_INSTALL_AUTHORITY=PASS'
+      - name: Install mosquitto-clients on UE without starting services
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP=/tmp/wp2-rq2-ue-mosq-clients
+          rm -rf "$TMP"; mkdir -p "$TMP" "$HOME/.ssh"
+          bash scripts/wp2_portal_client_bootstrap.sh "$TMP/portal-api" >/dev/null
+          sleep 15
+          portal-cli experiment get --experiment-id "$TARGET_EXPID" > "$TMP/experiment.json"
+          python3 -c 'import json,os; x=json.load(open("/tmp/wp2-rq2-ue-mosq-clients/experiment.json")); assert x.get("id")==os.environ["TARGET_EXPID"]; assert x.get("name")==os.environ["TARGET_NAME"]; assert x.get("project")=="WellPulse"; assert str(x.get("status","")).lower()=="ready"'
+          sleep 15
+          portal-cli experiment manifests get --experiment-id "$TARGET_EXPID" > "$TMP/manifest.json"
+          python3 - "$TMP/manifest.json" "$TMP/ue.txt" <<'PY'
+          import json,sys,xml.etree.ElementTree as ET
+          obj=json.load(open(sys.argv[1])); xmls=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+              elif isinstance(x,str) and '<node' in x: xmls.append(x)
+          walk(obj)
+          login=None
+          for text in xmls:
+              try: root=ET.fromstring(text)
+              except Exception: continue
+              for n in root.iter():
+                  if n.tag.rsplit('}',1)[-1]=='node' and n.attrib.get('client_id')=='rue1':
+                      for c in n.iter():
+                          if c.tag.rsplit('}',1)[-1]=='login' and c.attrib.get('hostname'):
+                              login=(c.attrib.get('username','aayoub'),c.attrib['hostname'],c.attrib.get('port','22'))
+                              break
+          assert login
+          open(sys.argv[2],'w').write('\t'.join(login)+'\n')
+          PY
+          python3 - <<'PY'
+          import os,pathlib
+          raw=os.environ['POWDER_SSH_PRIVATE_KEY'].replace('\r\n','\n').replace('\r','\n').lstrip('\ufeff').strip()+'\n'
+          pathlib.Path('/tmp/wp2-rq2-ue-mosq-clients/private.key').write_text(raw)
+          PY
+          chmod 600 "$TMP/private.key"
+          printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$POWDER_SSH_KEY_PASSPHRASE"\n' > "$TMP/askpass"
+          chmod 700 "$TMP/askpass"
+          export SSH_ASKPASS="$TMP/askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          eval "$(ssh-agent -s)" >/dev/null
+          setsid -w ssh-add "$TMP/private.key" </dev/null >/dev/null
+          : > "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+          IFS=$'\t' read -r U H P < "$TMP/ue.txt"
+          ssh -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -p "$P" "$U@$H" '
+            set -eu
+            echo UE_HOST=$(hostname)
+            if command -v mosquitto_pub >/dev/null 2>&1; then
+              echo MOSQUITTO_PUB_ALREADY_PRESENT=YES
+            else
+              echo MOSQUITTO_PUB_ALREADY_PRESENT=NO
+              trap "sudo rm -f /usr/sbin/policy-rc.d" EXIT
+              printf "#!/bin/sh\nexit 101\n" | sudo tee /usr/sbin/policy-rc.d >/dev/null
+              sudo chmod 755 /usr/sbin/policy-rc.d
+              sudo apt-get update -qq
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mosquitto-clients
+              sudo rm -f /usr/sbin/policy-rc.d
+              trap - EXIT
+            fi
+            command -v mosquitto_pub >/dev/null 2>&1
+            command -v mosquitto_sub >/dev/null 2>&1
+            echo MOSQUITTO_PUB_PATH=$(command -v mosquitto_pub)
+            echo MOSQUITTO_SUB_PATH=$(command -v mosquitto_sub)
+            if pgrep -x mosquitto >/dev/null 2>&1; then
+              echo MOSQUITTO_DAEMON_RUNNING=YES
+              exit 91
+            fi
+            echo MOSQUITTO_DAEMON_RUNNING=NO
+            echo RQ2_UE_MOSQUITTO_CLIENTS_INSTALL=PASS
+          '
+          echo 'PACED_CONTROL=post-install-quiet:90s'
+          sleep 90
+          ssh -o BatchMode=yes -o IdentitiesOnly=no -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -p "$P" "$U@$H" 'command -v mosquitto_pub >/dev/null 2>&1 && command -v mosquitto_sub >/dev/null 2>&1 && ! pgrep -x mosquitto >/dev/null 2>&1 && echo RQ2_UE_MOSQUITTO_CLIENTS_POSTQUIET=PASS'
+          printf 'RQ2_UE_MOSQUITTO_CLIENTS_INSTALL_ONLY=PASS\nRF_AUTHORIZED=NO\nCELLS_AUTHORIZED=NO\nRESTART_AUTHORIZED=NO\nTEARDOWN_AUTHORIZED=NO\n' | tee "$TMP/verdict.txt"
