@@ -10,19 +10,23 @@ Authority:
 
 - Venue: **IEEE Internet of Things Journal**.
 - Initial route: **Traditional / non-OA**.
-- Sole author: **Ahmed Elsayed Ayoub**.
-- Corresponding author: **Ahmed Elsayed Ayoub**.
+- Canonical publication name: **Ahmed Ayoub**.
+- Sole author: **Ahmed Ayoub**.
+- Corresponding author: **Ahmed Ayoub**.
 - Affiliation: **Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City, Egypt.**
 - Research funding: **no external funding**.
 - Competing interests: **none currently identified**.
+
+Global identity rule: publication-facing metadata must use **Ahmed Ayoub** exactly. Do not use `Ahmed Elsayed Ayoub`, `Ahmed El-Sayed Ayoub`, or another expanded variant in manuscripts, portal metadata, CRediT, citation records or scholarly profiles unless the author explicitly overrides the rule for a specific legal/administrative form.
 
 ## Required P20D insertions
 
 1. Explicit FIT IoT-LAB acknowledgment while retaining the existing FIT reference citation.
 2. POWDER naming/citation and concise infrastructure acknowledgment without inventing a funder/grant number.
 3. IEEE-compliant generative-AI disclosure because AI assistance extended beyond grammar-only correction during manuscript preparation.
-4. CRediT role statement consistent with the P20C lock.
+4. CRediT role statement consistent with the P20C lock and canonical name **Ahmed Ayoub**.
 5. Funding and competing-interest statements.
+6. Replace any legacy expanded author-name variant inherited from earlier internal drafts with **Ahmed Ayoub** before final build.
 
 ## Rights / IP state
 
@@ -45,6 +49,8 @@ Authority:
 ## Closure
 
 `WP2_P20C=PASS_AUTHORSHIP_CREDITS_RIGHTS_IP_LOCK`
+
+`PUBLICATION_NAME=AHMED_AYOUB`
 
 `P20D_UNLOCKED=YES`
 
