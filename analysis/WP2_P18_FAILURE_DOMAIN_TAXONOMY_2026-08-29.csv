@@ -1,0 +1,12 @@
+Failure domain,Experiment,Manipulated component,Primary endpoint,Admissible interpretation,Prohibited overreach
+Healthy reference,FIT C0,None,Final completeness,B0/W1 both complete in tested workload,Not universal reliability
+Broker delivery outage,FIT C1,Broker reachability,Receiver completeness; reconnect; W1 drain,Durability consequence vs non-durable B0,Not generic MQTT superiority
+Broker outage + gateway-process restart,FIT C2,Broker reachability + gateway process,Receiver completeness; W1 drain,Record-state survival across exact exec-restart treatment,Not node/power-failure guarantee
+Physical RF transition,POWDER E1–E3,Programmed attenuation,ICMP loss/RTT; MQTT completeness,Experiment-specific transition region,No universal 52 dB threshold
+RF-only recovery,POWDER E4 / E10-A,RF restoration,Recovery/non-recovery evidence,RF-only recovery not uniform across preserved cases,No deterministic recovery probability
+UE-assisted recovery,POWDER E5 / E10-B,RF restore + UE restart,First publish; first ping; receipt,Mechanism-specific recovery,Not generic 6 s recovery
+CORE-related recovery,POWDER E6 / E10-C-B,CORE services + RF restore,First ping; first publish,Mechanism-specific recovery,Not directly comparable to UE restart
+Combined recovery,POWDER E7,CORE + RF + UE sequence,Recovered path/application,Stress-case sequence behavior,Not all ordering permutations
+Broker-only fault control,POWDER E8 / E10-D,MQTT broker,Healthy LTE ping vs MQTT failure; upper bound,Service failure separable from radio health,E10-D not exact broker latency
+No-fault control,POWDER E9,None,Ping + MQTT unique delivery,Platform-specific control,No pooling with FIT C0
+UE-side replication,POWDER E11,UE restart sequence,UE-side recovery RTT/IP transition,One-sided repeatability evidence,No independent CORE/MQTT claim
