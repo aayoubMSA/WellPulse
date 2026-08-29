@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **P20B-R6 venue switch + P20D-R2 survey-visible Elsevier build + P20E-R2 PASS + P21-R2 packet ready**.  
+Last updated: 2026-08-29 after **P20D-R3/R3-R2 reference expansion + P20E-R3 red-hat PASS**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -20,21 +20,23 @@ This is the canonical operational retrieval point. GitHub is the scientific/cont
 - P18R deterministic F1 hotfix: **PASS / SCIENTIFIC-TOPOLOGY AUTHORITY**
 - P18RC production main figures: **PASS / FIGURE AUTHORITY**
 - P19 reviewer/reproducibility artifact: **PASS**
-- P20A literature & novelty closure: **PASS / 17-GROUP AUDIT AUTHORITY**
+- P20A original 17-group literature closure: **PASS / HISTORICAL INPUT AUTHORITY**
 - P20B-R1 through R5: **PASS / HISTORICAL VENUE RANKING**
-- **P20B-R6 desk-triage reweighting: PASS / INTERNET OF THINGS (ELSEVIER) SELECTED**
+- P20B-R6 desk-triage reweighting: **PASS / INTERNET OF THINGS (ELSEVIER) SELECTED**
 - P20C authorship/credits/rights/IP lock: **PASS**
 - IEEE P20D/R1 + P20E + P21: **HISTORICAL / SUPERSEDED FOR CURRENT ROUTE**
-- **P20D-R2 Elsevier survey-visible integration: PASS / CURRENT PRODUCTION AUTHORITY**
-- **P20E-R2 independent Elsevier validation: PASS**
-- **P21-R2 Elsevier authorization packet: PASS / AUTHOR DECISION PENDING**
+- Elsevier P20D-R2 + P20E-R2 + P21-R2: **HISTORICAL / SUPERSEDED BY R3-R2 BYTES**
+- **P20D-R3/R3-R2 reference/survey expansion: PASS / CURRENT PRODUCTION AUTHORITY**
+- **P20E-R3 red-hat adversarial review: PASS / CURRENT SUBMISSION-READINESS AUTHORITY**
+- P21-R3 author authorization packet: **LOCKED / NOT STARTED**
 - P22 submission execution & receipt: **LOCKED**
 - scientific blockers: **0**
 - production blockers: **0**
 - new experiment required: **NO**
+- new empirical claim required: **NO**
 - submission authorized: **NO**
 
-Publication-lane earned progress: **95/100**.
+Publication-lane earned progress: **90/100**.
 
 ## Global publication identity — HARD RULE
 
@@ -52,11 +54,11 @@ The author explicitly requires that the paper **properly show the effort perform
 
 Operational meaning:
 
-- the survey/novelty audit must remain visible in the main manuscript;
-- do not collapse it back into a few related-work sentences merely to shorten the paper;
-- preserve the seven search/comparator axes, main-text synthesis table and explicit audit outcome;
-- preserve the full source-by-source audit as supplementary material;
-- describe it accurately as a **targeted submission-date novelty audit**, not a PRISMA/systematic review/meta-analysis unless future work actually satisfies such a protocol.
+- keep the literature/novelty audit visible in the main manuscript;
+- do not collapse it into a few related-work sentences merely to shorten the paper;
+- preserve the seven search axes, synthesis table, explicit audit outcome and full Supplement S1;
+- describe it as a **targeted, claim-bounding submission-date novelty audit**, not a PRISMA systematic review/meta-analysis/exhaustive bibliographic census;
+- do not trim survey visibility unless a verified venue rule or later editorial request creates a concrete requirement.
 
 `SURVEY_VISIBILITY_REQUIREMENT=ACTIVE`
 
@@ -77,18 +79,17 @@ No later evidence may be relabelled as scored P7B success.
 3. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
 4. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
 5. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
-6. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
+6. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md` — historical 17-group baseline
 7. `analysis/WP2_P20B_R6_DESK_TRIAGE_PRIORITY_VENUE_SWITCH_2026-08-29.md`
 8. `docs/WP2_P20B_R6_DESK_TRIAGE_PRIORITY_VENUE_SWITCH_CLOSURE_2026-08-29.md`
 9. `analysis/WP2_P20C_AUTHORSHIP_CREDITS_RIGHTS_IP_LOCK_2026-08-29.md`
-10. `analysis/WP2_P20D_R2_ELSEVIER_IOT_SURVEY_VISIBLE_INTEGRATION_2026-08-29.md`
-11. `docs/WP2_P20D_R2_ELSEVIER_IOT_SURVEY_VISIBLE_INTEGRATION_CLOSURE_2026-08-29.md`
-12. `analysis/WP2_P20E_R2_INDEPENDENT_ELSEVIER_SUBMISSION_READINESS_VALIDATION_2026-08-29.md`
-13. `docs/WP2_P20E_R2_INDEPENDENT_ELSEVIER_SUBMISSION_READINESS_VALIDATION_CLOSURE_2026-08-29.md`
-14. `docs/WP2_P21_R2_ELSEVIER_AUTHOR_SUBMISSION_AUTHORIZATION_PACKET_2026-08-29.md`
-15. Research & Grants Lessons Learned Ledger: **LL-047 venue doctrine + LL-048 publication identity**.
+10. `analysis/WP2_P20D_R3_REFERENCE_SURVEY_EXPANSION_2026-08-29.md`
+11. `analysis/WP2_P20E_R3_RED_HAT_ADVERSARIAL_SUBMISSION_REVIEW_2026-08-29.md`
+12. `docs/WP2_P20E_R3_RED_HAT_ADVERSARIAL_SUBMISSION_REVIEW_CLOSURE_2026-08-29.md`
+13. Research & Grants Lessons Learned Ledger: **LL-047 venue doctrine + LL-048 publication identity**.
+14. P9 forensic authorities only when exact POWDER trace/caveat semantics are needed.
 
-Old IEEE P20D/P20E/P21 artifacts remain historical audit/back-up material only. Do not use the old IEEE P21 packet for P22.
+Old IEEE and Elsevier R2 P21 packets are historical only. **Do not use them to unlock P22.**
 
 ## Frozen scientific doctrine
 
@@ -105,17 +106,19 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 - W1 final reconciliation contains all 10,000 generated IDs exactly once;
 - W1 backlog-drain means: C1 `67.731246 s`; C2 `67.870252 s`.
 
-These are run-level repeated outcomes under exact treatments, not population reliability probabilities. C2 is gateway-process `exec` restart, not node reboot. B0 is non-durable and is not the strongest durable MQTT comparator.
+Run/replicate is the scientific unit. The 10,000 messages within each run are not 10,000 independent samples. C2 is gateway-process `exec` restart, not node/hardware reboot. B0 is non-durable and not the strongest durable MQTT comparator.
 
 ### POWDER — communication-path characterization
 
-WP2-P8 profile `srslte-controlled-rf` is a separately executed physical-RF/LTE/MQTT controlled reference characterization, not architecture-effect estimation.
+WP2-P8 profile `srslte-controlled-rf` is a separately executed physical-RF/LTE/MQTT controlled characterization, not architecture-effect estimation.
 
 - E1/E2/E3 transition region is experiment-specific; 52 dB is not universal;
 - E8 isolates broker/service failure while LTE remains healthy;
 - E9 is no-fault control;
 - E10-A remains censored with no scalar recovery latency;
-- E10-D is an upper bound only;
+- E10-B exact: 6.063318 s first MQTT, 6.609430 s first ping, 0.060172 s publish-to-CORE receipt;
+- E10-C-B exact: 29.247733 s first ping, 29.248129 s first MQTT;
+- E10-D is upper bound only, `<=10.908749 s`;
 - receiver-side unique-ID reconciliation governs delivery;
 - FIT and POWDER are complementary/non-substitutable and are not statistically pooled.
 
@@ -125,11 +128,11 @@ WP2-P8 profile `srslte-controlled-rf` is a separately executed physical-RF/LTE/M
 
 ## Immutable claim prohibitions
 
-Never claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB; deterministic RF-only recovery; exact E10-D broker recovery latency; population reliability from message counts/three FIT runs; pooled FIT+POWDER inference; historical firstness for persistence/store-and-forward/end-to-end acknowledgment; or unsupported field/rural/pump/hydraulic/groundwater/agronomic/industrial-process validation.
+Never claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB; deterministic RF-only recovery; exact E10-D broker recovery latency; population reliability from message counts/three FIT runs; pooled FIT+POWDER inference; historical firstness for persistence/store-and-forward/end-to-end acknowledgment/offline recovery/testbed usage; or unsupported field/rural/pump/hydraulic/groundwater/agronomic/industrial-process validation.
 
-## P20A literature / survey authority
+## Current literature / survey authority — R3
 
-The submission-date novelty audit uses seven axes:
+The current manuscript uses a targeted submission-date novelty audit across seven axes:
 
 1. MQTT persistence, sessions, QoS state and retransmission;
 2. MQTT/IoT robustness, stress testing and fault injection;
@@ -139,18 +142,21 @@ The submission-date novelty audit uses seven axes:
 6. real wireless/IoT testbeds, repeatability and reproducibility;
 7. receiver-side identity reconciliation/provenance where materially related.
 
-Audit result:
+Current R3 audit composition:
 
-- retained source/axis groups: **17**;
-- wording-narrowing groups: **11**;
-- no-impact/context groups: **6**;
+- source/axis groups: **32**;
+- peer-reviewed scholarly articles: **25**;
+- normative MQTT standard: **1**;
+- official technical/platform sources: **6**;
+- wording-narrowing groups: **17**;
+- contextual/no-impact groups: **15**;
 - scientific blockers: **0**.
 
-Material/current comparators include Mohammed et al. 2026 DOI `10.48084/etasr.16945`, Im & Lim E-MQTT DOI `10.3390/app132212419`, Radwan et al. 2026 DOI `10.1038/s41598-026-66865-8`, and the FIT/POWDER platform/testbed literature. Gaspar et al. DOI `10.1109/MIOT.2026.3681190` remains bibliographic/scope-only unless full text is directly recovered.
+The 32-group R3 expansion supersedes the 17-group count **for the current manuscript only**; older P20A remains historical evidence of the earlier closure state.
 
-Defensible contribution: failure-domain-aware evaluation separating application record-state survival from communication-path recovery, combining receiver-reconciled embedded durability evidence with separately executed controlled path characterization while preserving mechanism-specific endpoint semantics and avoiding pooled reliability inference.
+The paper does not claim that the audit is systematic/exhaustive. It uses the audit to define the allowed claim envelope.
 
-## Current venue / route authority — P20B-R6
+## Current venue / route authority
 
 Selected first route:
 
@@ -160,17 +166,11 @@ Initial route:
 
 **Subscription / non-OA**
 
-Reason for switch from IEEE IoT-J:
-
-- the author elevated **editorial triage / desk-decision speed** as a material objective distinct from average peer-review first-decision time;
-- Elsevier IoT was already nearly tied with IEEE in the 8-axis ranking;
-- current official scope directly covers IoT reliability, software engineering, testbeds and quality assurance, Full Research papers, Survey Papers, Open Software and Data, and practitioner-facing engineering;
-- the journal explicitly states high priority on timely publication;
-- the Elsevier format allows the survey effort and evidence architecture to remain visible without an IEEE eight-page overlength pressure.
+Reason: fast editorial triage/desk-decision speed became a material author objective; Elsevier IoT remained scientifically strong and allows the survey/evidence architecture to remain visible without IEEE eight-page pressure.
 
 Backup 1: **IEEE Internet of Things Journal**.
 
-No APC or paid OA route is authorized.
+No APC, paid OA route, copyright/license acceptance or payment is authorized.
 
 ## Publication identity / disclosures
 
@@ -183,126 +183,119 @@ No APC or paid OA route is authorized.
 - FIT IoT-LAB and POWDER acknowledgment/citation: present;
 - CRediT: present;
 - Data availability: present;
-- Elsevier generative-AI declaration: present immediately before References;
+- Elsevier generative-AI declaration: present;
 - repository public disclosure already exists; no patentability claim;
 - commercialization verdict: `NO_IP_ACTION -> PUBLISH`;
 - repository software licence remains unactivated pending authority-to-license verification.
 
-## Current production authority — P20D-R2
+## Current production authority — P20D-R3/R3-R2
 
 Archive:
-`WellPulse_P20D_R2_Elsevier_IoT_Submission_Package_2026-08-29.zip`
+`WellPulse_P20D_R3R2_Elsevier_IoT_Submission_Package_2026-08-29.zip`
 
 Drive ID:
-`163sZVVq2qRQn8EPnZDniRLxgoOCY2lK7`
+`1Th-aO9_2wOnhD6EWyh5b6qml4fPmGDSb`
 
-Size:
-`2,132,191 bytes`
+Archive size:
+`2,157,349 bytes`
 
 Archive SHA-256:
-`43d9cba4c14fcfc17d0c8d11e18ff3ee82ab3a3a8ee7b57e60db46634e025f89`
+`6ca12912711f9f7b9f255bb161399244fac4572c7d902db0ad2270741b38496d`
 
 Drive raw read-back: **exact hash match / PASS**.
 
 Main PDF:
-`WellPulse_Elsevier_IoT_P20D_R2_SubmissionDraft.pdf`
+`WellPulse_Elsevier_IoT_P20D_R3R2_SubmissionDraft.pdf`
 
-- 16 pages;
-- approximately 4,682 words;
-- SHA-256 `46953e6f8c579faf040d8f7cbf342e200ec603b205832abbd73d3c3434b8f2a0`.
+- pages: **19**;
+- references: **32**;
+- SHA-256: `d68c7b19a0785a4c8527156e93213ee4ac0582cccaccd95c28f815da6641c768`;
+- publication name: **Ahmed Ayoub**;
+- fonts: embedded;
+- private IPv4 addresses: none detected;
+- unresolved citation markers: 0.
 
-Survey S1 PDF SHA-256:
-`a098f1f366ff1d152b7e27524f454393620b93f31df563417749a28f86804017`
+Supplement S1:
+- `Supplement_S1_Literature_Novelty_Audit.pdf`
+- `Supplement_S1_Literature_Novelty_Audit.csv`
+- rows: **32** / narrowing 17 / no-impact 15 / blockers 0.
 
-P19 reproducibility supplement SHA-256:
+Supplement S2:
+`Supplement_S2_Reproducibility_Artifact.zip`
+
+SHA-256:
 `99ed7c4dfc42c1f0f4b659489abf7ad328584f413c0318210dace29b4912b48d`
 
-Five Highlights are present and all are <=85 characters.
+Isolated `python -I artifact_selfcheck.py`: **PASS**.
 
-## P20E-R2 independent validation authority
+## Current red-hat authority — P20E-R3
 
-PASS:
+Status: **PASS / NO SCIENTIFIC OR PRODUCTION BLOCKER**.
 
-- independent rebuild: **16 pages**;
-- packaged-versus-rebuild render diff: **0 changed pages / 0.0% changed pixels**;
-- all fonts embedded;
-- survey CSV: **17 rows / 11 wording-narrowing / 6 no-impact / 0 blockers**;
-- survey aggregate counts match main paper/P20A;
-- manuscript correctly identifies the survey as targeted novelty audit, not systematic review;
-- P19 isolated `python -I artifact_selfcheck.py`: **PASS**;
-- cache files: **0**;
-- publication identity/declarations: PASS;
-- key FIT/POWDER numerical spot checks: PASS;
-- novelty boundaries: PASS;
-- forbidden claim families: absent;
-- scientific blockers: **0**;
-- production blockers: **0**.
+Finite defects found and fixed before freeze:
 
-## Current P21-R2 authorization authority
+1. stale 17-group statement after expansion → corrected to 32;
+2. pseudo-systematic-review risk → explicit source composition + claim-bounding/non-exhaustive qualification;
+3. internal Gaspar retrieval-process wording → neutral scholarly scope treatment;
+4. S2 label/file-role mismatch → normalized submission-facing filename.
 
-`docs/WP2_P21_R2_ELSEVIER_AUTHOR_SUBMISSION_AUTHORIZATION_PACKET_2026-08-29.md`
+Strongest surviving disclosed limitations:
 
-Concurrent-submission evidence check:
+- B0 is non-durable; no strongest-durable-MQTT superiority;
+- FIT has three independent run-level replicates/cell; inference remains bounded/descriptive;
+- audit is targeted/claim-bounding, not exhaustive/systematic;
+- Gaspar detailed method/result comparison is not asserted;
+- 19-page survey-visible manuscript is intentional under the active author objective.
 
-- exact title Gmail search: **0 results**;
-- broader WellPulse/Elsevier/Editorial Manager search: no relevant manuscript-submission record;
-- canonical repo contains no submission receipt.
+Validation state:
 
-This supports `CONCURRENT_SUBMISSION_EVIDENCE_FOUND=NO`, but the author must explicitly confirm no concurrent submission because absence of email cannot prove every external portal action.
-
-Portal file map:
-
-- main: `WellPulse_Elsevier_IoT_P20D_R2_SubmissionDraft.pdf`;
-- Highlights: `highlights.txt` (convert to Word only if the live portal requires it, without wording change);
-- survey supplement: `Supplement_S1_Literature_Novelty_Audit.pdf` + `.csv`;
-- reproducibility supplement: `WellPulse_P19_REPRODUCIBILITY_SUPPLEMENT.zip`;
-- TeX/F1-F4/alt text retained for portal/production requests;
-- outer ZIP is archival authority, not a single portal upload.
+- references: 32/32 cited;
+- unresolved citation keys: 0;
+- forbidden claim regression: 0;
+- publication identity: PASS;
+- S2 self-check: PASS;
+- privacy/security scan: PASS;
+- scientific blockers: 0;
+- production blockers: 0.
 
 ## Publication lane
 
-1. P20A — 15% — **PASS**
+1. P20A — 15% — **PASS / historical literature baseline retained**
 2. P20B / R1-R6 — 15% — **PASS / ELSEVIER ROUTE CURRENT**
 3. P20C — 15% — **PASS**
-4. P20D / R2 — 25% — **PASS**
-5. P20E / R2 — 20% — **PASS**
-6. P21 / R2 — 5% — **PASS / PACKET READY / AUTHOR DECISION PENDING**
-7. **P22 — Submission Execution & Receipt — 5% — LOCKED**
+4. P20D / R3-R2 — 25% — **PASS / CURRENT PRODUCTION AUTHORITY**
+5. P20E / R3 — 20% — **PASS / RED-HAT CLEARED**
+6. **P21-R3 — Author Submission Authorization Packet — 5% — LOCKED / NOT STARTED**
+7. P22 — Submission Execution & Receipt — 5% — LOCKED
 
-Earned progress: **95/100**.
+Earned progress: **90/100**.
 
-## Exact next gate — author decision, then P22 only if YES
+## Exact next gate
 
-To unlock P22, the author must explicitly confirm that the WellPulse manuscript is not currently under consideration elsewhere and choose:
+The user has explicitly said **not yet** to submission progression. Therefore stop here.
 
-`AUTHORIZE_ELSEVIER_SUBMISSION=YES`
+If the author later asks to resume submission preparation, execute **P21-R3 only** against the exact R3-R2 bytes above. P21-R3 must recheck current portal requirements/concurrent-submission state and prepare an internal authorization packet. It must not infer authorization from `continue`, `go on`, venue preference, or prior P21 packets.
 
-or
-
-`AUTHORIZE_ELSEVIER_SUBMISSION=NO`
-
-A generic `continue`, `go on`, or venue preference must not be interpreted as external submission authorization.
-
-If and only if YES, P22 may open the current Elsevier submission portal, verify live portal metadata/file roles, upload the validated artifacts, and submit only if no new paid/open-access/licence/material condition appears. Any unexpected financial or rights commitment remains a separate author-controlled gate.
+P22 remains locked until a new explicit author authorization based on the current R3-R2 package.
 
 ## Stop state
 
-`WP2_P20B_R6=PASS_DESK_TRIAGE_PRIORITY_SWITCH`
+`WP2_P20D_R3=PASS_REFERENCE_SURVEY_EXPANSION`
 
-`VENUE_SELECTED=ELSEVIER_INTERNET_OF_THINGS`
+`WP2_P20E_R3=PASS_RED_HAT_ADVERSARIAL_SUBMISSION_REVIEW`
 
-`WP2_P20D_R2=PASS_ELSEVIER_IOT_SURVEY_VISIBLE_INTEGRATION`
+`PUBLICATION_LANE_PROGRESS=90_OF_100`
 
-`WP2_P20E_R2=PASS_INDEPENDENT_ELSEVIER_SUBMISSION_READINESS_VALIDATION`
+`P21_R2=SUPERSEDED`
 
-`WP2_P21_R2=PASS_PACKET_READY_AUTHOR_DECISION_PENDING`
-
-`PUBLICATION_LANE_PROGRESS=95_OF_100`
+`P21_R3=LOCKED_NOT_STARTED`
 
 `P22_LOCKED=YES`
 
 `PAYMENT_AUTHORIZED=NO`
 
-`CURRENT_PHASE=AUTHOR_ELSEVIER_SUBMISSION_AUTHORIZATION_DECISION`
+`COPYRIGHT_OR_LICENSE_ACCEPTANCE_AUTHORIZED=NO`
+
+`CURRENT_PHASE=STOP_AFTER_RED_HAT_PASS`
 
 `SUBMISSION_AUTHORIZED=NO`
