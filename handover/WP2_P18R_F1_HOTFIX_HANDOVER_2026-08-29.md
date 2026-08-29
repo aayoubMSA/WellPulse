@@ -1,21 +1,18 @@
 # WellPulse — P18R Figure-1 Hotfix Handover
 
-Date: 2026-08-29
-Status: **PASS / HANDOVER READY**
+Date: 2026-08-29  
+Status: **PASS / HANDOVER READY / STORAGE CLOSURE COMPLETE**
 
 ## Purpose
 
-This file is the continuation delta after the P18R scientific-figure engineering lifecycle. It records the accepted deterministic replacement for Figure 1 and the exact next project retrieval point.
-
-The repository `HANDOVER_CURRENT.md` remains the broad project handover and must be read first. This file is the latest bounded delta for Figure 1 and continuation into the next production gate.
+This file is the continuation delta for the accepted deterministic Figure-1 hotfix. `HANDOVER_CURRENT.md` remains the broad project retrieval point and must be read first.
 
 ## Frozen project state
 
-- Canonical repository: `aayoubMSA/WellPulse`
-- Branch: `main`
-- Current manuscript baseline: `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
+- Canonical repository: `aayoubMSA/WellPulse`, branch `main`.
+- Current manuscript baseline: `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`.
 - P13 claim envelope remains authoritative.
-- P17V independent verdict remains **VALIDATED WITH PRE-SUBMISSION CONDITIONS**.
+- P17V verdict remains **VALIDATED WITH PRE-SUBMISSION CONDITIONS**.
 - No new experiment is required.
 - No new empirical claim is required.
 - Submission remains **NOT AUTHORIZED**.
@@ -23,124 +20,129 @@ The repository `HANDOVER_CURRENT.md` remains the broad project handover and must
 
 ## Figure-1 hotfix result
 
-The prior P18R Figure 1 was rejected for layout/readability problems. A visually improved AI-generated version was reviewed by the consortium and was **REJECTED AS A PUBLICATION ASSET**; it is design-reference only and has no canonical scientific authority.
+The prior P18R Figure 1 was rejected for layout/readability problems. An AI-generated redesign was also rejected as a canonical publication asset. The accepted replacement is deterministic and code-generated.
 
-The accepted replacement is deterministic and code-generated.
-
-### Scientific corrections frozen in the accepted Figure 1
+Frozen scientific corrections:
 
 1. Sender-local `SENT` is separated from receiver-side evidence.
 2. Local `SENT` occurs after MQTT QoS 1 PUBACK in the canonical W1 implementation.
-3. Receiver-side evidence is an independent path: unique receiver IDs → generated/received reconciliation → reported final completeness.
-4. The publication-facing figure contains no internal `IC-xx` project-control identifiers.
-5. FIT design visibly states `3 runs/cell` and `10,000 records/run`.
+3. Receiver-side evidence is independent: unique receiver IDs → generated/received reconciliation → reported final completeness.
+4. Publication-facing artwork contains no internal `IC-xx` project-control identifiers.
+5. FIT design states `3 runs/cell` and `10,000 records/run`.
 6. POWDER is represented as the full `E0–E11` controlled RF/service/recovery characterization campaign.
-7. Synthesis wording is `two distinct resilience properties`: record-state survival + communication-path recovery.
-8. The figure explicitly preserves: complementary evidence only; no FIT+POWDER quantitative pooling; no POWDER W1-vs-baseline effect.
+7. Synthesis uses the reader-facing concept of two distinct resilience properties: record-state survival and communication-path recovery.
+8. Complementary evidence only; no FIT+POWDER quantitative pooling and no POWDER W1-vs-baseline effect.
 
-### Accepted artifact identities
+## Accepted current artifact identities
 
 Final deterministic Figure-1 PDF SHA-256:
 
 `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`
 
-Standalone generator SHA-256:
+Canonical generator:
 
-`201897de563448037798678a73c998bd8b7a01f74bb4096995587f13d6667d48`
+`analysis/wp2_p18r_generate_f1_hotfix.py`
 
-Local release package produced during execution:
+Git blob SHA-1:
+
+`bf344808414b78d9b0c688140e9de9a755d9a1e7`
+
+Current exact generator SHA-256:
+
+`3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`
+
+The earlier handover value `201897de563448037798678a73c998bd8b7a01f74bb4096995587f13d6667d48` is superseded for current generator identity. A fresh rebuild from the current generator reproduced the final PDF hash exactly; this was provenance drift only, not a figure-content change.
+
+## Durable Drive archive
+
+File:
 
 `WellPulse_P18R_F1_Hotfix_Final_2026-08-29.zip`
 
-### QA verdict
+Drive ID:
 
-- known text overlaps: `0`
-- known clipping: `0`
-- known arrow/text crossings: `0`
-- unintended color-cycle artefacts: `0`
-- PDF width: `7.16 in`
-- PDF fonts embedded: `PASS`
-- two consecutive deterministic builds produced identical PDF SHA-256: `PASS`
-- AI-generated asset dependency: `NONE`
+`12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`
+
+Drive URL:
+
+`https://drive.google.com/file/d/12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M/view`
+
+ZIP SHA-256:
+
+`e9d5a54b24506b879a748b5a06b39699e6f6ec1ed31093491c27b2be7d7e6e1d`
+
+Drive read-back hash verification: **PASS**.
+
+Canonical closure record:
+
+`docs/WP2_P18R_F1_DRIVE_ARCHIVAL_CLOSURE_2026-08-29.md`
+
+## QA verdict
+
+- known text overlaps: `0`;
+- known clipping: `0`;
+- known arrow/text crossings: `0`;
+- PDF width: `7.16 in`;
+- PDF fonts embedded: `PASS`;
+- current-generator → frozen-PDF exact hash match: `PASS`;
+- AI-generated asset dependency: `NONE`;
+- Drive archive/read-back: `PASS`.
 
 `P18R_F1_HOTFIX=PASS_DETERMINISTIC_F1_ACCEPTED`
 
+`P18R_F1_DRIVE_ARCHIVE=PASS`
+
+`PROVENANCE_DRIFT=REPAIRED`
+
 `AI_F1=REFERENCE_ONLY_NOT_CANONICAL`
 
-## Important source-of-truth correction
+## Supersession correction — P18RB
 
-A prior chat response described `P18RB` as completed. No canonical `P18RB` artifact is present in the repository at this handover point. Therefore the repository state wins: **P18RB is NOT yet canonically complete** and must be treated as the next bounded gate unless a future canonical artifact proves otherwise.
+The earlier version of this handover incorrectly stated that P18RB was not canonically complete. That statement is **SUPERSEDED**.
 
-Do not reconstruct P18RB from chat memory.
+Canonical P18RB authority exists at:
+
+`analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
+
+Verdict:
+
+`WP2_P18RB=CONDITIONAL_PASS_SCIENCE_PASS_PRODUCTION_NORMALIZATION_REQUIRED`
+
+Scientific/display blockers: `0`.
 
 ## Exact next move
 
-### WP2-P18RB — post-P18R high-standard benchmark
+### WP2-P18RC — MAIN-FIGURE PRODUCTION NORMALIZATION
 
-Benchmark the complete P18R main-figure set, using the accepted F1 hotfix as the Figure-1 authority, against the highest applicable venue-neutral standards before P19.
+Mandatory bounded scope only:
 
-Required benchmark dimensions:
+- F2 semantic-encoding cleanup;
+- Helvetica/Arial-compatible venue-neutral font-family normalization;
+- remove nonessential grids and normalize ordinary strokes to <=1 pt where applicable;
+- explicit alt text for F1–F4 and grayscale verification;
+- fixed author/affiliation/rights metadata for supported figure formats;
+- deterministic rebuild receipt for the normalized main set.
 
-- scientific claim-to-display completeness;
-- final-width typography and spacing;
-- grayscale / non-color-only readability;
-- vector source and embedded-font quality;
-- publisher-neutral artwork production discipline;
-- accessibility / alt-text readiness;
-- deterministic rebuild / source-data traceability;
-- consistent metadata / attribution / rights across F1–F4;
-- no accidental Matplotlib color-cycle semantics;
-- no scientific encoding changes without reopening P18R V&V.
+P18RC may not alter raw evidence, experimental validity, P13 claims, or inferential boundaries.
 
-P18RB may recommend evidence-neutral production normalization. It must not silently alter results, axes, aggregations, claims, or failure-domain semantics.
+**P19 must not be frozen until P18RC passes.**
 
-After P18RB PASS, proceed to:
-
-### WP2-P19 — reviewer-facing supplementary atlas + sanitized artifact
-
-- derive concise reviewer supplement from dossier v2.2;
-- include E0–E11, validity/anomaly evidence, FIT ledger, and endpoint semantics;
-- package analysis code, derived non-sensitive data, figures and manifests;
-- perform privacy/security sanitization before any release;
-- aim for an artifact capable of meeting an ACM-style Functional bar and approaching Reusable.
+After P18RC PASS, proceed to **WP2-P19 — reviewer-facing supplementary atlas + sanitized artifact**.
 
 ## Immutable prohibitions
 
-Do not claim:
-
-- scored P7B success;
-- POWDER B1-vs-W1 advantage;
-- strongest-durable-MQTT superiority;
-- generic `WellPulse beats MQTT`;
-- universal 52 dB threshold;
-- deterministic RF-only recovery;
-- exact broker latency from E10-D;
-- population reliability from message counts or three FIT replicates;
-- pooled FIT+POWDER inferential statistics;
-- field/rural/Siwa/pump/hydraulic/agronomic validation.
-
-## Attribution / affiliation
-
-Canonical project identity for internal documents:
-
-**Dr. Ahmed Elsayed Ayoub**  
-Assistant Professor of Computer Engineering  
-Department of Computer Systems Engineering  
-Faculty of Engineering, MSA University  
-Giza, Egypt
-
-Do not invent coauthors, CRediT roles, funding, copyright ownership, or licensing terms.
+Do not claim scored P7B success, POWDER B1-vs-W1 advantage, generic `WellPulse beats MQTT`, a universal 52 dB threshold, deterministic RF-only recovery, exact broker latency from E10-D, population reliability from message counts/three FIT replicates, pooled FIT+POWDER inference, or field/agronomic validation not supported by the evidence.
 
 ## Handover close
 
 `BRANCH_RESULT=PASS`
 
-`VERIFIED_RESULT=F1_DETERMINISTIC_HOTFIX_ACCEPTED`
-
-`DECISION_CHANGE=AI_F1_REJECTED_AS_PUBLICATION_ASSET`
+`VERIFIED_RESULT=F1_DETERMINISTIC_HOTFIX_ACCEPTED_AND_DURABLY_ARCHIVED`
 
 `REMAINING_SCIENTIFIC_BLOCKERS=0`
 
+`SCIENTIFIC_CONTENT_CHANGED=NO`
+
 `SUBMISSION_AUTHORIZED=NO`
 
-`NEXT_EXACT_MOVE=WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK`
+`NEXT_EXACT_MOVE=WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION`
