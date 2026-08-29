@@ -18,7 +18,7 @@ No P8 item is promoted or re-labelled as scored P7B evidence.
 | `WellPulse-P8-E10-E11-20260829-015817-FROZEN.zip` | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` | PASS |
 | `WellPulse_POWDER_Golden_Preservation_PRIVATE_2026-08-29.zip` | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` | PASS |
 
-The three SHA256 values above were recomputed from authenticated Drive downloads during P9 and match the P8 GitHub/Drive anchors.
+The three SHA256 values above were recomputed from authenticated Drive downloads during P9 and independently rechecked during closure QA; they match the P8 GitHub/Drive anchors.
 
 ## Canonical member inventory
 
@@ -35,6 +35,8 @@ Full path/hash enumeration remains inside the immutable archive-native manifests
 - master: `meta/SHA256_ALL_FILES.txt` + `meta/FILE_INVENTORY.csv`;
 - E10/E11: `meta/SHA256_ALL_COLLECTED.txt` + `meta/RUN_STATUS.csv` + node-local SHA256 manifests;
 - private preservation: `SHA256_ALL.txt` + `PRESERVATION_MANIFEST.json`.
+
+Independent manifest re-audit found two deterministic self-log exceptions: master `meta/collection.log` was hashed at 5611 bytes then appended only with its final `creating final ZIP` line; E10/E11 `meta/collector.log` was hashed through byte 8570 then appended only with its final `creating final ZIP` line. The outer frozen ZIP hashes remain exact Drive matches, all other parsed archive-native manifest entries verified, and neither collector log is used for metrics. These are recorded as `A-018 / DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND`, not corruption.
 
 The private `SHA256_ALL.txt` enumerates all **89** `screenshots_unclassified/*.png` files by filename and individual SHA256. Their UUID names do not support defensible run attribution, so they are preserved but not used for metric reconstruction.
 
