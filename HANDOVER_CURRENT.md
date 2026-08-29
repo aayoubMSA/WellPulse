@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion of **WP2-P11 — FULL RAW-DATA SCIENTIFIC ANALYSIS**.
+Last updated: 2026-08-29 after completion of **WP2-P12 — CROSS-EVIDENCE INTEGRATION**.
 
 ## Canonical authority
 
@@ -18,7 +18,8 @@ This file is the current operational retrieval point. Do not reconstruct current
 - WP2-P9 forensic reconciliation: **PASS / COMPLETE / INDEPENDENT RE-AUDIT PASS**
 - WP2-P10 scientific analysis contract: **PASS / FROZEN**
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
-- WP2-P12 cross-evidence integration: **NOT STARTED**
+- WP2-P12 cross-evidence integration: **PASS / COMPLETE**
+- WP2-P13 claim-evidence matrix: **NOT STARTED**
 - P7B scored physical qualification: **NOT PASSED**
 - scored execution: **NOT AUTHORIZED**
 - live POWDER dependency for current phase: **NONE**
@@ -31,7 +32,7 @@ Historical scored state remains unchanged:
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No P8/P9/P10/P11 result may be promoted, reinterpreted or relabelled as scored P7B.
+No P8/P9/P10/P11/P12 result may be promoted, reinterpreted or relabelled as scored P7B.
 
 ## Canonical evidence classes
 
@@ -133,30 +134,18 @@ Canonical outputs:
 3. `analysis/WP2_P11_POWDER_DERIVED_METRICS_2026-08-29.csv`
 4. `analysis/wp2_p11_analyze.py`
 
-### RQ1 — FIT principal results
-
-All 18 cells were independently reconstructed from `generated.jsonl` and receiver evidence.
+### FIT principal results
 
 - C0: B0 = 100% in 3/3; W1 = 100% in 3/3; difference `0 pp`.
 - C1: B0 = 80% in 3/3; W1 = 100% in 3/3; difference `+20 pp` in every replicate.
 - C2: B0 = 80% in 3/3; W1 = 100% in 3/3; difference `+20 pp` in every replicate.
 - Every B0 C1/C2 run permanently missed exactly 2,000/10,000 generated records.
 - Every W1 final run contained all 10,000 generated IDs exactly once.
-- No unexpected receiver IDs were found.
+- W1 backlog drain mean: C1 `67.731246 s`; C2 `67.870252 s`.
 
-Reconnect characterization:
+The completeness effects have zero empirical run-level variance in this 3-replicate design, so no population reliability probability is inferred.
 
-- C1 B0 mean `1.325412 s`; W1 mean `1.317088 s`.
-- C2 B0 mean `1.362121 s`; W1 mean `1.344870 s`.
-
-W1 backlog drain:
-
-- C1 mean `67.731246 s`;
-- C2 mean `67.870252 s`.
-
-The completeness effects have zero empirical run-level variance in this 3-replicate design, so P11 does not manufacture population CIs or reliability percentages from them.
-
-### RQ2 — POWDER transition results
+### POWDER transition results
 
 E1R4 ascending:
 
@@ -166,22 +155,14 @@ E1R4 ascending:
 - 51 dB: ICMP 30%; MQTT 20/20.
 - 52 dB: ICMP 60%; MQTT 13/20 = 65%.
 
-E2 descending:
+E3 at 52 dB:
 
-- 52 dB: ICMP 65%; MQTT 11/20 = 55%.
-- 51 dB: ICMP 10%; MQTT 20/20.
-- 50 dB and below in sampled windows: ICMP clean; MQTT complete.
+- ICMP loss `80/65/70%` across cycles;
+- MQTT completeness `60/25/55%`.
 
-E3 repeatability:
+Interpretation remains an experiment-specific transition region around 50–52 dB, not a universal threshold.
 
-- 49 dB ICMP loss: `0/0/0%`; MQTT `100/100/100%`.
-- 50 dB ICMP loss: `5/0/5%`; MQTT `100/100/100%`.
-- 51 dB ICMP loss: `10/5/50%`; MQTT `100/95/100%`.
-- 52 dB ICMP loss: `80/65/70%`; MQTT `60/25/55%`.
-
-Interpretation is an experiment-specific transition region around 50–52 dB, not a universal hard threshold. MQTT remained more tolerant than ICMP in the transition region but became incomplete under severe attenuation.
-
-### RQ3 — recovery/failure-domain results
+### Recovery/failure-domain results
 
 - RF-only recovery is not deterministic: E10-A has no observed recovery inside its preserved window.
 - E10-B RF restore + UE restart: first MQTT publish `6.063318 s`; first ping `6.609430 s`; publish→CORE receipt `0.060172 s`.
@@ -190,18 +171,9 @@ Interpretation is an experiment-specific transition region around 50–52 dB, no
 - E8 demonstrates MQTT disruption while LTE pings remain healthy.
 - E9 no-fault control: MQTT 60/60 and clean bidirectional ping.
 
-### RQ4 — integration rule
+### P11 provenance anomaly
 
-FIT and POWDER provide complementary evidence layers:
-
-- FIT = architecture durability/integrity comparison under controlled application/connectivity failure;
-- POWDER = physical-RF degradation/recovery characterization and failure-domain separation.
-
-They must not be pooled into one “WellPulse reliability” estimate.
-
-### New P11 provenance anomaly
-
-`P11-A01 / FIT_SHA256_MANIFEST_SELF_REFERENCE`: each FIT `SHA256SUMS.txt` contains a self-entry equal to the empty-file SHA256 because the manifest hashes itself during generation. All 103 non-self entries verify, all outer ZIP hashes match Drive, and the self-entry is not a metric source. This is documented, not cleaned away.
+`P11-A01 / FIT_SHA256_MANIFEST_SELF_REFERENCE`: each FIT `SHA256SUMS.txt` contains a self-entry equal to the empty-file SHA256 because the manifest hashes itself during generation. All 103 non-self entries verify, all outer ZIP hashes match Drive, and the self-entry is not a metric source.
 
 P11 gates:
 
@@ -210,6 +182,57 @@ P11 gates:
 `P11_UNRESOLVED_EVIDENCE_DISCREPANCIES=0`
 
 `WP2_P11=PASS_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS`
+
+## P12 closure — cross-evidence integration
+
+Canonical output:
+
+`analysis/WP2_P12_CROSS_EVIDENCE_INTEGRATION_2026-08-29.md`
+
+### Frozen integration doctrine
+
+FIT and POWDER are complementary, not substitutable:
+
+- **FIT = record-state survival / architecture comparison.** It directly tests whether W1 durable record semantics prevent permanent loss relative to B0 under the frozen embedded outage/restart treatments.
+- **POWDER = communication-path degradation and recovery.** It characterizes the physical LTE/MQTT path under controlled RF and service/process interventions.
+
+The project-level scientific synthesis is therefore **failure-domain-aware triangulation**, not a pooled “WellPulse reliability” estimate.
+
+### Integrated conclusions allowed into P13 mapping
+
+1. FIT C1/C2 provide a repeated `+20 pp` final-completeness difference for W1 vs B0 under the exact frozen treatments.
+2. FIT C0 shows healthy-path equivalence at 100% final completeness.
+3. W1 complete recovery on FIT carries a measurable backlog-drain cost.
+4. POWDER shows an experiment-specific RF transition region rather than a sharp universal threshold.
+5. POWDER shows lower-layer ICMP degradation can precede MQTT incompleteness.
+6. Recovery depends on the failure/recovery mechanism; RF-only recovery is not deterministic across all preserved observations.
+7. Broker-only interruption can break MQTT while LTE remains healthy.
+8. FIT and POWDER jointly support treating **durable record survival** and **communication-path recovery** as distinct resilience properties.
+9. Both evidence classes support receiver-side, evidence-first reconciliation as the defensible reporting basis.
+
+These are candidate claims only until P13 maps each one to evidence, limitations and wording strength.
+
+### Quantitative integration prohibition
+
+No pooled FIT+POWDER completeness, reliability percentage, p-value, confidence interval, or generic recovery latency is permitted.
+
+FIT backlog drain and POWDER recovery times measure different constructs and must not be compared numerically as treatment effects.
+
+### P12 tensions preserved
+
+- B0 is a non-durable baseline, not the strongest durable MQTT comparator.
+- scored POWDER B1-vs-W1 was not completed.
+- E10-A preserves non-recovery within its observation window.
+- FIT three-replicate deterministic outcomes are not population probabilities.
+- platform workloads, hardware, impairment mechanisms and evidence schemas differ.
+
+P12 gates:
+
+`P12_UNSUPPORTED_INTEGRATED_CLAIMS=0`
+
+`P12_STATISTICAL_POOLING=NONE`
+
+`WP2_P12=PASS_CROSS_EVIDENCE_INTEGRATION`
 
 ## Claim prohibitions carried forward
 
@@ -223,7 +246,8 @@ Do not claim:
 - deterministic RF-only recovery;
 - population reliability from message counts or three FIT replicates;
 - rural/field/Siwa/pump/hydraulic/agronomic validation;
-- unresolved RF-path or runtime USRP identity.
+- unresolved RF-path or runtime USRP identity;
+- pooled statistical inference across FIT and POWDER.
 
 B2 remains a comparator limitation/qualification issue, not current comparative evidence. No B2 or new live experiment is required for the current offline paper-analysis lane.
 
@@ -249,10 +273,12 @@ Raw archives remain immutable.
 
 `WP2_P11=PASS_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS`
 
+`WP2_P12=PASS_CROSS_EVIDENCE_INTEGRATION`
+
 `PRIMARY_ARCHITECTURE_COMPARISON=FIT_B0_VS_W1`
 
 `POWDER_ROLE=CONTROLLED_PHYSICAL_RF_AND_RECOVERY_CHARACTERIZATION`
 
 `LIVE_POWDER_DEPENDENCY=NONE_FOR_CURRENT_PHASE`
 
-`NEXT_PHASE=WP2_P12_CROSS_EVIDENCE_INTEGRATION`
+`NEXT_PHASE=WP2_P13_CLAIM_EVIDENCE_MATRIX`
