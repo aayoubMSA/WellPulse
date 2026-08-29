@@ -1,25 +1,26 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion of **WP2-P12 — CROSS-EVIDENCE INTEGRATION**.
+Last updated: 2026-08-29 after completion of **WP2-P13 — CLAIM–EVIDENCE MATRIX**.
 
 ## Canonical authority
 
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
-This file is the current operational retrieval point. Do not reconstruct current state from conversation memory.
+This file is the current operational retrieval point. Do not reconstruct current state from conversation memory. Detailed evidence, analysis and caveats remain in the canonical files referenced below.
 
 ## Executive scientific state
 
 - WP0: **PASS / EARLIER PAPER STORY PARTIALLY SUPERSEDED BY P10 EVIDENCE-BOUND CONTRACT**
 - WP1: **PASS / FROZEN HISTORICAL CONFIRMATORY DESIGN**
-- WP2: **ACTIVE — OFFLINE SCIENTIFIC INTEGRATION**
+- WP2: **ACTIVE — OFFLINE SCIENTIFIC INTEGRATION / PUBLICATION PREPARATION**
 - WP2-P8 manual RF campaign: **COMPLETE / GOLDEN / NON-SCORED MANUAL REFERENCE**
 - WP2-P9 forensic reconciliation: **PASS / COMPLETE / INDEPENDENT RE-AUDIT PASS**
 - WP2-P10 scientific analysis contract: **PASS / FROZEN**
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
 - WP2-P12 cross-evidence integration: **PASS / COMPLETE**
-- WP2-P13 claim-evidence matrix: **NOT STARTED**
+- WP2-P13 claim–evidence matrix: **PASS / FROZEN**
+- WP2-P14 publication tables and figures: **NOT STARTED**
 - P7B scored physical qualification: **NOT PASSED**
 - scored execution: **NOT AUTHORIZED**
 - live POWDER dependency for current phase: **NONE**
@@ -32,27 +33,25 @@ Historical scored state remains unchanged:
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No P8/P9/P10/P11/P12 result may be promoted, reinterpreted or relabelled as scored P7B.
+No P8/P9/P10/P11/P12/P13 result may be promoted, reinterpreted or relabelled as scored P7B.
 
 ## Canonical evidence classes
 
-### FIT final architecture comparison
+### FIT — final architecture comparison
 
-Source: `experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md`
+Authority: `experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md`
 
-- class: `FINAL_WP_RT01_FIT_A8`
-- platform: FIT IoT-LAB Grenoble, A8-100
-- matrix: `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`
-- exactly 10,000 records/cell
-- B0 = non-durable publish-only baseline
-- W1 = WellPulse durable queue + reconciliation
-- C0 = healthy
-- C1 = deterministic broker outage
-- C2 = broker outage + gateway-process exec restart
+- evidence class `FINAL_WP_RT01_FIT_A8`;
+- FIT IoT-LAB Grenoble, A8-100;
+- `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`;
+- exactly 10,000 records per cell;
+- B0 = non-durable publish-only baseline;
+- W1 = WellPulse durable queue + reconciliation;
+- C0 healthy; C1 broker outage; C2 broker outage + gateway-process exec restart.
 
-This remains the only current final evidence class supporting a direct architecture-level `B0 vs W1` comparison.
+This is the only current final evidence class supporting a direct architecture-level `B0 vs W1` comparison.
 
-FIT Drive raw archives and SHA256:
+FIT raw authorities:
 
 | Rep | Drive ID | SHA256 |
 |---|---|---|
@@ -60,17 +59,16 @@ FIT Drive raw archives and SHA256:
 | R2 | `1Bi8zr7lO6UKn5BSoMrjQhoTcXIL5UtIX` | `cf25bdcd4684b6be2d6e5b328776a5704f85a520068c5fe6ace4121c909a0fe7` |
 | R3 | `1Y1bBgs0iclyXeKsDr4tTI-ZcQEqr3EaO` | `ef92f4c3cce6e3824669b7771a35ae8c2374275ef4e1b4937c69c79ef47ac3c8` |
 
-### POWDER golden physical-RF evidence
+### POWDER — golden physical-RF/recovery evidence
 
-- campaign: `WP2-P8`
-- reservation: `WP-07-C`
-- profile: `srslte-controlled-rf`
-- topology: `enb1 -> nuc1 / CORE`; `rue1 -> nuc2 / UE`
-- classification: `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
+- campaign `WP2-P8`;
+- profile `srslte-controlled-rf`;
+- `enb1 -> nuc1 / CORE`; `rue1 -> nuc2 / UE`;
+- classification `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`.
 
-P8/P9 support controlled physical-RF/LTE/MQTT characterization, transition behavior, hysteresis, repeatability, recovery-mechanism comparison, controls and timing. They do **not** provide a scored `B1 vs W1` POWDER architecture comparison.
+P8/P9 support controlled physical-RF/LTE/MQTT degradation, transition behavior, hysteresis, repeatability, recovery-mechanism comparison, controls and timing. They do **not** provide a scored B1-vs-W1 POWDER architecture comparison.
 
-POWDER Drive authorities remain:
+POWDER Drive authorities:
 
 | Authority | SHA256 | Drive ID |
 |---|---|---|
@@ -78,74 +76,30 @@ POWDER Drive authorities remain:
 | E10/E11 collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` |
 | Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` |
 
-## P9 forensic authority
+## Mandatory read order for P14+
 
-P9 remains authoritative for POWDER run validity, anomalies, endpoint semantics and traceability.
+1. `HANDOVER_CURRENT.md`
+2. `docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
+3. `analysis/WP2_P11_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS_2026-08-29.md`
+4. `analysis/WP2_P12_CROSS_EVIDENCE_INTEGRATION_2026-08-29.md`
+5. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md`
+6. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.csv`
+7. P9 forensic authorities as needed, especially `evidence/powder/WP2_P9_FORENSIC_TRACE_MAP_2026-08-29.md` and `evidence/powder/WP2_P9_ANOMALY_REGISTER_2026-08-29.md`.
 
-Required trace chain:
+## P11 scientific results carried forward
 
-`reported value → reconstructed table → raw-file root → frozen archive → SHA256 → Drive evidence`
+### FIT
 
-`UNSUPPORTED_SURVIVING_VALUES=0`
-
-`UNRESOLVED_ARCHIVE_HASH_DISCREPANCIES=0`
-
-Important immutable caveats remain:
-
-- E5 forward recovery ping observed live but not frozen;
-- E8 duplicate recovery send; unique IDs govern completeness;
-- E10-A censored no-recovery observation;
-- E10-C attempt A setup artifact, B valid with caveat;
-- E10-D upper-bound timing only;
-- E1R4 seq 96 and E3 seq 150 receiver-missing despite no sender failure event;
-- E11 R1-R3 collector is UE-side only;
-- E7 481.046 ms RTT maximum preserved;
-- runtime UHD identity not independently exposed;
-- attenuator-ID→physical-path mapping unresolved;
-- 89 screenshots preserved but unclassified;
-- documented post-manifest collector/self-log append exceptions remain non-metric provenance anomalies.
-
-## P10 frozen scientific contract
-
-Canonical file:
-
-`docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
-
-Frozen RQs:
-
-1. **RQ1 — Embedded durability/integrity:** FIT W1 vs B0 under C0/C1/C2.
-2. **RQ2 — Physical RF degradation/transition:** POWDER E1-E3.
-3. **RQ3 — Failure-domain/recovery separation:** POWDER E4-E11.
-4. **RQ4 — Cross-layer triangulation:** FIT + POWDER without pooled inference.
-
-Frozen contribution package:
-
-- C1 real-embedded durability evidence;
-- C2 controlled physical-RF/LTE/MQTT characterization;
-- C3 failure-domain separation;
-- C4 evidence-first reproducibility.
-
-## P11 closure — full raw-data scientific analysis
-
-Canonical outputs:
-
-1. `analysis/WP2_P11_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS_2026-08-29.md`
-2. `analysis/WP2_P11_FIT_RECONSTRUCTED_RUNS_2026-08-29.csv`
-3. `analysis/WP2_P11_POWDER_DERIVED_METRICS_2026-08-29.csv`
-4. `analysis/wp2_p11_analyze.py`
-
-### FIT principal results
-
-- C0: B0 = 100% in 3/3; W1 = 100% in 3/3; difference `0 pp`.
-- C1: B0 = 80% in 3/3; W1 = 100% in 3/3; difference `+20 pp` in every replicate.
-- C2: B0 = 80% in 3/3; W1 = 100% in 3/3; difference `+20 pp` in every replicate.
+- C0: B0 = 100% and W1 = 100% in 3/3; difference `0 pp`.
+- C1: B0 = 80%, W1 = 100% in 3/3; difference `+20 pp` in every replicate.
+- C2: B0 = 80%, W1 = 100% in 3/3; difference `+20 pp` in every replicate.
 - Every B0 C1/C2 run permanently missed exactly 2,000/10,000 generated records.
 - Every W1 final run contained all 10,000 generated IDs exactly once.
-- W1 backlog drain mean: C1 `67.731246 s`; C2 `67.870252 s`.
+- W1 backlog-drain mean: C1 `67.731246 s`; C2 `67.870252 s`.
 
-The completeness effects have zero empirical run-level variance in this 3-replicate design, so no population reliability probability is inferred.
+These are repeated deterministic outcomes under the exact three-replicate FIT treatment, not population reliability probabilities.
 
-### POWDER transition results
+### POWDER transition
 
 E1R4 ascending:
 
@@ -160,101 +114,116 @@ E3 at 52 dB:
 - ICMP loss `80/65/70%` across cycles;
 - MQTT completeness `60/25/55%`.
 
-Interpretation remains an experiment-specific transition region around 50–52 dB, not a universal threshold.
+Interpretation: experiment-specific transition region around 50–52 dB, not a universal threshold.
 
-### Recovery/failure-domain results
+### POWDER recovery/failure domains
 
-- RF-only recovery is not deterministic: E10-A has no observed recovery inside its preserved window.
-- E10-B RF restore + UE restart: first MQTT publish `6.063318 s`; first ping `6.609430 s`; publish→CORE receipt `0.060172 s`.
-- E10-C-B RF restore: first ping `29.247733 s`; first publish `29.248129 s`.
-- E10-D broker result remains `<=10.908749 s` upper bound only.
-- E8 demonstrates MQTT disruption while LTE pings remain healthy.
-- E9 no-fault control: MQTT 60/60 and clean bidirectional ping.
+- E10-A: no recovery observed inside preserved RF-only observation window; censored result.
+- E10-B RF restore + UE restart: action-begin→first MQTT publish `6.063318 s`; action-begin→first ping `6.609430 s`; publish→CORE receipt `0.060172 s`.
+- E10-C-B: RF restore→first ping `29.247733 s`; RF restore→first publish `29.248129 s`.
+- E10-D: broker-start action-begin→manual successful publish `<=10.908749 s`; upper bound only.
+- E8: MQTT interruption while LTE ping remained healthy.
+- E9: no-fault control MQTT 60/60 with clean bidirectional ping.
 
-### P11 provenance anomaly
-
-`P11-A01 / FIT_SHA256_MANIFEST_SELF_REFERENCE`: each FIT `SHA256SUMS.txt` contains a self-entry equal to the empty-file SHA256 because the manifest hashes itself during generation. All 103 non-self entries verify, all outer ZIP hashes match Drive, and the self-entry is not a metric source.
-
-P11 gates:
-
-`P11_UNSUPPORTED_SURVIVING_VALUES=0`
-
-`P11_UNRESOLVED_EVIDENCE_DISCREPANCIES=0`
-
-`WP2_P11=PASS_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS`
-
-## P12 closure — cross-evidence integration
-
-Canonical output:
-
-`analysis/WP2_P12_CROSS_EVIDENCE_INTEGRATION_2026-08-29.md`
-
-### Frozen integration doctrine
+## P12 integration doctrine
 
 FIT and POWDER are complementary, not substitutable:
 
-- **FIT = record-state survival / architecture comparison.** It directly tests whether W1 durable record semantics prevent permanent loss relative to B0 under the frozen embedded outage/restart treatments.
-- **POWDER = communication-path degradation and recovery.** It characterizes the physical LTE/MQTT path under controlled RF and service/process interventions.
+- **FIT = record-state survival / architecture comparison**.
+- **POWDER = communication-path degradation / recovery characterization**.
 
-The project-level scientific synthesis is therefore **failure-domain-aware triangulation**, not a pooled “WellPulse reliability” estimate.
+The project-level synthesis is **failure-domain-aware triangulation**. A resilient telemetry system must be evaluated for both **durable record survival** and **communication-path recovery**. No pooled FIT+POWDER reliability statistic is allowed.
 
-### Integrated conclusions allowed into P13 mapping
+## P13 closure — claim–evidence matrix
 
-1. FIT C1/C2 provide a repeated `+20 pp` final-completeness difference for W1 vs B0 under the exact frozen treatments.
-2. FIT C0 shows healthy-path equivalence at 100% final completeness.
-3. W1 complete recovery on FIT carries a measurable backlog-drain cost.
-4. POWDER shows an experiment-specific RF transition region rather than a sharp universal threshold.
-5. POWDER shows lower-layer ICMP degradation can precede MQTT incompleteness.
-6. Recovery depends on the failure/recovery mechanism; RF-only recovery is not deterministic across all preserved observations.
-7. Broker-only interruption can break MQTT while LTE remains healthy.
-8. FIT and POWDER jointly support treating **durable record survival** and **communication-path recovery** as distinct resilience properties.
-9. Both evidence classes support receiver-side, evidence-first reconciliation as the defensible reporting basis.
+Canonical outputs:
 
-These are candidate claims only until P13 maps each one to evidence, limitations and wording strength.
+1. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md`
+2. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.csv`
 
-### Quantitative integration prohibition
+Nine candidate claims were reviewed and all nine passed with bounded wording:
 
-No pooled FIT+POWDER completeness, reliability percentage, p-value, confidence interval, or generic recovery latency is permitted.
+### Strength A — direct replicated empirical evidence
 
-FIT backlog drain and POWDER recovery times measure different constructs and must not be compared numerically as treatment effects.
+- `IC-01`: FIT C1/C2 W1 10,000/10,000 vs B0 8,000/10,000 in every replicate, bounded to the exact treatment.
+- `IC-02`: FIT C0 healthy final delivery complete for both B0 and W1 in 3/3.
+- `IC-03`: W1 complete FIT recovery carries a measurable backlog-drain interval (~67.7–67.9 s).
 
-### P12 tensions preserved
+### Strength B — direct experiment-specific characterization
 
-- B0 is a non-durable baseline, not the strongest durable MQTT comparator.
-- scored POWDER B1-vs-W1 was not completed.
-- E10-A preserves non-recovery within its observation window.
-- FIT three-replicate deterministic outcomes are not population probabilities.
-- platform workloads, hardware, impairment mechanisms and evidence schemas differ.
+- `IC-04`: POWDER physical degradation is a transition region; 52 dB is severe but variable in the tested profile.
+- `IC-05`: ICMP degradation can precede MQTT incompleteness in the transition region.
+- `IC-06`: recovery depends on failure/recovery mechanism; RF-only restoration was not deterministic across all preserved observations.
+- `IC-07`: broker-only interruption can disrupt MQTT while LTE ping remains healthy.
 
-P12 gates:
+### Strength C — methodological synthesis
 
-`P12_UNSUPPORTED_INTEGRATED_CLAIMS=0`
+- `IC-08`: durable record survival and communication-path recovery are distinct resilience properties requiring separate validation layers.
+- `IC-09`: receiver-side evidence-first reconciliation and immutable provenance support defensible resilience reporting in this project.
 
-`P12_STATISTICAL_POOLING=NONE`
+P13 hierarchy:
 
-`WP2_P12=PASS_CROSS_EVIDENCE_INTEGRATION`
+- primary empirical claims: `IC-01`, `IC-04`, `IC-06`;
+- supporting empirical claims: `IC-02`, `IC-03`, `IC-05`, `IC-07`;
+- methodological synthesis: `IC-08`, `IC-09`.
 
-## Claim prohibitions carried forward
+P13 gates:
+
+`P13_CLAIMS_REVIEWED=9`
+
+`P13_CLAIMS_PASSED=9`
+
+`P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
+
+`P13_STATISTICAL_POOLING=NONE`
+
+`WP2_P13=PASS_CLAIM_EVIDENCE_MATRIX_FROZEN`
+
+## Immutable caveats and prohibitions
+
+Carry forward all P9/P11 anomalies. In particular:
+
+- E5 forward recovery ping was not frozen;
+- E8 duplicate recovery sends remain preserved and unique IDs govern completeness;
+- E10-A is censored no-recovery evidence;
+- E10-C attempt A is setup artifact; B is valid with caveat;
+- E10-D is upper-bound timing only;
+- E1R4 seq 96 and E3 seq 150 are receiver-missing despite no sender failure event;
+- E11 R1–R3 is UE-side only;
+- E7 481.046 ms RTT maximum remains preserved;
+- unresolved runtime UHD identity and attenuator-ID→physical-path mapping must not be inferred;
+- FIT `SHA256SUMS.txt` self-reference anomaly (`P11-A01`) is documented; all 103 non-self entries and outer ZIP hashes verify.
 
 Do not claim:
 
 - scored P7B success;
 - POWDER B1-vs-W1 advantage;
-- superiority to the strongest available durable MQTT client;
-- universal RF thresholds;
-- exact E10-D broker latency;
+- strongest-durable-MQTT superiority;
+- universal RF threshold;
 - deterministic RF-only recovery;
+- exact E10-D broker latency;
 - population reliability from message counts or three FIT replicates;
-- rural/field/Siwa/pump/hydraulic/agronomic validation;
+- rural/field/Siwa/pump/hydraulic/groundwater/agronomic validation;
 - unresolved RF-path or runtime USRP identity;
-- pooled statistical inference across FIT and POWDER.
+- pooled FIT+POWDER inferential statistics.
 
-B2 remains a comparator limitation/qualification issue, not current comparative evidence. No B2 or new live experiment is required for the current offline paper-analysis lane.
+## P14 authorization envelope
+
+P14 may create publication tables/figures only from P13-passed claims and approved quantitative sources:
+
+- FIT run-level completeness, missing counts, reconnect values and W1 backlog-drain values;
+- POWDER ICMP loss/RTT and MQTT completeness by attenuation/cycle/direction;
+- mechanism-specific POWDER recovery timing with censor/upper-bound notation;
+- evidence-layer / failure-domain schematic for the P13 methodological synthesis.
+
+P14 must not create a combined FIT+POWDER reliability score or any visual implying a POWDER B1-vs-W1 comparison.
+
+P14 does not authorize new experiments, manuscript prose, journal submission, or scored P7B retry.
 
 ## Storage authority
 
 1. **Google Drive = primary durable authority for frozen/raw binary evidence.**
-2. **GitHub = canonical scientific/control record** for manifests, hashes, contracts, analysis scripts, derived tables, anomaly registers, results and handovers.
+2. **GitHub = canonical scientific/control record** for manifests, hashes, contracts, analysis scripts, derived tables, anomaly registers, claim matrices, results and handovers.
 3. **Home PC = independent third copy where applicable.**
 
 Raw archives remain immutable.
@@ -275,10 +244,12 @@ Raw archives remain immutable.
 
 `WP2_P12=PASS_CROSS_EVIDENCE_INTEGRATION`
 
+`WP2_P13=PASS_CLAIM_EVIDENCE_MATRIX_FROZEN`
+
 `PRIMARY_ARCHITECTURE_COMPARISON=FIT_B0_VS_W1`
 
 `POWDER_ROLE=CONTROLLED_PHYSICAL_RF_AND_RECOVERY_CHARACTERIZATION`
 
 `LIVE_POWDER_DEPENDENCY=NONE_FOR_CURRENT_PHASE`
 
-`NEXT_PHASE=WP2_P13_CLAIM_EVIDENCE_MATRIX`
+`NEXT_PHASE=WP2_P14_PUBLICATION_TABLES_AND_FIGURES`
