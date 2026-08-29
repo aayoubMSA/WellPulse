@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P18 — MAIN-DISPLAY REDESIGN + CLAIM/DISPLAY QA** and **WP2-P18B — HIGH-STANDARD PUBLICATION/ARTIFACT BENCHMARK**.
+Last updated: 2026-08-29 after **WP2-P18R — SCIENTIFIC FIGURE ENGINEERING LIFECYCLE**.
 
 ## Canonical authority
 
@@ -19,13 +19,14 @@ This file is the current operational retrieval point. Do not reconstruct current
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
 - WP2-P12 cross-evidence integration: **PASS / COMPLETE**
 - WP2-P13 claim–evidence matrix: **PASS / FROZEN**
-- WP2-P14 historical publication display set: **PASS / SUPERSEDED FOR MAIN-DISPLAY USE BY P18**
+- WP2-P14 historical publication display set: **PASS / HISTORICAL ONLY**
 - WP2-P15 manuscript construction: **PASS / historical internal full draft**
 - WP2-P16 adversarial publication QA: **PASS / scientific QA complete**
-- WP2-P17 dossier research pack + consortium revision: **PASS / consortium-revised internal draft + QA**
+- WP2-P17 dossier research pack + first consortium revision: **PASS / consortium-revised internal draft + QA**
 - WP2-P17V superior independent validation: **PASS / VALIDATED WITH PRE-SUBMISSION CONDITIONS**
-- WP2-P18 main-display redesign: **PASS / NEW MAIN DISPLAY SET FROZEN**
-- WP2-P18B high-standard benchmark: **COMPLETE / DISPLAY 95.6% CHECKLIST COVERAGE / WHOLE PACKAGE 84% READINESS-EQUIVALENT**
+- WP2-P18 first main-display redesign: **SUPERSEDED BY P18R**
+- WP2-P18B high-standard benchmark: **HISTORICAL BENCHMARK OF PRE-P18R DISPLAY/PACKAGE STATE**
+- WP2-P18R scientific figure engineering lifecycle: **PASS / CURRENT MAIN-DISPLAY AUTHORITY**
 - new experiment required for current bounded manuscript: **NO**
 - new empirical claims required: **NO**
 - current scientific blockers: **0**
@@ -58,14 +59,11 @@ No P8+ result may be promoted or relabelled as scored P7B.
 12. `manuscript/WP2_P17_CONSORTIUM_REVISION_QA_2026-08-29.md`
 13. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
 14. `manuscript/WP2_P17V_SUPERIOR_INDEPENDENT_CONSORTIUM_VALIDATION_2026-08-29.md`
-15. `manuscript/WP2_P18_MAIN_DISPLAY_REDESIGN_AND_QA_2026-08-29.md`
-16. `manuscript/WP2_P18_FINAL_DISPLAY_PACK_INTEGRITY_RECEIPT_2026-08-29.md`
-17. `manuscript/WP2_P18_FIGURE_CAPTIONS_ALT_TEXT_2026-08-29.md`
-18. `analysis/WP2_P18_FAILURE_DOMAIN_TAXONOMY_2026-08-29.csv`
-19. `analysis/WP2_P18_MAIN_SUPPLEMENT_DISPLAY_SPLIT_2026-08-29.csv`
-20. `analysis/WP2_P18B_HIGH_STANDARD_PUBLICATION_ARTIFACT_BENCHMARK_2026-08-29.md`
-21. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
-22. P14 files only for historical comparison; P18 is authoritative for the current main display set.
+15. `analysis/WP2_P18R_FIGURE_REQUIREMENTS_SPEC_2026-08-29.md`
+16. `manuscript/WP2_P18R_SCIENTIFIC_FIGURE_ENGINEERING_LIFECYCLE_2026-08-29.md`
+17. `analysis/WP2_P18R_GENERATOR_RELEASE_RECEIPT_2026-08-29.md`
+18. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
+19. P18/P18B only for historical comparison; P18R is the current main-display authority.
 
 ## Frozen evidence roles
 
@@ -75,12 +73,13 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 
 - FIT IoT-LAB Grenoble A8-100;
 - `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`;
-- 10,000 records/cell;
+- exactly 10,000 records/cell;
 - B0 = non-durable publish-only baseline;
 - W1 = durable queue + receiver reconciliation;
-- C0 healthy; C1 broker outage; C2 broker outage + gateway-process exec restart.
+- C0 healthy; C1 broker outage; C2 broker outage + gateway-process `exec` restart.
 
 Principal results:
+
 - C0: B0 100%, W1 100% in 3/3;
 - C1: B0 80%, W1 100% in 3/3, `+20 pp` each run;
 - C2: B0 80%, W1 100% in 3/3, `+20 pp` each run;
@@ -91,44 +90,48 @@ Principal results:
 These are repeated outcomes under the exact treatment, not population reliability probabilities.
 
 Canonical W1 implementation semantics:
-- stable `run_id:boot_id:sequence` identity;
+
+- stable `record_id = run_id:boot_id:sequence` identity;
 - deterministic canonical JSON;
 - SHA-256 checksum;
 - SQLite WAL + `synchronous=FULL`;
-- `PENDING` / `SENT` states;
-- identical re-enqueue is idempotent;
+- `PENDING` / `SENT` state;
+- exact duplicate re-enqueue is idempotent;
 - conflicting identity reuse raises an integrity error.
 
 ### POWDER = communication-path degradation/recovery characterization
 
 Campaign: `WP2-P8`; profile `srslte-controlled-rf`.
 
-Internal control classification:
+Internal control classification remains:
 
 `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
 
 Publication-facing role: **separately executed controlled reference characterization; not architecture-effect estimation**.
 
 Principal evidence:
+
 - E1R4 48–50 dB: ICMP clean, MQTT 20/20;
 - E1R4 51 dB: ICMP 30% loss, MQTT 20/20;
 - E1R4 52 dB: ICMP 60% loss, MQTT 13/20;
+- E2 52 dB: ICMP 65% loss, MQTT 11/20;
 - E3 52 dB: ICMP loss `80/65/70%`, MQTT completeness `60/25/55%`;
 - E8: broker interruption disrupts MQTT while LTE ping remains healthy;
 - E9: no-fault control MQTT 60/60 with clean bidirectional ping;
-- E10-A: no recovery inside preserved RF-only timing window; censored, no scalar latency;
+- E10-A: no recovery observed inside preserved RF-only window; censored, no scalar latency;
 - E10-B: action-begin→first MQTT publish `6.063318 s`; first ping `6.609430 s`; publish→CORE receipt `0.060172 s`;
 - E10-C-B: RF restore→first ping `29.247733 s`; first publish `29.248129 s`;
 - E10-D: `<=10.908749 s` upper bound only.
 
-Receiver-side reconciliation remains authoritative. E1R4 seq 96 and E3 seq 150 are sender-present/receiver-absent without matching sender failure flags; E8 has 80 sender-log lines but only 60 unique IDs due to duplicate recovery sends.
+Receiver-side reconciliation remains authoritative. Important concrete examples include E1R4 sequence 96 and E3 sequence 150 being sender-present/receiver-absent without matching sender failure flags, and E8 containing 80 sender-log lines but only 60 unique IDs because recovery IDs were duplicated.
 
-Interpretation remains experiment-specific. No universal 52 dB threshold is claimed.
+Interpretation remains experiment-specific. No universal 52 dB threshold exists.
 
 ## Frozen integration doctrine
 
 FIT and POWDER are complementary, not substitutable:
-- **FIT = record-state survival / architecture comparison**;
+
+- **FIT = record-state survival / architecture comparison**.
 - **POWDER = communication-path degradation / recovery characterization**.
 
 The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER reliability statistic is allowed.
@@ -136,11 +139,12 @@ The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER re
 ## Frozen claim envelope
 
 P13 remains the scientific claim authority:
+
 - primary empirical: `IC-01`, `IC-04`, `IC-06`;
 - supporting empirical: `IC-02`, `IC-03`, `IC-05`, `IC-07`;
 - methodological synthesis: `IC-08`, `IC-09`.
 
-P17/P17V/P18 add no new empirical claim and do not expand P13.
+P17/P17V/P18R add no new empirical claims and do not expand P13.
 
 `P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
 
@@ -184,101 +188,139 @@ Folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
 
 Dossier role: **audit-grade experiment atlas / manuscript-supplement input**. Raw archives, P9 and P11 remain higher measurement authorities.
 
-## P18 current main-display authority
+## P18R — current main-display authority
 
-P18 replaces P14 for the publication-facing **main display selection**. P14 remains historical evidence of earlier display work.
+P18R supersedes the first P18 main-display implementation. P14/P18 remain historical comparison points only.
 
-### Main figures
+### Why P18R exists
 
-1. `Fig_P18_01_architecture_evidence_roles` — W1 record lifecycle + FIT/POWDER non-overlapping roles.
-2. `Fig_P18_02_FIT_completeness` — B0/W1 run-level final completeness on a full `0–100%` scale.
-3. `Fig_P18_03_POWDER_transition_direction` — E1R4/E2 cross-layer response on a full percentage scale.
-4. `Fig_P18_04_POWDER_E3_repeatability` — E3 cycles on a full `0–100%` completeness scale.
+The first P18 figures were numerically correct but scientifically too thin. AI-generated redesigns were explicitly rejected and are not canonical. A second consortium design round required a code-first scientific-figure engineering lifecycle.
 
-### Main tables
+Core doctrine:
 
-1. failure-domain / experiment / manipulated-component / endpoint / admissible-interpretation taxonomy;
-2. compact FIT run-level summary;
-3. mechanism-specific recovery-semantics table preserving exact/censored/upper-bound status.
+> **Richness must come from scientific structure, not decoration.**
 
-### Supplement split
+### Current main figures
 
-Move from main to supplement:
-- standalone FIT backlog-drain plot while retaining numerical values in main text/table;
-- E0/E4–E11 detailed atlas figures;
-- run-validity and anomaly registers;
+1. **Figure 1 — System and evidence architecture**
+   - W1 code-grounded record-state machine;
+   - stable identity/checksum;
+   - SQLite WAL/PENDING state;
+   - publish/retry/receiver reconciliation;
+   - FIT design/treatments/endpoints;
+   - POWDER transition/recovery/control roles;
+   - IC-01…IC-09 mapping and explicit non-pooling guard.
+
+2. **Figure 2 — FIT record survival and recovery cost**
+   - Panel A: all run-level B0/W1 final completeness observations for C0/C1/C2;
+   - Panel B: reconnect times;
+   - Panel C: W1 backlog-drain times;
+   - final integrity, reconnect and durable catch-up remain distinct constructs.
+
+3. **Figure 3 — POWDER transition and repeatability**
+   - Panel A: E1R4/E2 ICMP response;
+   - Panel B: E1R4/E2 MQTT completeness;
+   - Panel C: E3 ICMP-loss cycle variability;
+   - Panel D: E3 MQTT-completeness repeatability;
+   - no fitted or universal threshold.
+
+4. **Figure 4 — Failure-domain and recovery semantics**
+   - Panel A: RF/UE/CORE/broker/no-fault intervention-domain matrix for E4–E10;
+   - Panel B: E10 endpoint table preserving exact/censored/upper-bound semantics.
+
+### Current main/supplement boundary
+
+Main article: P18R Figures 1–4.
+
+Supplement:
+
+- detailed E0/E4–E11 experiment atlas;
+- individual timeline plots;
+- FIT full run ledger;
+- run-validity/anomaly registers;
 - detailed provenance/hash tables.
 
-Move to sanitized artifact:
-- derived CSVs;
-- reconstruction/display scripts;
-- non-sensitive manifests;
-- releasable evidence only after privacy/security review.
+Sanitized artifact:
 
-### P18 production and integrity
+- canonical derived CSVs supporting public values;
+- reproducible generator source;
+- figure specification;
+- manifests and QA receipts;
+- releasable evidence after P19 privacy/security review.
 
-- Figure 1 = exactly `7.16 in` wide;
-- Figures 2–4 = exactly `3.5 in` wide;
-- PDF/SVG vector masters;
-- PNG fallback = 600 dpi;
-- PDF fonts embedded/subset;
-- captions and alt text frozen in `manuscript/WP2_P18_FIGURE_CAPTIONS_ALT_TEXT_2026-08-29.md`;
-- quantitative percentage plots use full percentage axes to avoid visual exaggeration.
+### P18R toolchain and V&V
 
-Durable final P18 display pack:
-- Drive ID `1tAj83-6rbDEdho9yKdREXU00w6h1pteh`;
-- final ZIP SHA-256 `3f5879dbac7493819930157d46980de99efdee37044b6b1ffdb19f04fec395f1`.
+Implementation:
 
-`WP2_P18=PASS_MAIN_DISPLAY_REDESIGN_CLAIM_DISPLAY_QA`
+- Matplotlib/Pandas/Numpy for quantitative figures;
+- deterministic vector/structured rendering for figure-table material;
+- no AI image dependency;
+- no manually edited raster source in canonical production path.
 
-`P18_UNSUPPORTED_DISPLAY_CLAIMS=0`
+The first code implementation was rejected internally despite successful execution because of production-scale/text-layout defects. The layout engine was revised, rebuilt and independently rendered for final visual inspection.
 
-`P18_CROSS_PLATFORM_QUANTITATIVE_POOLING=NONE`
+Frozen checks include:
 
-## P18B high-standard benchmark
+- FIT 18-cell design and all key run-level outcomes;
+- 2,000-record B0 outage loss;
+- E1R4/E2 key boundary values;
+- E3 52 dB `60/25/55%` MQTT and `80/65/70%` ICMP loss;
+- E10 censored/upper-bound semantics.
 
-Cross-publisher benchmark anchors include current IEEE graphics guidance, Elsevier artwork guidance, Nature Portfolio data/code-availability expectations, and ACM-style artifact-evaluation criteria.
+Final release:
 
-Benchmark result:
+`WellPulse_P18R_Scientific_Figure_Engineering_Release_2026-08-29.zip`
 
-- P18 main-display checklist coverage: **95.6%**;
-- whole publication-package readiness-equivalent: **84%**;
-- scientific blockers: `0`.
+Drive ID:
 
-These percentages are operational checklist-coverage indicators, not acceptance probabilities.
+`1alitbv9479Mq9URhXIBHkQql7zuuA51o`
 
-Remaining gold-standard gaps are deliberately assigned to P19/P20:
+ZIP SHA-256:
 
-### P19 — reviewer-facing supplement + sanitized artifact
+`5586091bc518cc541c3c9b75e9a0c965913877cd6bf83d1644fa6f05264e1083`
 
-Target an artifact capable of meeting an ACM-style **Functional** bar and approaching **Reusable**:
-- concise reviewer supplement derived from dossier v2.2;
-- E0–E11 + FIT ledger + validity/anomaly + timing semantics;
-- sanitized derived data supporting public values;
-- README/inventory;
-- software/hardware environment and dependency lock;
-- expected runtimes/resources;
-- claim/result → script → output map;
-- one-command reproduction path where feasible;
-- blank-environment execution receipt;
-- explicit private/raw exclusions;
-- license only after verified rights decision;
-- DOI-capable archive only after release authorization.
+Generator source SHA-256:
 
-### P20 — final literature / venue / credits / rights / source package
+`5a313546fd88b6e06d7d3c473bb6742e214723287bdd37a9b84cf26faadf87f6`
 
-Only after P19 PASS:
-- submission-date literature search and Gaspar full-text comparison if accessible;
-- target-journal selection and current author instructions;
-- clean venue LaTeX/source manuscript;
-- venue-specific artwork typography/naming/placement normalization;
-- final data/code availability statements;
-- final authorship/order + CRediT roles;
-- funding/COI/collaborator acknowledgments;
-- FIT IoT-LAB and POWDER acknowledgment/citation verification;
-- copyright/license/permissions audit;
-- source↔PDF↔figures↔supplement↔artifact proof QA;
-- explicit user authorization before external submission.
+Final figure PDF SHA-256:
+
+- F1 `179b3201b63a5910473885e2005d2ba2bfd55c9fe888f0d1ed42980d21a09ea1`;
+- F2 `a38e321ec4a6b51ede1fff89601432852ac0c9e0e56d32ac880724a3b9ad0eff`;
+- F3 `bc23a25a53beb13396b056b22bdd93af62ec7c7f91b3d81199028dd4496887ee`;
+- F4 `a2be6684ddd339f6b60c1406cb9673a2d14a2c6c038cdb8a0ec748b6b93f5d0c`.
+
+`P18R_CONSORTIUM_DECISION=CONSENSUS_CODE_GENERATED_COMPOSITE_FIGURES`
+
+`P18R_AI_GENERATED_ASSETS=REJECTED_NOT_CANONICAL`
+
+`P18R_DATA_INVARIANTS=PASS`
+
+`P18R_RENDER_FIRST_VISUAL_QA=PASS`
+
+`P18R_FIGURE_ENGINE_VV=PASS`
+
+`WP2_P18R=PASS_SCIENTIFIC_FIGURE_ENGINEERING_LIFECYCLE`
+
+## Benchmark status after P18R
+
+P18B's earlier display score applies to the **pre-P18R** figure implementation and is now historical for figure-quality comparison. A fresh high-standard benchmark should be run against the P18R release before freezing the final submission-facing visual package.
+
+Recommended next bounded gate:
+
+### P18RB — post-P18R high-standard benchmark
+
+Benchmark the new code-generated figures and source package against:
+
+- current target-publisher artwork rules once venue is selected;
+- general IEEE/Elsevier/Nature-quality figure-production criteria where venue-neutral;
+- accessibility and grayscale robustness;
+- typography at final print width;
+- code/data/figure reproducibility;
+- claim-to-display completeness;
+- artifact-evaluation-style reproducibility expectations.
+
+P18RB must not alter science silently. Any scientific encoding change reopens P18R V&V.
 
 ## Authorship, affiliation, credits, rights
 
@@ -292,11 +334,54 @@ Giza, Egypt
 
 Do not invent coauthors, CRediT roles, funding, copyright ownership, or licensing terms.
 
-Before submission explicitly verify all authorship, funding, collaborator, institutional/testbed credit, copyright and licensing requirements.
+Before submission explicitly verify:
+
+- final author list/order;
+- CRediT/contributor roles;
+- MSA affiliation wording;
+- funding declarations;
+- collaborator acknowledgments;
+- FIT IoT-LAB acknowledgment/citation;
+- POWDER acknowledgment/citation;
+- copyright/licensing requirements of the selected venue and applicable institutional/testbed policies.
+
+## Remaining gates before submission authorization
+
+### P18RB — fresh benchmark of P18R
+
+- compare P18R against highest applicable scientific-artwork/reproducibility standards;
+- issue gap register;
+- permit only evidence-neutral production refinements without reopening science;
+- reopen P18R V&V for any scientific encoding change.
+
+### P19 — reviewer-facing supplementary atlas + sanitized artifact
+
+- derive concise reviewer supplement from dossier v2.2;
+- include E0–E11, validity, anomalies, FIT ledger and endpoint semantics;
+- package analysis code, derived non-sensitive data, manifests and figures;
+- privacy/security sanitization before release;
+- target an artifact capable of meeting an ACM-style Functional bar and approaching Reusable.
+
+### P20 — final literature / venue / credits / rights / source package
+
+Only after P18RB/P19 PASS:
+
+- submission-date literature check and Gaspar full-text comparison if accessible;
+- target-journal selection and current author instructions;
+- clean venue LaTeX/source manuscript;
+- venue-specific artwork typography/naming/placement normalization;
+- final data/code availability statements;
+- final authorship/order + CRediT roles;
+- funding/COI/collaborator acknowledgments;
+- FIT IoT-LAB and POWDER acknowledgment/citation verification;
+- copyright/license/permissions audit;
+- source↔PDF↔figures↔supplement↔artifact proof QA;
+- explicit user authorization before external submission.
 
 ## Immutable prohibitions
 
 Do not claim:
+
 - scored P7B success;
 - POWDER B1-vs-W1 advantage;
 - strongest-durable-MQTT superiority;
@@ -350,14 +435,16 @@ Raw evidence remains immutable.
 
 `P17V_VERDICT=VALIDATED_WITH_PRE_SUBMISSION_CONDITIONS`
 
-`WP2_P18=PASS_MAIN_DISPLAY_REDESIGN_CLAIM_DISPLAY_QA`
+`WP2_P18=SUPERSEDED_BY_P18R`
 
-`P18B_DISPLAY_BENCHMARK=PASS_95_6_PERCENT_CHECKLIST_COVERAGE`
+`WP2_P18B=HISTORICAL_PRE_P18R_BENCHMARK`
 
-`P18B_FULL_PACKAGE_READINESS=84_PERCENT_CHECKLIST_COVERAGE`
+`WP2_P18R=PASS_SCIENTIFIC_FIGURE_ENGINEERING_LIFECYCLE`
+
+`P18R_AI_GENERATED_ASSETS=REJECTED_NOT_CANONICAL`
 
 `LIVE_POWDER_DEPENDENCY=NONE`
 
 `SUBMISSION_AUTHORIZED=NO`
 
-`NEXT_PHASE=WP2_P19_REVIEWER_SUPPLEMENT_AND_SANITIZED_ARTIFACT`
+`NEXT_PHASE=WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK`
