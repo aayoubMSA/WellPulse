@@ -1,13 +1,10 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **P18RB benchmark + P18R F1 storage/provenance closure**.
-
-## Canonical authority
-
+Last updated: 2026-08-29 after **WP2-P18RC PASS**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
-This file is the current operational retrieval point. Repository and durable Drive evidence override conversation memory.
+This file is the canonical operational retrieval point. GitHub is the scientific/control/source record; Google Drive is the durable authority for frozen/raw binary evidence and registered research packs. Repository/Drive evidence overrides chat memory.
 
 ## Executive state
 
@@ -22,13 +19,14 @@ This file is the current operational retrieval point. Repository and durable Dri
 - WP2-P16: **PASS / ADVERSARIAL PUBLICATION QA**
 - WP2-P17: **PASS / CONSORTIUM-REVISED INTERNAL MANUSCRIPT + DOSSIER RESEARCH PACK**
 - WP2-P17V: **PASS / VALIDATED WITH PRE-SUBMISSION CONDITIONS**
-- WP2-P18 first display redesign: **SUPERSEDED BY P18R**
+- WP2-P18 first redesign: **SUPERSEDED BY P18R**
 - WP2-P18B: **HISTORICAL PRE-P18R BENCHMARK**
-- WP2-P18R scientific figure engineering: **PASS / CURRENT MAIN-DISPLAY AUTHORITY**
-- P18R Figure-1 deterministic hotfix: **PASS / CURRENT F1 AUTHORITY / DURABLY ARCHIVED**
-- WP2-P18RB post-P18R benchmark: **CONDITIONAL PASS / SCIENCE PASS / PRODUCTION NORMALIZATION REQUIRED**
+- WP2-P18R scientific figure engineering: **PASS**
+- P18R deterministic F1 hotfix: **PASS / SCIENTIFIC-TOPOLOGY AUTHORITY**
+- WP2-P18RB benchmark: **CONDITIONAL PASS / SCIENCE PASS / PRODUCTION NORMALIZATION REQUIRED**
+- WP2-P18RC main-figure production normalization: **PASS / CURRENT PRODUCTION MAIN-DISPLAY AUTHORITY**
 - current scientific blockers: **0**
-- new experiment required for current bounded manuscript: **NO**
+- new experiment required: **NO**
 - new empirical claim required: **NO**
 - live POWDER dependency: **NONE**
 - submission authorization: **NO**
@@ -63,19 +61,18 @@ No P8+ result may be promoted or relabelled as scored P7B.
 16. `analysis/WP2_P18R_GENERATOR_RELEASE_RECEIPT_2026-08-29.md`
 17. `docs/WP2_P18R_F1_DRIVE_ARCHIVAL_CLOSURE_2026-08-29.md`
 18. `analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
-19. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
-20. P18/P18B only for historical comparison.
+19. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
+20. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
+21. P18/P18B only for historical comparison.
 
 ## Frozen evidence roles
 
 ### FIT — architecture-level record-state survival
-
 Authority: `FINAL_WP_RT01_FIT_A8`.
 
 Design: `B0/W1 × C0/C1/C2 × 3 runs = 18 cells`, exactly 10,000 records/run.
 
-Core frozen outcome:
-
+Frozen outcome:
 - C0: B0/W1 = 100% all runs;
 - C1: B0 = 80%, W1 = 100% all runs;
 - C2: B0 = 80%, W1 = 100% all runs;
@@ -83,33 +80,30 @@ Core frozen outcome:
 - W1 final reconciliation has all 10,000 generated IDs exactly once;
 - W1 backlog-drain means: C1 `67.731246 s`; C2 `67.870252 s`.
 
-These are run-level repeated outcomes under the exact treatments, not population reliability probabilities.
+These are repeated run-level outcomes under the exact treatments, not population reliability probabilities. C2 is gateway-process `exec` restart, not node reboot.
 
 ### POWDER — communication-path degradation/recovery characterization
-
 Campaign: `WP2-P8`, profile `srslte-controlled-rf`.
 
 Publication role: **separately executed physical-RF/LTE/MQTT controlled reference characterization; not architecture-effect estimation**.
 
-Key frozen interpretation:
-
-- E1/E2/E3 characterize the experiment-specific transition region;
-- 52 dB is **not** a universal threshold;
+Frozen interpretation:
+- E1/E2/E3 characterize an experiment-specific transition region;
+- 52 dB is not a universal threshold;
 - E8 separates broker/service failure from healthy LTE connectivity;
 - E9 is the no-fault control;
 - E10 preserves exact/censored/upper-bound timing semantics;
-- receiver-side unique-ID reconciliation is authoritative where sender/receiver records disagree.
+- E10-A has no scalar recovery latency;
+- E10-D is upper-bound only;
+- receiver-side unique-ID reconciliation governs reported delivery where sender/receiver records disagree.
 
 ## Frozen integration doctrine
 
 FIT and POWDER are complementary and non-substitutable:
-
 - FIT = record-state survival / bounded architecture comparison;
 - POWDER = communication-path degradation and recovery characterization.
 
-No pooled FIT+POWDER reliability statistic or inferential effect is allowed.
-
-P13 remains the claim authority. P17/P17V/P18R/P18RB add no new empirical claims and do not expand the P13 envelope.
+No pooled FIT+POWDER reliability statistic or inferential effect is allowed. P13 remains the claim authority. P17/P17V/P18R/P18RB/P18RC add no new empirical claims and do not expand the P13 envelope.
 
 `P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
 
@@ -119,119 +113,77 @@ P13 remains the claim authority. P17/P17V/P18R/P18RB add no new empirical claims
 
 `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
 
-Working title:
+Working title: **WellPulse: Separating Record-State Survival from Communication-Path Recovery in Resilient IoT Telemetry**
 
-**WellPulse: Separating Record-State Survival from Communication-Path Recovery in Resilient IoT Telemetry**
+P17V: **VALIDATED WITH PRE-SUBMISSION CONDITIONS**; claims `9/9`; numerical contradictions `0`; unsupported new claims `0`; scientific blockers `0`; new experiment required `NO`.
 
-P17V verdict: **VALIDATED WITH PRE-SUBMISSION CONDITIONS**.
-
-- claims validated: `9/9`;
-- numerical contradictions: `0`;
-- unsupported new claims: `0`;
-- scientific blockers: `0`;
-- new experiment required: `NO`.
-
-The bounded limitation remains explicit: B0 is non-durable and is not the strongest durable MQTT comparator. Do not generalize the result into generic MQTT superiority.
+B0 remains explicitly non-durable and is not the strongest durable MQTT comparator. Never generalize the FIT result into generic MQTT superiority.
 
 ## Durable Drive authorities
 
 ### P17 dossier/research pack
-
-Drive parent folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
+Parent folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
 
 - dossier PDF `WellPulse_Experimental_Technical_Dossier_v2.2.pdf` — Drive ID `12ec22A89ybsNoBpYcglx9Im6pW8Vk55-`, SHA-256 `a9274514cbf21de58291c2640f560f6082711e0a8696890419e918e595b40f3e`;
-- dossier reproducible package — Drive ID `1ts__z8kN0fORwDksQZoj4eeaG--UyCAw`;
+- reproducible dossier package — Drive ID `1ts__z8kN0fORwDksQZoj4eeaG--UyCAw`;
 - experiment figure suite — Drive ID `1y8rStzWdGEivWjuFCP0h5Y6Amv6267sY`;
 - figure-centered QA report — Drive ID `1ukEvwr3_uOoZcCn3TknwOcZL6HRaLo1a`.
 
 Raw FIT and POWDER frozen archives remain higher measurement authorities than the dossier.
 
-### P18R historical full figure-engineering release
+### Historical P18R full figure release
+`WellPulse_P18R_Scientific_Figure_Engineering_Release_2026-08-29.zip` — Drive ID `1alitbv9479Mq9URhXIBHkQql7zuuA51o`, SHA-256 `5586091bc518cc541c3c9b75e9a0c965913877cd6bf83d1644fa6f05264e1083`.
 
-`WellPulse_P18R_Scientific_Figure_Engineering_Release_2026-08-29.zip`  
-Drive ID `1alitbv9479Mq9URhXIBHkQql7zuuA51o`  
-SHA-256 `5586091bc518cc541c3c9b75e9a0c965913877cd6bf83d1644fa6f05264e1083`
+### P18R deterministic F1 hotfix
+Canonical pre-normalization generator: `analysis/wp2_p18r_generate_f1_hotfix.py`; Git blob `bf344808414b78d9b0c688140e9de9a755d9a1e7`; SHA-256 `3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`.
 
-The Figure 1 inside that historical release is superseded by the deterministic F1 hotfix below. Figures 2–4 remain P18R authorities pending P18RC normalization.
+Pre-normalization F1 PDF SHA-256: `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`.
 
-### Current deterministic Figure 1
+Archive `WellPulse_P18R_F1_Hotfix_Final_2026-08-29.zip` — Drive ID `12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`, ZIP SHA-256 `e9d5a54b24506b879a748b5a06b39699e6f6ec1ed31093491c27b2be7d7e6e1d`; Drive read-back PASS.
 
-Canonical generator: `analysis/wp2_p18r_generate_f1_hotfix.py`  
-Git blob SHA-1: `bf344808414b78d9b0c688140e9de9a755d9a1e7`  
-Current generator SHA-256: `3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`  
-Final PDF SHA-256: `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`
+### P18RC current production-normalized main set
+Canonical closure: `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`.
 
-Durable archive:
-
-`WellPulse_P18R_F1_Hotfix_Final_2026-08-29.zip`  
-Drive ID: `12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`  
-ZIP SHA-256: `e9d5a54b24506b879a748b5a06b39699e6f6ec1ed31093491c27b2be7d7e6e1d`
-
+Archive: `WellPulse_P18RC_Main_Figure_Production_Normalization_2026-08-29.zip`  
+Drive ID: `1rdFq7ktppFBUp54UoeS5AP3kukDiU9sW`  
+ZIP SHA-256: `97f0fd1e4c41bb67f6da70056935b60a1627695e082ea8d38eff657bce1d02a8`  
 Drive read-back hash: **PASS / exact match**.
 
-The previous generator SHA `201897de...` is superseded as stale provenance. A rebuild from the current generator reproduces the frozen final PDF hash exactly. No scientific or visual-content change resulted from this correction.
+Current normalized PDF SHA-256:
+- F1 `7d7feb075731475747282cf0dd0081ec6afb1bc45c17bd16c754063ac83237cb`;
+- F2 `73b96a2b8c1fa2a4c15b3bd15b0065f77a2863dcacb84d8c3f2d7d0b57cef508`;
+- F3 `faccbef11762df7c293728992e59ac9b17e4b455e4d2023dcddeb50f41e5e9b8`;
+- F4 `87d2c703e4308477b3d89c5d0a9594a7380f2e0c8350d5d74721f779785a1b38`.
 
-## P18RB benchmark — current production verdict
+P18RC QA: F2 accidental/default color semantics removed; typography normalized to embedded Arial-compatible sans; nonessential quantitative grids removed; ordinary Matplotlib strokes <=1 pt; explicit F1–F4 alt text frozen; grayscale/non-color-only interpretation PASS; file metadata normalized; zero known clipping/overlap/crossing; two independent builds yielded identical hashes for all 12 PDF/SVG/PNG assets.
 
-Canonical authority:
-
-`analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
-
-Verdict:
-
-`WP2_P18RB=CONDITIONAL_PASS_SCIENCE_PASS_PRODUCTION_NORMALIZATION_REQUIRED`
-
-Scientific/display blockers: `0`.
-
-Mandatory bounded production-normalization classes before P19:
-
-1. F2 semantic encoding cleanup — remove accidental/default color-cycle meaning while preserving data and raw points.
-2. Use embedded Helvetica/Arial-compatible venue-neutral sans typography across F1–F4.
-3. Remove nonessential background grids and normalize ordinary strokes to `<=1 pt` where applicable.
-4. Freeze explicit alt text for F1–F4 and verify grayscale interpretation.
-5. Normalize author/affiliation/rights metadata in supported F2–F4 file formats; do not invent a public license.
-6. Rebuild the normalized main set and freeze hashes/rebuild QA.
-
-P19 must not be frozen until P18RC passes.
+P18RC is production-only. F1 scientific/topological authority remains the deterministic hotfix semantics; P18RC changes typography/metadata/encoding discipline only.
 
 ## Exact next gate
 
-### WP2-P18RC — MAIN-FIGURE PRODUCTION NORMALIZATION
+### WP2-P19 — REVIEWER-FACING SUPPLEMENT + SANITIZED ARTIFACT
 
-P18RC is a publication-engineering gate only. It must not silently alter science, raw evidence, axes, aggregations, P13 claims, experimental validity, or FIT/POWDER inferential boundaries.
+P19 should package:
+- reviewer-facing E0–E11 atlas;
+- FIT full run ledger;
+- run-validity and anomaly evidence;
+- endpoint semantics;
+- analysis code and derived non-sensitive data;
+- P18RC normalized figures/captions/alt text;
+- claim/result → script → output map;
+- manifests, hashes and dependency/runtime documentation;
+- explicit public/private evidence boundary and privacy/security review;
+- blank-environment/reviewer exercisability where feasible.
 
-After P18RC PASS, proceed directly to:
-
-### WP2-P19 — reviewer-facing supplementary atlas + sanitized artifact
-
-Then P20 handles final literature/venue/source-package/credits/rights normalization and explicit submission authorization.
+P19 must not expose credential-bearing/private preservation material. P20 remains responsible for final literature/venue/source-package/credits/rights normalization and explicit submission authorization.
 
 ## Authorship / credits / rights guard
 
-Do not invent coauthors, CRediT roles, funding, copyright ownership, or licensing terms. Before any external submission/release, explicitly verify final author list/order, CRediT roles, affiliation wording, funding/COI, collaborator acknowledgments, FIT IoT-LAB and POWDER acknowledgment/citation, and venue/institution/testbed copyright-license requirements.
+Do not invent coauthors, CRediT roles, funding, copyright ownership, or licensing terms. Before external submission/release, verify final author list/order, CRediT roles, affiliation wording, funding/COI, collaborator acknowledgments, FIT IoT-LAB and POWDER acknowledgment/citation, and venue/institution/testbed copyright-license requirements.
 
 ## Immutable prohibitions
 
-Do not claim:
-
-- scored P7B success;
-- POWDER B1-vs-W1 advantage;
-- strongest-durable-MQTT superiority;
-- generic `WellPulse beats MQTT`;
-- universal 52 dB threshold;
-- deterministic RF-only recovery;
-- exact broker latency from E10-D;
-- population reliability from message counts or three FIT runs;
-- pooled FIT+POWDER inferential statistics;
-- field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation not supported by the frozen evidence.
-
-## Storage authority
-
-1. **Google Drive = primary durable authority for frozen/raw binary evidence and registered research packs.**
-2. **GitHub = canonical scientific/control/source record.**
-3. **Home PC = independent third copy where applicable; not canonical.**
-
-Raw evidence remains immutable.
+Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB threshold; deterministic RF-only recovery; exact broker latency from E10-D; population reliability from message counts or three FIT runs; pooled FIT+POWDER inference; or unsupported field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation.
 
 ## Stop state
 
@@ -239,11 +191,15 @@ Raw evidence remains immutable.
 
 `P18R_F1_HOTFIX=PASS_DETERMINISTIC_F1_ACCEPTED`
 
-`P18R_F1_DRIVE_ARCHIVE=PASS`
-
-`PROVENANCE_DRIFT=REPAIRED`
-
 `WP2_P18RB=CONDITIONAL_PASS_SCIENCE_PASS_PRODUCTION_NORMALIZATION_REQUIRED`
+
+`WP2_P18RC=PASS_MAIN_FIGURE_PRODUCTION_NORMALIZATION`
+
+`P18RC_DRIVE_ARCHIVE=PASS`
+
+`P18RC_DRIVE_READBACK_HASH=PASS`
+
+`P18RC_DETERMINISTIC_12_OF_12=PASS`
 
 `CURRENT_SCIENTIFIC_BLOCKERS=0`
 
@@ -253,4 +209,4 @@ Raw evidence remains immutable.
 
 `SUBMISSION_AUTHORIZED=NO`
 
-`NEXT_PHASE=WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION`
+`CURRENT_PHASE=WP2_P19_REVIEWER_SUPPLEMENT_AND_SANITIZED_ARTIFACT`
