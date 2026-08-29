@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20A PASS — literature & novelty closure**.  
+Last updated: 2026-08-29 after **WP2-P20B PASS — venue qualification & selection**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -26,6 +26,7 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P19 reviewer supplement + sanitized artifact: **PASS / CURRENT REVIEWER-ARTIFACT AUTHORITY**
 - post-P19 consortium WP architecture review: **PASS / FUTURE LANE REFACTORED**
 - P20A literature & novelty closure: **PASS / CURRENT NOVELTY-BOUNDARY AUTHORITY**
+- P20B venue qualification & selection: **PASS / PRIMARY RECOMMENDED / AUTHOR COMMITMENT NOT MADE**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -68,8 +69,11 @@ No P8+ result may be promoted or relabelled as scored P7B.
 22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
 23. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
 24. `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`
-25. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
-26. P18/P18B only for historical comparison.
+25. `analysis/WP2_P20B_VENUE_QUALIFICATION_MATRIX_2026-08-29.md`
+26. `docs/WP2_P20B_VENUE_QUALIFICATION_SELECTION_CLOSURE_2026-08-29.md`
+27. Google Sheet `Research & Grants — Lessons Learned Ledger` before venue/submission-facing decisions; publication rules LL-036 through LL-042 are canonical reusable-experience authority.
+28. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+29. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
@@ -193,6 +197,40 @@ P20A current-search result:
 
 P20D later must add Mohammed et al. 2026, account for E-MQTT and Radwan et al. 2026, and preserve the P20A wording constraints.
 
+## P20B current venue authority
+
+Decision matrix: `analysis/WP2_P20B_VENUE_QUALIFICATION_MATRIX_2026-08-29.md`.  
+Closure: `docs/WP2_P20B_VENUE_QUALIFICATION_SELECTION_CLOSURE_2026-08-29.md`.
+
+Current venue recommendation:
+
+1. **Internet of Things (Elsevier)** — **PRIMARY / GO** — internal utility `95/100`;
+2. **Computer Networks (Elsevier)** — **BACKUP #1 / GO** — `86/100`;
+3. **Journal of Systems Architecture (Elsevier)** — **BACKUP #2 / CONDITIONAL GO** — `76/100`;
+4. **Journal of Network and Computer Applications** — **HOLD / LOWER PRIORITY**;
+5. **Expert Systems with Applications** — **KILL for current manuscript**;
+6. **Engineering Applications of Artificial Intelligence** — **KILL for current manuscript**.
+
+Utility scores are decision aids, not acceptance probabilities.
+
+Why the primary leads:
+
+- direct IoT domain fit and explicit reliability scope;
+- Full Research + Open Software/Data compatibility;
+- current official guidance states high priority on timely publication;
+- actual recent MQTT robustness research in the journal confirms editorial/readership fit;
+- current P18RC/P19 package can be reused without changing the paper into an AI, protocol-design or generic networking paper.
+
+P20B makes **no author venue commitment**. It authorizes no portal action, copyright/license acceptance, open-access purchase, APC/payment, or submission. Optional OA price/discount/tax and exact Guide-for-Authors constraints must be rechecked before any downstream commitment/transformation.
+
+`P20B_PRIMARY_RECOMMENDATION=INTERNET_OF_THINGS_ELSEVIER`
+
+`P20B_BACKUP_1=COMPUTER_NETWORKS_ELSEVIER`
+
+`P20B_BACKUP_2=JOURNAL_OF_SYSTEMS_ARCHITECTURE_CONDITIONAL`
+
+`P20B_AUTHOR_COMMITMENT=NO`
+
 ## Refactored remaining publication lane
 
 Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
@@ -200,26 +238,36 @@ Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
 P20 remains an **umbrella only**. Monolithic P20 execution is rejected. Execute one bounded gate at a time:
 
 1. **P20A — Literature & Novelty Closure — 15% — PASS**
-2. **P20B — Venue Qualification & Selection — 15% — NOT STARTED**
-3. **P20C — Authorship / Credits / Rights Lock — 15% — LOCKED**
+2. **P20B — Venue Qualification & Selection — 15% — PASS**
+3. **P20C — Authorship / Credits / Rights Lock — 15% — NOT STARTED**
 4. **P20D — Final Manuscript & Source Package Integration — 25% — LOCKED**
 5. **P20E — Independent Submission-Readiness Validation — 20% — LOCKED**
 6. **P21 — Author Submission Authorization Packet — 5% — LOCKED**
 7. **P22 — Submission Execution & Receipt — 5% — LOCKED**
 
-Remaining-lane earned progress from the post-P19 refactor baseline: **15/100**.
+Remaining-lane earned progress from the post-P19 refactor baseline: **30/100**.
 
-P20C–P22 remain dependency-locked. P20B is the only next executable gate and still requires current authorization.
+P20D–P22 remain dependency-locked. P20C is the only next executable gate and requires current authorization.
 
 ## Exact next gate — DO NOT EXECUTE WITHOUT CURRENT AUTHORIZATION
 
-### WP2-P20B — VENUE QUALIFICATION & SELECTION
+### WP2-P20C — AUTHORSHIP / CREDITS / RIGHTS LOCK
 
-P20B must use **current official venue guidance** to produce a ranked primary/backup venue matrix covering scope/article-type fit, indexing legitimacy, APC/charges, manuscript limits, supplement/artifact policy, formatting requirements, editorial fit, and material submission constraints.
+P20C must verify, from canonical project records and user-controlled evidence where needed:
 
-P20B may recommend a primary target but must not silently commit the author to a venue. Venue-specific source/manuscript transformation belongs to P20D after the prerequisite gates pass.
+- exact author list and order;
+- corresponding-author identity;
+- CRediT contributions;
+- affiliation wording;
+- funding statements;
+- conflict-of-interest declaration basis;
+- FIT IoT-LAB / POWDER / institutional / collaborator acknowledgments;
+- rights/permissions status of figures, data, software and externally sourced material;
+- which license/public-release statements are actually supportable.
 
-Do not perform authorship/rights lock, final source packaging, portal submission, license acceptance, or payment commitment during P20B.
+P20C must not invent a coauthor, contribution, funder, permission, license, waiver, institutional approval or conflict statement. It must separate verified fact from `UNKNOWN / AUTHOR INPUT REQUIRED`.
+
+P20C does not perform final venue formatting/source integration, portal submission, license acceptance, OA purchase or payment.
 
 ## Immutable prohibitions
 
@@ -243,6 +291,18 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `P20A_SCIENTIFIC_BLOCKERS=0`
 
+`WP2_P20B=PASS_VENUE_QUALIFICATION_AND_SELECTION`
+
+`P20B_PRIMARY_RECOMMENDATION=INTERNET_OF_THINGS_ELSEVIER`
+
+`P20B_BACKUP_1=COMPUTER_NETWORKS_ELSEVIER`
+
+`P20B_BACKUP_2=JOURNAL_OF_SYSTEMS_ARCHITECTURE_CONDITIONAL`
+
+`P20B_AUTHOR_COMMITMENT=NO`
+
+`P20C_LOCK_RELEASED=YES`
+
 `P18RC_REOPEN=NO`
 
 `P19_REOPEN_SCIENCE=NO`
@@ -259,6 +319,6 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `P20_MONOLITHIC_EXECUTION=REJECTED`
 
-`CURRENT_PHASE=WP2_P20B_GATE_NOT_STARTED`
+`CURRENT_PHASE=WP2_P20C_GATE_NOT_STARTED`
 
 `SUBMISSION_AUTHORIZED=NO`
