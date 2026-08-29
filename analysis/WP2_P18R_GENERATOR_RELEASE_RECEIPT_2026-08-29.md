@@ -1,7 +1,7 @@
 # WP2-P18R — Generator / Release Receipt
 
 Date: 2026-08-29  
-Status: **REGISTERED / DURABLE RELEASE / SOURCE HASHED / F1 HOTFIX APPLIED**
+Status: **REGISTERED / DURABLE RELEASE / SOURCE HASHED / F1 HOTFIX APPLIED / P18RB BENCHMARK COMPLETE**
 
 ## Generator
 
@@ -117,10 +117,42 @@ The P18R release and F1 hotfix collectively provide:
 
 `P18R_F1_CURRENT_PDF_SHA256=4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`
 
+## P18RB post-P18R high-standard benchmark
+
+Canonical benchmark:
+
+`analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
+
+Verdict:
+
+**CONDITIONAL PASS / SCIENCE PASS / PRODUCTION NORMALIZATION REQUIRED**.
+
+Scientific/display blockers: `0`.
+
+Required finite production-normalization patch before P19:
+
+**WP2-P18RC — MAIN-FIGURE PRODUCTION NORMALIZATION**
+
+Required classes:
+- F2 semantic encoding cleanup;
+- Helvetica/Arial-compatible venue-neutral font-family normalization;
+- nonessential gridline / >1 pt line-weight normalization;
+- explicit alt text for all four main figures;
+- F2–F4 file-level attribution/rights metadata normalization;
+- final deterministic/rebuild receipt for the normalized set.
+
+No science, raw data, P13 claim or experimental validity change is authorized by this benchmark.
+
+`WP2_P18RB=CONDITIONAL_PASS_SCIENCE_PASS_PRODUCTION_NORMALIZATION_REQUIRED`
+
 ## Return to project line
 
-The F1 hotfix is a bounded correction and does not change raw evidence, P13 claims, P17/P17V manuscript conclusions, or submission authorization.
+The F1 hotfix and P18RB benchmark are bounded publication-engineering gates and do not change raw evidence, P13 claims, P17/P17V manuscript conclusions, or submission authorization.
 
-After this hotfix the project returns to the main path:
+Current next bounded gate:
 
-**P18RB — post-P18R high-standard benchmark**, then **P19 — reviewer-facing supplement + sanitized artifact** if P18RB passes.
+**P18RC — main-figure production normalization**.
+
+After P18RC PASS, return directly to:
+
+**P19 — reviewer-facing supplement + sanitized artifact**.
