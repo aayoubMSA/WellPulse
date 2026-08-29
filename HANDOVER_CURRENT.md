@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20B-R2 PASS — national publishing-agreement reweighting**.  
+Last updated: 2026-08-29 after **WP2-P20B-R3 PASS — industrial discoverability & translation axis**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -29,6 +29,7 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P20B original venue qualification: **HISTORICAL / SUPERSEDED FOR RANKING**
 - P20B-R1 publisher-neutral venue requalification: **PASS / CURRENT SCOPE-AND-EDITORIAL VENUE AUTHORITY**
 - P20B-R2 national publishing-agreement reweighting: **PASS / CURRENT ECONOMIC-AND-ROUTE AUTHORITY**
+- P20B-R3 industrial discoverability & translation review: **PASS / CURRENT INDUSTRIAL-PULL AUTHORITY**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -74,10 +75,12 @@ No P8+ result may be promoted or relabelled as scored P7B.
 25. `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`
 26. `analysis/WP2_P20B_R2_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING_2026-08-29.md`
 27. `docs/WP2_P20B_R2_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING_CLOSURE_2026-08-29.md`
-28. Google Sheet `Research & Grants — Lessons Learned Ledger`; publication rules LL-036 through **LL-044** are canonical reusable-experience authority.
-29. Original P20B matrix/closure only as historical/superseded comparison.
-30. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
-31. P18/P18B only for historical comparison.
+28. `analysis/WP2_P20B_R3_INDUSTRIAL_DISCOVERABILITY_TRANSLATION_AXIS_2026-08-29.md`
+29. `docs/WP2_P20B_R3_INDUSTRIAL_DISCOVERABILITY_TRANSLATION_CLOSURE_2026-08-29.md`
+30. Google Sheet `Research & Grants — Lessons Learned Ledger`; publication rules LL-036 through **LL-046** are canonical reusable-experience authority.
+31. Original P20B matrix/closure only as historical/superseded comparison.
+32. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+33. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
@@ -248,13 +251,63 @@ Additional publisher-agreement state:
 
 `P20B_R2_PAYMENT_AUTHORIZED=NO`
 
+## P20B-R3 — industrial discoverability / translation authority
+
+R3 adds a fourth publication objective: **Industrial Pull / Translational Discoverability**.
+
+Applied engineering papers may be read by corporate R&D engineers, technology scouts, standards engineers, patent teams, venture builders, TTOs and potential licensees. Scientific citation impact is therefore not a sufficient proxy for commercial/industrial visibility.
+
+R3 requires venue assessment on:
+
+- practitioner density;
+- corporate R&D search infrastructure;
+- patent/innovation adjacency;
+- standards adjacency;
+- applied-method readability;
+- artifact/code accessibility;
+- open discoverability;
+- translation/industry pathways.
+
+### WellPulse route implications under industrial pull
+
+**IEEE Internet of Things Journal — VERY HIGH targeted industrial pull.** IEEE Xplore is explicitly positioned for academia, industry and government; IEEE reports very high patent-reference penetration and strong standards adjacency. IoT-J scope explicitly includes standardization activity and SDOs.
+
+**Internet of Things (Elsevier) — HIGH corporate-R&D discoverability.** ScienceDirect/Scopus are explicitly marketed into industrial R&D and innovation workflows.
+
+**ACM Transactions on Internet of Things — HIGH computing-practitioner discoverability.** ACM's 2026 OA model increases practitioner access; institutional/APC status remains a separate economic gate.
+
+**Scientific Reports — HIGH broad/open visibility, MEDIUM targeted engineering pull.** The Springer Nature/STDF/EKB agreement makes this route economically strong, but it is less directly connected to engineering standards and technology-scout workflows than IEEE.
+
+Current objective profiles:
+
+- **Best specialist scientific + industrial route:** IEEE Internet of Things Journal.
+- **Best corporate-R&D-search specialist fallback:** Internet of Things (Elsevier).
+- **Best broad/open/economically advantaged route:** Scientific Reports, conditional on article-level STDF/EKB eligibility.
+- **Best computing-specialist OA alternative:** ACM Transactions on Internet of Things, subject to institutional/APC confirmation.
+
+### Pre-publication commercialization/IP safeguard
+
+Because industrial exploitation is now an explicit objective, P20C must include a finite commercialization/IP screen **before external submission/public disclosure**.
+
+Current state:
+
+`PATENTABILITY=UNKNOWN_NOT_ASSESSED`
+
+`COMMERCIAL_DEMAND=UNKNOWN_NOT_VALIDATED`
+
+`IP_OWNERSHIP=TO_BE_VERIFIED_IN_P20C`
+
+No patent, startup, license, revenue or market-demand claim is made.
+
+The IP screen must not delay publication indefinitely. It must end with one of: `PROTECT / LICENSE / PARTNER`, or `NO_IP_ACTION -> PUBLISH`.
+
 ## Refactored remaining publication lane
 
 Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
 
 1. **P20A — Literature & Novelty Closure — 15% — PASS**
-2. **P20B / R1 / R2 — Venue Qualification, Publisher-Neutral Requalification & Agreement Reweighting — 15% — PASS**
-3. **P20C — Authorship / Credits / Rights Lock — 15% — NOT STARTED**
+2. **P20B / R1 / R2 / R3 — Venue Qualification, Publisher-Neutral Requalification, Agreement Reweighting & Industrial-Pull Review — 15% — PASS**
+3. **P20C — Authorship / Credits / Rights / IP-Translation Lock — 15% — NOT STARTED**
 4. **P20D — Final Manuscript & Source Package Integration — 25% — LOCKED**
 5. **P20E — Independent Submission-Readiness Validation — 20% — LOCKED**
 6. **P21 — Author Submission Authorization Packet — 5% — LOCKED**
@@ -266,7 +319,7 @@ P20D–P22 remain dependency-locked. P20C is the only next executable gate and r
 
 ## Exact next gate — DO NOT EXECUTE WITHOUT CURRENT AUTHORIZATION
 
-### WP2-P20C — AUTHORSHIP / CREDITS / RIGHTS LOCK
+### WP2-P20C — AUTHORSHIP / CREDITS / RIGHTS / IP-TRANSLATION LOCK
 
 P20C must verify from canonical project records and user-controlled evidence where needed:
 
@@ -279,9 +332,11 @@ P20C must verify from canonical project records and user-controlled evidence whe
 - conflict-of-interest declaration basis;
 - FIT IoT-LAB / POWDER / institutional / collaborator acknowledgments;
 - rights/permissions status of figures, data, software and externally sourced material;
-- supportable license/public-release statements.
+- supportable license/public-release statements;
+- **potentially protectable foreground IP, prior public disclosure, inventors, ownership/assignment, institutional IP policy, third-party rights, and desired patent/license/partner action before disclosure**;
+- a bounded commercialization route verdict: `PROTECT / LICENSE / PARTNER / NO_IP_ACTION`.
 
-P20C must not invent a coauthor, contribution, funder, permission, license, waiver, institutional approval or conflict statement. It must separate verified fact from `UNKNOWN / AUTHOR INPUT REQUIRED`.
+P20C must not invent a coauthor, contribution, funder, permission, license, waiver, institutional approval, patentability finding, commercial demand or conflict statement. It must separate verified fact from `UNKNOWN / AUTHOR INPUT REQUIRED`.
 
 P20C does not perform final venue formatting/source integration, portal submission, license acceptance, OA purchase or payment.
 
@@ -307,17 +362,21 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `WP2_P20B_R2=PASS_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING`
 
+`WP2_P20B_R3=PASS_INDUSTRIAL_DISCOVERABILITY_TRANSLATION_AXIS`
+
 `MSA_SPRINGER_NATURE_OA_AGREEMENT=VERIFIED_ACTIVE_TO_2029_12_31`
 
-`P20B_R2_CO_PRIMARY_SPECIALIST=IEEE_INTERNET_OF_THINGS_JOURNAL`
+`P20B_SPECIALIST_PRIMARY=IEEE_INTERNET_OF_THINGS_JOURNAL`
 
-`P20B_R2_CO_PRIMARY_ZERO_APC_SPEED=SCIENTIFIC_REPORTS`
+`P20B_CORPORATE_RD_BACKUP=ELSEVIER_INTERNET_OF_THINGS`
 
-`P20B_R2_SPECIALIST_BACKUP=ELSEVIER_INTERNET_OF_THINGS`
+`P20B_BROAD_ZERO_APC_ROUTE=SCIENTIFIC_REPORTS_CONDITIONAL_ON_ARTICLE_ELIGIBILITY`
 
-`P20B_R2_SPRINGER_SPECIALIST_BACKUP=TELECOMMUNICATION_SYSTEMS`
+`P20B_ACM_SPECIALIST_OA=ACM_TRANSACTIONS_ON_INTERNET_OF_THINGS_COST_GATE`
 
 `P20B_AUTHOR_COMMITMENT=NO`
+
+`P20C_IP_TRANSLATION_SCREEN=MANDATORY`
 
 `P20C_LOCK_RELEASED=YES`
 
