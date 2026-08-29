@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P19 PASS**.  
+Last updated: 2026-08-29 after **post-P19 consortium WP architecture review**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -24,6 +24,7 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P18RB benchmark: **CONDITIONAL PASS / SCIENCE PASS / PRODUCTION NORMALIZATION REQUIRED**
 - P18RC main-figure production normalization: **PASS / CURRENT PRODUCTION MAIN-DISPLAY AUTHORITY**
 - P19 reviewer supplement + sanitized artifact: **PASS / CURRENT REVIEWER-ARTIFACT AUTHORITY**
+- post-P19 consortium WP architecture review: **PASS / FUTURE LANE REFACTORED**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -43,34 +44,37 @@ No P8+ result may be promoted or relabelled as scored P7B.
 ## Mandatory read order
 
 1. `HANDOVER_CURRENT.md`
-2. `docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
-3. `analysis/WP2_P11_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS_2026-08-29.md`
-4. `analysis/WP2_P12_CROSS_EVIDENCE_INTEGRATION_2026-08-29.md`
-5. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md`
-6. `manuscript/WP2_P16_ADVERSARIAL_PUBLICATION_QA_2026-08-29.md`
-7. `manuscript/WP2_P16_MANDATORY_EDITORIAL_PATCHES_2026-08-29.md`
-8. `docs/WP2_P17_EXPERIMENT_DOSSIER_V2_2_RESEARCH_PACK_2026-08-29.md`
-9. `analysis/WP2_P17_EVIDENCE_EXPLOITATION_MATRIX_2026-08-29.md`
-10. `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
-11. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
-12. `manuscript/WP2_P17V_SUPERIOR_INDEPENDENT_CONSORTIUM_VALIDATION_2026-08-29.md`
-13. `analysis/WP2_P18R_FIGURE_REQUIREMENTS_SPEC_2026-08-29.md`
-14. `manuscript/WP2_P18R_SCIENTIFIC_FIGURE_ENGINEERING_LIFECYCLE_2026-08-29.md`
-15. `manuscript/WP2_P18R_F1_HOTFIX_QA_2026-08-29.md`
-16. `analysis/WP2_P18R_GENERATOR_RELEASE_RECEIPT_2026-08-29.md`
-17. `docs/WP2_P18R_F1_DRIVE_ARCHIVAL_CLOSURE_2026-08-29.md`
-18. `analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
-19. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
-20. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
-21. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
-22. P18/P18B only for historical comparison.
+2. `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`
+3. `docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
+4. `analysis/WP2_P11_FULL_RAW_DATA_SCIENTIFIC_ANALYSIS_2026-08-29.md`
+5. `analysis/WP2_P12_CROSS_EVIDENCE_INTEGRATION_2026-08-29.md`
+6. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md`
+7. `manuscript/WP2_P16_ADVERSARIAL_PUBLICATION_QA_2026-08-29.md`
+8. `manuscript/WP2_P16_MANDATORY_EDITORIAL_PATCHES_2026-08-29.md`
+9. `docs/WP2_P17_EXPERIMENT_DOSSIER_V2_2_RESEARCH_PACK_2026-08-29.md`
+10. `analysis/WP2_P17_EVIDENCE_EXPLOITATION_MATRIX_2026-08-29.md`
+11. `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
+12. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
+13. `manuscript/WP2_P17V_SUPERIOR_INDEPENDENT_CONSORTIUM_VALIDATION_2026-08-29.md`
+14. `analysis/WP2_P18R_FIGURE_REQUIREMENTS_SPEC_2026-08-29.md`
+15. `manuscript/WP2_P18R_SCIENTIFIC_FIGURE_ENGINEERING_LIFECYCLE_2026-08-29.md`
+16. `manuscript/WP2_P18R_F1_HOTFIX_QA_2026-08-29.md`
+17. `analysis/WP2_P18R_GENERATOR_RELEASE_RECEIPT_2026-08-29.md`
+18. `docs/WP2_P18R_F1_DRIVE_ARCHIVAL_CLOSURE_2026-08-29.md`
+19. `analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
+20. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
+21. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
+22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md` before executing the next gate.
+23. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+24. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
 ### FIT — architecture-level record-state survival
+
 Authority: `FINAL_WP_RT01_FIT_A8`.
 
-`B0/W1 × C0/C1/C2 × 3 runs = 18 cells`, 10,000 records/run.
+`B0/W1 × C0/C1/C2 × 3 runs = 18 cells`, exactly 10,000 records/run.
 
 - C0 B0/W1 = 100% all runs;
 - C1 B0 = 80%, W1 = 100% all runs;
@@ -82,6 +86,7 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 These are run-level repeated outcomes under exact treatments, not population reliability probabilities. C2 is gateway-process `exec` restart, not node reboot. B0 is non-durable and is not the strongest durable MQTT comparator.
 
 ### POWDER — communication-path degradation/recovery characterization
+
 Campaign `WP2-P8`, profile `srslte-controlled-rf`.
 
 Role: separately executed physical-RF/LTE/MQTT controlled reference characterization; **not architecture-effect estimation**.
@@ -115,6 +120,7 @@ Never generalize the FIT result into generic MQTT superiority.
 Parent research folder: `P12_WellPulse` / `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`.
 
 ### P17 dossier
+
 - PDF Drive ID `12ec22A89ybsNoBpYcglx9Im6pW8Vk55-`, SHA-256 `a9274514cbf21de58291c2640f560f6082711e0a8696890419e918e595b40f3e`;
 - reproducible package `1ts__z8kN0fORwDksQZoj4eeaG--UyCAw`;
 - experiment figure suite `1y8rStzWdGEivWjuFCP0h5Y6Amv6267sY`;
@@ -123,12 +129,15 @@ Parent research folder: `P12_WellPulse` / `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`.
 Raw FIT/POWDER frozen archives remain higher measurement authorities.
 
 ### Historical P18R release
+
 `WellPulse_P18R_Scientific_Figure_Engineering_Release_2026-08-29.zip` — Drive `1alitbv9479Mq9URhXIBHkQql7zuuA51o`, SHA-256 `5586091bc518cc541c3c9b75e9a0c965913877cd6bf83d1644fa6f05264e1083`.
 
 ### Deterministic F1 hotfix
+
 Pre-normalization generator `analysis/wp2_p18r_generate_f1_hotfix.py`, blob `bf344808414b78d9b0c688140e9de9a755d9a1e7`, SHA-256 `3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`; pre-normalization PDF SHA-256 `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`. Archive Drive `12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`, read-back PASS.
 
 ### P18RC current production main figures
+
 Closure: `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`.
 
 Archive: `WellPulse_P18RC_Main_Figure_Production_Normalization_2026-08-29.zip`  
@@ -145,6 +154,7 @@ Current PDF SHA-256:
 P18RC: F2 semantic cleanup PASS; embedded Arial-compatible sans PASS; grids/ordinary strokes normalized; F1–F4 alt text frozen; grayscale PASS; metadata normalized; zero known clipping/overlap/crossing; two-build 12/12 hash equality PASS. F1 scientific/topological semantics remain the deterministic hotfix authority.
 
 ### P19 reviewer supplement + sanitized artifact
+
 Closure: `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`.
 
 Archive: `WellPulse_P19_Reviewer_Supplement_Sanitized_Artifact_2026-08-29.zip`  
@@ -154,26 +164,43 @@ Drive read-back: PASS.
 
 P19 includes reviewer-facing FIT + E0–E11 atlas, sanitized validity/anomaly register, derived non-sensitive CSVs, P13 claim map, P18RC figures/alt text, analysis/rebuild code, claim→script→output map, standard-library self-check, dependency record, privacy/security review and manifests.
 
-Privacy boundary: private raw archives, credential-bearing material, unclassified screenshots, secrets/tokens and testbed-credential files are excluded. E11 exact RFC1918 session addresses were replaced with `session address changed`; the transition fact and one-sided-collector caveat remain. Standard-library self-check PASS; F2–F4 sanitized-data rebuild PASS.
+Independent consortium recheck after closure:
+- archive hash exact match: PASS;
+- manifest `54/54`: PASS;
+- isolated `python -I artifact_selfcheck.py`: PASS;
+- scientific reopening required: NO.
+
+Non-blocking packaging hygiene exception: two `__pycache__/*.pyc` files are present in the current P19 archive. No obvious credential/privacy/scientific leak was identified, but compiled-cache files must be excluded from the final externally distributed package during P20D/P20E.
+
+## Refactored remaining publication lane
+
+Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
+
+P20 remains an **umbrella only**. Monolithic P20 execution is rejected. Execute one bounded gate at a time:
+
+1. **P20A — Literature & Novelty Closure — 15%**
+2. **P20B — Venue Qualification & Selection — 15%**
+3. **P20C — Authorship / Credits / Rights Lock — 15%**
+4. **P20D — Final Manuscript & Source Package Integration — 25%**
+5. **P20E — Independent Submission-Readiness Validation — 20%**
+6. **P21 — Author Submission Authorization Packet — 5%**
+7. **P22 — Submission Execution & Receipt — 5%**
+
+Remaining-lane weights total 100%. Progress is awarded only after each gate passes.
+
+P20B–P22 are dependency-locked until their predecessors pass.
 
 ## Exact next gate — DO NOT EXECUTE WITHOUT CURRENT AUTHORIZATION
 
-### WP2-P20 — FINAL LITERATURE / VENUE / SOURCE PACKAGE / CREDITS / RIGHTS NORMALIZATION
+### WP2-P20A — LITERATURE & NOVELTY CLOSURE
 
-P20 must handle:
-- final submission-date literature verification, including Gaspar et al. full-text comparison if accessible;
-- target-journal selection/verification and venue-specific formatting;
-- final manuscript source package;
-- final author list/order and CRediT roles;
-- affiliation wording;
-- funding/COI;
-- collaborator acknowledgments;
-- FIT IoT-LAB and POWDER acknowledgment/citation wording;
-- copyright/license/permissions and artifact-release terms;
-- final proof QA;
-- explicit submission authorization gate.
+Mandate:
 
-Submission remains **NOT AUTHORIZED**.
+`handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
+
+P20A must perform a current venue-neutral literature/novelty closure, including Gaspar et al. 2026 full-text comparison if legitimately accessible, verify all material bibliography/prior-art anchors, and freeze the comparator/novelty boundary without changing measured science or adding claims.
+
+Do not perform venue-specific formatting, final authorship/rights lock, final source packaging, or submission during P20A.
 
 ## Immutable prohibitions
 
@@ -185,15 +212,13 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `WP2_P19=PASS_REVIEWER_SUPPLEMENT_AND_SANITIZED_ARTIFACT`
 
-`P19_PRIVACY_SECURITY_REVIEW=PASS`
+`POST_P19_WP_ARCHITECTURE_REVIEW=PASS`
 
-`P19_STDLIB_SELFCHECK=PASS`
+`P18RC_REOPEN=NO`
 
-`P19_QUANTITATIVE_REBUILD=PASS`
+`P19_REOPEN_SCIENCE=NO`
 
-`P19_DRIVE_ARCHIVE=PASS`
-
-`P19_DRIVE_READBACK_HASH=PASS`
+`P19_PACKAGING_EXCEPTION=NON_BLOCKING_PYCACHE_REMOVE_BEFORE_EXTERNAL_PACKAGE`
 
 `CURRENT_SCIENTIFIC_BLOCKERS=0`
 
@@ -201,6 +226,8 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `LIVE_POWDER_DEPENDENCY=NONE`
 
-`SUBMISSION_AUTHORIZED=NO`
+`P20_MONOLITHIC_EXECUTION=REJECTED`
 
-`CURRENT_PHASE=WP2_P20_GATE_NOT_STARTED`
+`CURRENT_PHASE=WP2_P20A_GATE_NOT_STARTED`
+
+`SUBMISSION_AUTHORIZED=NO`
