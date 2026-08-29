@@ -1,0 +1,12 @@
+experiment,direction,attenuation_db,icmp_loss_pct,icmp_avg_rtt_ms,mqtt_received_unique,mqtt_sent_unique,mqtt_completeness_pct,note
+E1R4,ascending,48,0,32.274,20,20,100.0,
+E1R4,ascending,49,0,36.963,20,20,100.0,
+E1R4,ascending,50,0,34.452,20,20,100.0,
+E1R4,ascending,51,30,51.171,20,20,100.0,ICMP degraded while MQTT remained complete
+E1R4,ascending,52,60,66.578,13,20,65.0,receiver-missing includes seq 96 without sender MQTT_FAIL
+E2,descending,46,0,36.158,20,20,100.0,
+E2,descending,48,0,34.717,20,20,100.0,
+E2,descending,49,0,31.318,20,20,100.0,
+E2,descending,50,0,40.341,20,20,100.0,clean ICMP recovery
+E2,descending,51,10,41.312,20,20,100.0,partial ICMP recovery with complete MQTT
+E2,descending,52,65,59.909,11,20,55.0,severe starting state
