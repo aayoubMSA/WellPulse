@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20D PASS — final IEEE manuscript/source package integration**.  
+Last updated: 2026-08-29 after **WP2-P20D-R1 production-compliance repair + WP2-P20E independent submission-readiness PASS**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -26,13 +26,16 @@ This is the canonical operational retrieval point. GitHub is the scientific/cont
 - P20B-R1 through R4: **PASS**
 - P20B-R5 final venue selection: **PASS / IEEE INTERNET OF THINGS JOURNAL SELECTED**
 - P20C authorship / credits / rights / IP lock: **PASS**
-- P20D final IEEE manuscript & source package integration: **PASS**
+- P20D initial IEEE integration package: **PASS / HISTORICAL PRODUCTION PACKAGE**
+- P20D-R1 bounded IEEE production-compliance repair: **PASS / CURRENT SUBMISSION-PACKAGE AUTHORITY**
+- P20E independent submission-readiness validation: **PASS**
 - current scientific blockers: **0**
+- current production blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
 - submission authorization: **NO**
 
-Publication-lane progress: **70/100**.
+Publication-lane progress: **90/100**.
 
 ## Global publication identity — HARD RULE
 
@@ -75,10 +78,14 @@ No later evidence may be relabelled as scored P7B success.
 17. `docs/WP2_P20B_R5_FINAL_VENUE_SELECTION_CLOSURE_2026-08-29.md`
 18. `analysis/WP2_P20C_AUTHORSHIP_CREDITS_RIGHTS_IP_LOCK_2026-08-29.md`
 19. `docs/WP2_P20C_AUTHORSHIP_CREDITS_RIGHTS_IP_CLOSURE_2026-08-29.md`
-20. `analysis/WP2_P20D_FINAL_IEEE_MANUSCRIPT_SOURCE_PACKAGE_INTEGRATION_2026-08-29.md`
+20. `analysis/WP2_P20D_FINAL_IEEE_MANUSCRIPT_SOURCE_PACKAGE_INTEGRATION_2026-08-29.md` — historical initial production package
 21. `docs/WP2_P20D_FINAL_IEEE_MANUSCRIPT_SOURCE_PACKAGE_CLOSURE_2026-08-29.md`
-22. Research & Grants Lessons Learned Ledger: **LL-047 master venue doctrine + LL-048 canonical publication identity**.
-23. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+22. `analysis/WP2_P20D_R1_IEEE_PRODUCTION_COMPLIANCE_REPAIR_2026-08-29.md`
+23. `docs/WP2_P20D_R1_IEEE_PRODUCTION_COMPLIANCE_REPAIR_CLOSURE_2026-08-29.md`
+24. `analysis/WP2_P20E_INDEPENDENT_SUBMISSION_READINESS_VALIDATION_2026-08-29.md`
+25. `docs/WP2_P20E_INDEPENDENT_SUBMISSION_READINESS_VALIDATION_CLOSURE_2026-08-29.md`
+26. Research & Grants Lessons Learned Ledger: **LL-047 master venue doctrine + LL-048 canonical publication identity**.
+27. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
 
 ## Frozen scientific doctrine
 
@@ -132,7 +139,7 @@ Do not claim:
 
 ## P20A novelty authority
 
-P20D has integrated the required current comparators:
+Current manuscript integrates:
 
 - Mohammed et al. 2026, DOI `10.48084/etasr.16945`;
 - Im and Lim 2023 E-MQTT, DOI `10.3390/app132212419`;
@@ -148,9 +155,18 @@ Selected target: **IEEE Internet of Things Journal**.
 
 Route: **Traditional / non-OA**.
 
-Current IoT-J rule reverified at P20D: mandatory USD 175/page charges apply beyond the first eight published pages; submission signifies acceptance of that requirement.
+Current IoT-J rules reverified during P20D/P20E:
 
-P20D IEEEtran author build = **6 pages**, creating two pages of author-build headroom. Production pagination can still change. No overlength payment is authorized.
+- manuscript in IEEE double-column journal style;
+- abstract 150–250 words, one paragraph;
+- ORCID required for all authors at submission/proof stages;
+- mandatory USD 175/page charge beyond the first eight published pages; submission signifies acceptance of the requirement;
+- Traditional route has no OA APC;
+- IEEE copyright form remains a downstream action;
+- substantive AI use must be disclosed in the Acknowledgment;
+- supplementary collections are separate upload items and require adequate README information.
+
+Validated R1 IEEEtran author build = **6 pages** and abstract = **221 words**. Production pagination can still change. No overlength payment is authorized.
 
 Backup ranking remains:
 
@@ -166,12 +182,12 @@ Backup ranking remains:
 
 - sole author: **Ahmed Ayoub**;
 - corresponding author: **Ahmed Ayoub**;
-- affiliation: **Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City, Egypt**;
+- affiliation: **Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City 12451, Egypt**;
 - research funding: **no external funding**;
 - competing interests: **none currently identified**;
-- FIT IoT-LAB and POWDER acknowledgments required;
-- CRediT statement required;
-- IEEE generative-AI disclosure required;
+- FIT IoT-LAB and POWDER acknowledgments required and present;
+- CRediT statement present;
+- IEEE generative-AI disclosure present;
 - repository is already public; prior public disclosure exists;
 - no patentability claim;
 - current commercialization verdict: `NO_IP_ACTION -> PUBLISH`;
@@ -195,80 +211,110 @@ P19 archive:
 Drive ID `1t5S_L-S0hfmyMPLdXh8Fd-jGBOH8SCkl`
 SHA-256 `5a9ed4fa197ea5c3aa43447fabf16d7928aeabe58722e16af63afe25bc7cfdc7`
 
-P20D creates publication-safe derivatives without changing frozen authorities. F1-F4 metadata normalization to `Ahmed Ayoub` produced **0.0% rendered-pixel change** for every figure. P19 externalized supplement removes `__pycache__/*.pyc`; isolated self-check PASS.
+P20D/P20D-R1 create publication-safe derivatives without changing frozen authorities. F1-F4 metadata normalization to `Ahmed Ayoub` produced **0.0% rendered-pixel change**. Submission-safe P19 supplement excludes `__pycache__/*.pyc`; isolated self-check PASS.
 
-## P20D durable authority
+## Current production authority — P20D-R1
 
 Archive:
-`WellPulse_P20D_IEEE_Submission_Package_2026-08-29.zip`
+`WellPulse_P20D_R1_IEEE_Submission_Package_2026-08-29.zip`
 
 Drive ID:
-`19K3gB9TY4znMZmGHw_DQHZnM9ee_eMSx`
+`1j61flpHqrVlR_c-Hu1ueUjl5p2RQwhGG`
 
 Archive size:
-`3,597,127 bytes`
+`3,601,271 bytes`
 
 Archive SHA-256:
-`3377b6c13c53f47594d75c50419bceaee87e81e4450f000dcf01054b78706f0b`
+`73b46d0b19cfd74689bdc10efb27c71a5460ca1c9ab6843503155a87696eb73c`
 
 Drive raw read-back SHA-256: **exact match / PASS**.
 
 Submission-draft PDF SHA-256:
-`a3737379e4688ef64b4b95ba3350ad29ae5e90563a5a45f384f92b50e2d729ca`
+`95917105f9d03fce155b9cc2a579d2e0e6f567a30557f87f82382db193597fa1`
 
 TeX SHA-256:
-`249b73d004728cb39cd5e34621985b3b8c5794185824951ecdb549a7db52fd01`
+`0e0c64ba0552f2e71e8a00e4cc29a35da908b7f0996a5a94db34e36d2ef644ef`
 
 Submission-safe P19 supplement ZIP SHA-256:
-`a8dc2e789fed93c5f18ebc17cbf7ae2f66514dfdc157770d5fd5abded3d7fac5`
+`99ed7c4dfc42c1f0f4b659489abf7ad328584f413c0318210dace29b4912b48d`
+
+The earlier P20D archive at Drive ID `19K3gB9TY4znMZmGHw_DQHZnM9ee_eMSx` remains historical production evidence but is superseded for submission-readiness by P20D-R1.
+
+## P20E independent validation authority
+
+P20E independently extracted and rebuilt the exact P20D-R1 archive.
+
+PASS evidence:
+
+- outer archive/Drive read-back hash exact;
+- root manifest 66/66 and SHA list 67/67 valid;
+- nested P19 manifest 53/53 valid;
+- PDF = 6 pages, US Letter, unencrypted text PDF;
+- fonts embedded;
+- independent TeX rebuild = 6 pages;
+- rebuild visual diff = **0 changed pages / 0.0% pixels**;
+- abstract = 221 words;
+- publication name consistency = `Ahmed Ayoub`, expanded variants 0;
+- P19 isolated scientific self-check PASS;
+- cache files 0;
+- no detected private IPv4 or exposed credential value in reviewer-facing corpus;
+- key FIT and POWDER values independently recomputed and match frozen authorities;
+- P20A comparator/novelty boundaries preserved;
+- forbidden claim families absent;
+- AI disclosure / CRediT / funding / COI / FIT / POWDER statements present;
+- supplementary README compliant with current IEEE collection-description expectations.
+
+`SCIENTIFIC_BLOCKERS=0`
+
+`PRODUCTION_BLOCKERS=0`
 
 ## Publication lane
 
 1. P20A — 15% — **PASS**
 2. P20B / R1-R5 — 15% — **PASS**
 3. P20C — 15% — **PASS**
-4. P20D — 25% — **PASS**
-5. **P20E — Independent Submission-Readiness Validation — 20% — NEXT / NOT STARTED**
-6. P21 — Author Submission Authorization Packet — 5% — LOCKED
+4. P20D / R1 — 25% — **PASS**
+5. P20E — 20% — **PASS**
+6. **P21 — Author Submission Authorization Packet — 5% — NEXT / UNLOCKED**
 7. P22 — Submission Execution & Receipt — 5% — LOCKED
 
-Earned progress: **70/100**.
+Earned progress: **90/100**.
 
-## Exact next gate — WP2-P20E
+## Exact next gate — WP2-P21
 
-P20E must be an independent red-team validation of the exact P20D bytes/layout, not another authoring pass.
+P21 is the only next executable gate. It prepares an author-facing authorization packet; it does **not** submit.
 
-It must verify at minimum:
+P21 must surface and verify:
 
-- exact PDF/source identity and hashes;
-- all numerical claims against frozen authorities;
-- P20A novelty boundaries and added references;
-- LL-048 publication-name consistency everywhere submission-facing;
-- author/affiliation/CRediT/funding/COI/testbed/AI statements;
-- IEEE page-count and page-charge risk;
-- figure legibility, grayscale/accessibility, captions and alt-text mapping;
-- supplement manifest/self-check/privacy/security state;
-- absence of legacy internal-control prose from submission-facing files;
-- references and DOI integrity;
-- no hidden scientific claim drift from P17V/P13;
-- no payment/license/submission action.
+1. exact target = IEEE Internet of Things Journal;
+2. exact route = Traditional / non-OA;
+3. exact manuscript/PDF/supplement archive hashes from P20D-R1;
+4. exact publication identity = Ahmed Ayoub;
+5. exact ORCID linked to Ahmed Ayoub in the submission account;
+6. confirmation that this manuscript is not under active consideration elsewhere;
+7. explicit author awareness that IoT-J states submission signifies acceptance of mandatory overlength charges if final published length exceeds eight pages, despite the current 6-page author build;
+8. main-manuscript vs supplement vs optional separate-graphics portal upload mapping;
+9. copyright form remains downstream, not pre-authorized;
+10. final explicit author decision: `AUTHORIZE_SUBMISSION=YES/NO`.
 
-P20E may PASS, PASS WITH FINITE FIXES, or FAIL. It must not submit externally.
+P21 may prepare all metadata and portal mapping, but must stop before any external submission/copyright/payment action. P22 remains locked until the user explicitly authorizes submission after seeing P21.
 
 ## Stop state
 
-`WP2_P20D=PASS_FINAL_IEEE_MANUSCRIPT_SOURCE_PACKAGE_INTEGRATION`
+`WP2_P20D_R1=PASS_BOUNDED_IEEE_PRODUCTION_COMPLIANCE_REPAIR`
 
-`PUBLICATION_LANE_PROGRESS=70_OF_100`
+`WP2_P20E=PASS_INDEPENDENT_SUBMISSION_READINESS_VALIDATION`
 
-`P20E_UNLOCKED=YES`
+`PUBLICATION_LANE_PROGRESS=90_OF_100`
 
-`P21_LOCKED=YES`
+`P21_UNLOCKED=YES`
+
+`P22_LOCKED=YES`
 
 `OVERLENGTH_PAYMENT_AUTHORIZED=NO`
 
 `COPYRIGHT_ACCEPTANCE_AUTHORIZED=NO`
 
-`CURRENT_PHASE=WP2_P20E_GATE_NOT_STARTED`
+`CURRENT_PHASE=WP2_P21_GATE_NOT_STARTED`
 
 `SUBMISSION_AUTHORIZED=NO`
