@@ -1,0 +1,10 @@
+claim_id,rq,claim_type,strength,status,evidence_class,claim_summary,key_caveat
+IC-01,RQ1,primary_empirical,A,PASS,FIT,"W1 10000/10000 vs B0 8000/10000 in all C1/C2 replicates","Exact FIT treatment; B0 non-durable; no population reliability or strongest MQTT claim"
+IC-02,RQ1,supporting_empirical,A,PASS,FIT,"B0 and W1 both 100% in healthy C0 across 3/3 replicates","Exact FIT workload/platform only"
+IC-03,RQ1,supporting_empirical,A,PASS,FIT,"W1 complete recovery includes ~67.7-67.9 s backlog drain","Backlog drain is not reconnect time or POWDER recovery latency"
+IC-04,RQ2,primary_empirical,B,PASS,POWDER,"Experiment-specific RF degradation is a transition region; severe but variable at 52 dB","No universal threshold or unresolved path mapping"
+IC-05,RQ2,supporting_empirical,B,PASS,POWDER,"ICMP degradation can precede MQTT incompleteness in the transition region","Not W1 durability evidence or universal MQTT robustness"
+IC-06,RQ3,primary_empirical,B,PASS,POWDER,"Recovery depends on mechanism; RF-only recovery was not deterministic","Keep exact timing endpoints; preserve E10-A censoring and E10-D upper bound"
+IC-07,RQ3,supporting_empirical,B,PASS,POWDER,"Broker-only interruption disrupted MQTT while LTE ping path remained healthy","Control/path-isolation result; not architecture comparison"
+IC-08,RQ4,methodological_synthesis,C,PASS,FIT+POWDER,"Record-state survival and communication-path recovery are distinct resilience properties","Structured triangulation only; no pooled inference"
+IC-09,RQ4,methodological_synthesis,C,PASS,FIT+POWDER,"Receiver-side evidence-first reconciliation supports defensible reporting","Methodological project contribution, not universal theorem"
