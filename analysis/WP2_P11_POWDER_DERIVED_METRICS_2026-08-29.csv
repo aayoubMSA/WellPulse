@@ -1,0 +1,24 @@
+experiment,cycle,direction,attenuation_db,icmp_tx,icmp_rx,icmp_loss_pct,icmp_avg_rtt_ms,mqtt_sent_unique,mqtt_received_unique,mqtt_completeness_pct,note
+E1R4,,ascending,48,20,20,0,32.274,20,20,100.0,
+E1R4,,ascending,49,20,20,0,36.963,20,20,100.0,
+E1R4,,ascending,50,20,20,0,34.452,20,20,100.0,
+E1R4,,ascending,51,20,14,30,51.171,20,20,100.0,ICMP degraded while MQTT remained complete
+E1R4,,ascending,52,20,8,60,66.578,20,13,65.0,receiver-missing includes seq 96 without sender MQTT_FAIL
+E2,,descending,52,20,7,65,59.909,20,11,55.0,severe starting state
+E2,,descending,51,20,18,10,41.312,20,20,100.0,partial ICMP recovery with complete MQTT
+E2,,descending,50,20,20,0,40.341,20,20,100.0,clean ICMP recovery
+E2,,descending,49,20,20,0,31.318,20,20,100.0,
+E2,,descending,48,20,20,0,34.717,20,20,100.0,
+E2,,descending,46,20,20,0,36.158,20,20,100.0,
+E3,1,repeat,49,20,20,0,32.997,20,20,100.0,
+E3,1,repeat,50,20,19,5,33.374,20,20,100.0,
+E3,1,repeat,51,20,18,10,54.130,20,20,100.0,
+E3,1,repeat,52,20,4,80,61.262,20,12,60.0,
+E3,2,repeat,49,20,20,0,35.486,20,20,100.0,
+E3,2,repeat,50,20,20,0,39.275,20,20,100.0,
+E3,2,repeat,51,20,19,5,50.766,20,19,95.0,receiver-missing seq 135
+E3,2,repeat,52,20,7,65,67.157,20,5,25.0,receiver-missing includes seq 150 without sender MQTT_FAIL
+E3,3,repeat,49,20,20,0,33.065,20,20,100.0,
+E3,3,repeat,50,20,19,5,42.621,20,20,100.0,
+E3,3,repeat,51,20,10,50,45.068,20,20,100.0,
+E3,3,repeat,52,20,6,70,46.962,20,11,55.0,
