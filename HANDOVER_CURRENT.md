@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P17V — SUPERIOR INDEPENDENT CONSORTIUM VALIDATION**.
+Last updated: 2026-08-29 after **WP2-P18 — MAIN-DISPLAY REDESIGN + CLAIM/DISPLAY QA** and **WP2-P18B — HIGH-STANDARD PUBLICATION/ARTIFACT BENCHMARK**.
 
 ## Canonical authority
 
@@ -19,14 +19,16 @@ This file is the current operational retrieval point. Do not reconstruct current
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
 - WP2-P12 cross-evidence integration: **PASS / COMPLETE**
 - WP2-P13 claim–evidence matrix: **PASS / FROZEN**
-- WP2-P14 publication tables/figures: **PASS / FROZEN / historical main-display set**
+- WP2-P14 historical publication display set: **PASS / SUPERSEDED FOR MAIN-DISPLAY USE BY P18**
 - WP2-P15 manuscript construction: **PASS / historical internal full draft**
 - WP2-P16 adversarial publication QA: **PASS / scientific QA complete**
-- WP2-P17 dossier research pack + first consortium revision: **PASS / consortium-revised internal draft + QA**
+- WP2-P17 dossier research pack + consortium revision: **PASS / consortium-revised internal draft + QA**
 - WP2-P17V superior independent validation: **PASS / VALIDATED WITH PRE-SUBMISSION CONDITIONS**
+- WP2-P18 main-display redesign: **PASS / NEW MAIN DISPLAY SET FROZEN**
+- WP2-P18B high-standard benchmark: **COMPLETE / DISPLAY 95.6% CHECKLIST COVERAGE / WHOLE PACKAGE 84% READINESS-EQUIVALENT**
 - new experiment required for current bounded manuscript: **NO**
 - new empirical claims required: **NO**
-- scientific blockers in P17V: **0**
+- current scientific blockers: **0**
 - submission authorization: **NO**
 - live POWDER dependency: **NONE**
 
@@ -56,8 +58,14 @@ No P8+ result may be promoted or relabelled as scored P7B.
 12. `manuscript/WP2_P17_CONSORTIUM_REVISION_QA_2026-08-29.md`
 13. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
 14. `manuscript/WP2_P17V_SUPERIOR_INDEPENDENT_CONSORTIUM_VALIDATION_2026-08-29.md`
-15. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
-16. P14 display files only when auditing the historical display set; P18 is expected to redesign the main display set under a new QA gate.
+15. `manuscript/WP2_P18_MAIN_DISPLAY_REDESIGN_AND_QA_2026-08-29.md`
+16. `manuscript/WP2_P18_FINAL_DISPLAY_PACK_INTEGRITY_RECEIPT_2026-08-29.md`
+17. `manuscript/WP2_P18_FIGURE_CAPTIONS_ALT_TEXT_2026-08-29.md`
+18. `analysis/WP2_P18_FAILURE_DOMAIN_TAXONOMY_2026-08-29.csv`
+19. `analysis/WP2_P18_MAIN_SUPPLEMENT_DISPLAY_SPLIT_2026-08-29.csv`
+20. `analysis/WP2_P18B_HIGH_STANDARD_PUBLICATION_ARTIFACT_BENCHMARK_2026-08-29.md`
+21. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
+22. P14 files only for historical comparison; P18 is authoritative for the current main display set.
 
 ## Frozen evidence roles
 
@@ -73,24 +81,22 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 - C0 healthy; C1 broker outage; C2 broker outage + gateway-process exec restart.
 
 Principal results:
-
 - C0: B0 100%, W1 100% in 3/3;
 - C1: B0 80%, W1 100% in 3/3, `+20 pp` each run;
 - C2: B0 80%, W1 100% in 3/3, `+20 pp` each run;
-- each B0 C1/C2 run misses exactly 2,000/10,000 records, matching the imposed outage-period record block;
+- every B0 C1/C2 run misses exactly 2,000/10,000 records, matching the imposed outage-period record block;
 - every W1 final run contains all 10,000 generated IDs exactly once;
 - W1 backlog-drain means: C1 `67.731246 s`; C2 `67.870252 s`.
 
 These are repeated outcomes under the exact treatment, not population reliability probabilities.
 
 Canonical W1 implementation semantics:
-
-- `record_id = run_id:boot_id:sequence` with zero-padded sequence;
-- deterministic canonical JSON serialization;
+- stable `run_id:boot_id:sequence` identity;
+- deterministic canonical JSON;
 - SHA-256 checksum;
-- SQLite queue with WAL and `synchronous=FULL`;
-- `PENDING` / `SENT` state;
-- exact duplicate re-enqueue is idempotent;
+- SQLite WAL + `synchronous=FULL`;
+- `PENDING` / `SENT` states;
+- identical re-enqueue is idempotent;
 - conflicting identity reuse raises an integrity error.
 
 ### POWDER = communication-path degradation/recovery characterization
@@ -104,27 +110,25 @@ Internal control classification:
 Publication-facing role: **separately executed controlled reference characterization; not architecture-effect estimation**.
 
 Principal evidence:
-
 - E1R4 48–50 dB: ICMP clean, MQTT 20/20;
 - E1R4 51 dB: ICMP 30% loss, MQTT 20/20;
 - E1R4 52 dB: ICMP 60% loss, MQTT 13/20;
 - E3 52 dB: ICMP loss `80/65/70%`, MQTT completeness `60/25/55%`;
 - E8: broker interruption disrupts MQTT while LTE ping remains healthy;
 - E9: no-fault control MQTT 60/60 with clean bidirectional ping;
-- E10-A: no recovery observed inside preserved RF-only window; censored, no scalar latency;
+- E10-A: no recovery inside preserved RF-only timing window; censored, no scalar latency;
 - E10-B: action-begin→first MQTT publish `6.063318 s`; first ping `6.609430 s`; publish→CORE receipt `0.060172 s`;
 - E10-C-B: RF restore→first ping `29.247733 s`; first publish `29.248129 s`;
 - E10-D: `<=10.908749 s` upper bound only.
 
-Receiver-side reconciliation is authoritative. Concrete examples: E1R4 seq 96 and E3 seq 150 are sender-present/receiver-absent without matching sender failure flags; E8 has 80 sender-log lines but only 60 unique IDs due to duplicated recovery sends.
+Receiver-side reconciliation remains authoritative. E1R4 seq 96 and E3 seq 150 are sender-present/receiver-absent without matching sender failure flags; E8 has 80 sender-log lines but only 60 unique IDs due to duplicate recovery sends.
 
 Interpretation remains experiment-specific. No universal 52 dB threshold is claimed.
 
 ## Frozen integration doctrine
 
 FIT and POWDER are complementary, not substitutable:
-
-- **FIT = record-state survival / architecture comparison**.
+- **FIT = record-state survival / architecture comparison**;
 - **POWDER = communication-path degradation / recovery characterization**.
 
 The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER reliability statistic is allowed.
@@ -132,16 +136,39 @@ The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER re
 ## Frozen claim envelope
 
 P13 remains the scientific claim authority:
-
 - primary empirical: `IC-01`, `IC-04`, `IC-06`;
 - supporting empirical: `IC-02`, `IC-03`, `IC-05`, `IC-07`;
 - methodological synthesis: `IC-08`, `IC-09`.
 
-P17/P17V add no new empirical claims and do not expand P13.
+P17/P17V/P18 add no new empirical claim and do not expand P13.
 
 `P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
 
 `P13_STATISTICAL_POOLING=NONE`
+
+## Current manuscript baseline
+
+Canonical consortium-revised internal draft:
+
+`manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
+
+Preferred working title:
+
+**WellPulse: Separating Record-State Survival from Communication-Path Recovery in Resilient IoT Telemetry**
+
+P17 uses three empirical RQs and treats cross-testbed triangulation as synthesis rather than a fourth pooled experiment.
+
+Independent P17V verdict:
+
+**VALIDATED WITH PRE-SUBMISSION CONDITIONS.**
+
+- claims validated: `9/9`;
+- numerical contradictions: `0`;
+- unsupported new claims: `0`;
+- scientific blockers: `0`;
+- new experiment required: `NO`.
+
+Principal scientific limitation remains transparent: B0 is non-durable and is not the strongest durable MQTT comparator. The current paper is defensible only because it makes the bounded B0 comparison rather than generic MQTT superiority.
 
 ## P17 durable research pack
 
@@ -157,60 +184,101 @@ Folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
 
 Dossier role: **audit-grade experiment atlas / manuscript-supplement input**. Raw archives, P9 and P11 remain higher measurement authorities.
 
-## P17 manuscript baseline
+## P18 current main-display authority
 
-Canonical revised internal draft:
+P18 replaces P14 for the publication-facing **main display selection**. P14 remains historical evidence of earlier display work.
 
-`manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
+### Main figures
 
-Preferred working title:
+1. `Fig_P18_01_architecture_evidence_roles` — W1 record lifecycle + FIT/POWDER non-overlapping roles.
+2. `Fig_P18_02_FIT_completeness` — B0/W1 run-level final completeness on a full `0–100%` scale.
+3. `Fig_P18_03_POWDER_transition_direction` — E1R4/E2 cross-layer response on a full percentage scale.
+4. `Fig_P18_04_POWDER_E3_repeatability` — E3 cycles on a full `0–100%` completeness scale.
 
-**WellPulse: Separating Record-State Survival from Communication-Path Recovery in Resilient IoT Telemetry**
+### Main tables
 
-P17 uses three empirical RQs and treats cross-testbed triangulation as synthesis rather than as a fourth pooled experiment.
+1. failure-domain / experiment / manipulated-component / endpoint / admissible-interpretation taxonomy;
+2. compact FIT run-level summary;
+3. mechanism-specific recovery-semantics table preserving exact/censored/upper-bound status.
 
-`WP2_P17_QA=PASS_CONSORTIUM_REVISION_EVIDENCE_BOUNDED`
+### Supplement split
 
-`P17_QA_UNSUPPORTED_CLAIMS=0`
+Move from main to supplement:
+- standalone FIT backlog-drain plot while retaining numerical values in main text/table;
+- E0/E4–E11 detailed atlas figures;
+- run-validity and anomaly registers;
+- detailed provenance/hash tables.
 
-`P17_QA_NUMERICAL_CONTRADICTIONS=0`
+Move to sanitized artifact:
+- derived CSVs;
+- reconstruction/display scripts;
+- non-sensitive manifests;
+- releasable evidence only after privacy/security review.
 
-## P17V superior independent validation
+### P18 production and integrity
 
-A second, independent role-based consortium of 12 reviewers validated P17 against P11/P12/P13/P16, canonical code, forensic authorities and an independent current baseline/literature check.
+- Figure 1 = exactly `7.16 in` wide;
+- Figures 2–4 = exactly `3.5 in` wide;
+- PDF/SVG vector masters;
+- PNG fallback = 600 dpi;
+- PDF fonts embedded/subset;
+- captions and alt text frozen in `manuscript/WP2_P18_FIGURE_CAPTIONS_ALT_TEXT_2026-08-29.md`;
+- quantitative percentage plots use full percentage axes to avoid visual exaggeration.
 
-Roles:
+Durable final P18 display pack:
+- Drive ID `1tAj83-6rbDEdho9yKdREXU00w6h1pteh`;
+- final ZIP SHA-256 `3f5879dbac7493819930157d46980de99efdee37044b6b1ffdb19f04fec395f1`.
 
-1. senior systems/meta-review editor;
-2. MQTT protocol/persistence specialist;
-3. embedded storage/crash-consistency reviewer;
-4. wireless/RF experimentalist;
-5. cellular/LTE systems reviewer;
-6. experimental design/statistics reviewer;
-7. causal/measurement-methodology reviewer;
-8. reproducibility/forensic evidence auditor;
-9. research-software reviewer;
-10. literature/novelty meta-reviewer;
-11. scientific-visualization reviewer;
-12. adversarial associate-editor simulation.
+`WP2_P18=PASS_MAIN_DISPLAY_REDESIGN_CLAIM_DISPLAY_QA`
 
-Independent verdict:
+`P18_UNSUPPORTED_DISPLAY_CLAIMS=0`
 
-**VALIDATED WITH PRE-SUBMISSION CONDITIONS.**
+`P18_CROSS_PLATFORM_QUANTITATIVE_POOLING=NONE`
 
-- claims validated: `9/9`;
-- numerical contradictions: `0`;
-- unsupported new claims: `0`;
-- scientific blockers: `0`;
-- new experiment required: `NO`.
+## P18B high-standard benchmark
 
-Principal residual scientific limitation: B0 is non-durable and is not the strongest durable MQTT comparator. Independent official Paho documentation confirms that durable/persistent MQTT client state is established prior art. The current bounded paper remains defensible because it does not claim generic MQTT superiority.
+Cross-publisher benchmark anchors include current IEEE graphics guidance, Elsevier artwork guidance, Nature Portfolio data/code-availability expectations, and ACM-style artifact-evaluation criteria.
 
-P17V also independently reconfirmed the novelty boundary: persistence, retransmission, offline-first reconciliation, store-and-forward and testbed repeatability are prior art. The defensible contribution is the compound evaluation: failure-domain-aware framing + bounded embedded durability evidence + controlled physical-path characterization + endpoint-specific recovery semantics + receiver-side evidence preservation.
+Benchmark result:
 
-Gaspar et al. 2026 DOI `10.1109/MIOT.2026.3681190` is independently confirmed bibliographically. Detailed full-text comparison remains a pre-submission gate if accessible.
+- P18 main-display checklist coverage: **95.6%**;
+- whole publication-package readiness-equivalent: **84%**;
+- scientific blockers: `0`.
 
-`P17V_VERDICT=VALIDATED_WITH_PRE_SUBMISSION_CONDITIONS`
+These percentages are operational checklist-coverage indicators, not acceptance probabilities.
+
+Remaining gold-standard gaps are deliberately assigned to P19/P20:
+
+### P19 — reviewer-facing supplement + sanitized artifact
+
+Target an artifact capable of meeting an ACM-style **Functional** bar and approaching **Reusable**:
+- concise reviewer supplement derived from dossier v2.2;
+- E0–E11 + FIT ledger + validity/anomaly + timing semantics;
+- sanitized derived data supporting public values;
+- README/inventory;
+- software/hardware environment and dependency lock;
+- expected runtimes/resources;
+- claim/result → script → output map;
+- one-command reproduction path where feasible;
+- blank-environment execution receipt;
+- explicit private/raw exclusions;
+- license only after verified rights decision;
+- DOI-capable archive only after release authorization.
+
+### P20 — final literature / venue / credits / rights / source package
+
+Only after P19 PASS:
+- submission-date literature search and Gaspar full-text comparison if accessible;
+- target-journal selection and current author instructions;
+- clean venue LaTeX/source manuscript;
+- venue-specific artwork typography/naming/placement normalization;
+- final data/code availability statements;
+- final authorship/order + CRediT roles;
+- funding/COI/collaborator acknowledgments;
+- FIT IoT-LAB and POWDER acknowledgment/citation verification;
+- copyright/license/permissions audit;
+- source↔PDF↔figures↔supplement↔artifact proof QA;
+- explicit user authorization before external submission.
 
 ## Authorship, affiliation, credits, rights
 
@@ -222,52 +290,13 @@ Department of Computer Systems Engineering
 Faculty of Engineering, MSA University  
 Giza, Egypt
 
-Do not invent coauthors, contributor roles, funding, copyright ownership, or licensing terms.
+Do not invent coauthors, CRediT roles, funding, copyright ownership, or licensing terms.
 
-Before submission explicitly verify:
-
-- final author list/order;
-- CRediT/contributor roles;
-- MSA affiliation wording;
-- funding declarations;
-- collaborator acknowledgments;
-- FIT IoT-LAB citation/acknowledgment;
-- POWDER citation/acknowledgment;
-- copyright/licensing requirements of the selected venue and applicable institutional/testbed policies.
-
-## Remaining gates before submission authorization
-
-### P18 — Main-display redesign + claim/display QA
-
-- architecture + evidence-role schematic;
-- failure-domain taxonomy display/table;
-- final main-versus-supplement display split;
-- independent display QA against P13/P17/P17V.
-
-### P19 — Reviewer-facing supplementary atlas + sanitized artifact
-
-- derive concise reviewer supplement from dossier v2.2;
-- include E0–E11, validity, anomalies, FIT ledger and endpoint semantics;
-- package analysis code, derived non-sensitive data, manifests and figures;
-- privacy/security sanitization before release.
-
-### P20 — Final literature/credits/venue/submission preparation
-
-Only after P18/P19 PASS:
-
-- submission-date literature check and Gaspar full-text comparison if accessible;
-- target-journal and author-instruction verification;
-- final authorship/credits/funding/rights audit;
-- clean submission-facing manuscript with internal control/status notes removed;
-- proof and claim-reference-display-artifact consistency QA;
-- explicit user authorization before external submission.
-
-No new POWDER or FIT experiment is authorized or currently required.
+Before submission explicitly verify all authorship, funding, collaborator, institutional/testbed credit, copyright and licensing requirements.
 
 ## Immutable prohibitions
 
 Do not claim:
-
 - scored P7B success;
 - POWDER B1-vs-W1 advantage;
 - strongest-durable-MQTT superiority;
@@ -279,7 +308,7 @@ Do not claim:
 - field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation;
 - unresolved RF-path/runtime USRP identity;
 - pooled FIT+POWDER inferential statistics;
-- historical uniqueness of the two-property model unless separately established by literature evidence.
+- historical uniqueness of the two-property framework unless separately established by literature evidence.
 
 ## Storage authority
 
@@ -307,7 +336,7 @@ Raw evidence remains immutable.
 
 `WP2_P13=PASS_CLAIM_EVIDENCE_MATRIX_FROZEN`
 
-`WP2_P14=PASS_PUBLICATION_TABLES_AND_FIGURES_FROZEN`
+`WP2_P14=PASS_HISTORICAL_DISPLAY_SET`
 
 `WP2_P15=PASS_MANUSCRIPT_CONSTRUCTED_EVIDENCE_BOUNDED`
 
@@ -321,8 +350,14 @@ Raw evidence remains immutable.
 
 `P17V_VERDICT=VALIDATED_WITH_PRE_SUBMISSION_CONDITIONS`
 
+`WP2_P18=PASS_MAIN_DISPLAY_REDESIGN_CLAIM_DISPLAY_QA`
+
+`P18B_DISPLAY_BENCHMARK=PASS_95_6_PERCENT_CHECKLIST_COVERAGE`
+
+`P18B_FULL_PACKAGE_READINESS=84_PERCENT_CHECKLIST_COVERAGE`
+
 `LIVE_POWDER_DEPENDENCY=NONE`
 
 `SUBMISSION_AUTHORIZED=NO`
 
-`NEXT_PHASE=WP2_P18_MAIN_DISPLAY_REDESIGN_AND_QA`
+`NEXT_PHASE=WP2_P19_REVIEWER_SUPPLEMENT_AND_SANITIZED_ARTIFACT`
