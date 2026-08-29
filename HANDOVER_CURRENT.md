@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **post-P19 consortium WP architecture review**.  
+Last updated: 2026-08-29 after **WP2-P20A PASS — literature & novelty closure**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -25,6 +25,7 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P18RC main-figure production normalization: **PASS / CURRENT PRODUCTION MAIN-DISPLAY AUTHORITY**
 - P19 reviewer supplement + sanitized artifact: **PASS / CURRENT REVIEWER-ARTIFACT AUTHORITY**
 - post-P19 consortium WP architecture review: **PASS / FUTURE LANE REFACTORED**
+- P20A literature & novelty closure: **PASS / CURRENT NOVELTY-BOUNDARY AUTHORITY**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -64,9 +65,11 @@ No P8+ result may be promoted or relabelled as scored P7B.
 19. `analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
 20. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
 21. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
-22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md` before executing the next gate.
-23. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
-24. P18/P18B only for historical comparison.
+22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
+23. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
+24. `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`
+25. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+26. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
@@ -172,39 +175,55 @@ Independent consortium recheck after closure:
 
 Non-blocking packaging hygiene exception: two `__pycache__/*.pyc` files are present in the current P19 archive. No obvious credential/privacy/scientific leak was identified, but compiled-cache files must be excluded from the final externally distributed package during P20D/P20E.
 
+## P20A current novelty-boundary authority
+
+Closure: `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`.  
+Comparator matrix: `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`.
+
+P20A current-search result:
+
+- material P17 literature/testbed/technical anchors: **11/11 verified**;
+- closest newly identified conceptual comparator: Mohammed et al. 2026, DOI `10.48084/etasr.16945`;
+- material action: **WORDING NARROWING ONLY**;
+- no novelty claim is permitted for generic persistence, disk-backed buffering, retransmission, store-and-forward, offline-first continuity, application/database acknowledgment, end-to-end subscriber confirmation, testbed repeatability, or historical priority for decoupling data reliability from network availability;
+- E-MQTT (2023) constrains receiver-confirmation priority wording;
+- Radwan et al. (Scientific Reports, 17 Aug 2026, DOI `10.1038/s41598-026-66865-8`) is current load/congestion MQTT reliability prior work with no collision to the frozen claim envelope;
+- Gaspar et al. DOI `10.1109/MIOT.2026.3681190` is bibliographically verified; a current author page advertises a PDF, but the full text was not recovered through the available retrieval channel, so detailed method/result attribution remains prohibited;
+- final defensible contribution is the **compound failure-domain-aware evaluation structure and bounded evidence package**, not historical uniqueness of persistence/store-and-forward/reconciliation ingredients.
+
+P20D later must add Mohammed et al. 2026, account for E-MQTT and Radwan et al. 2026, and preserve the P20A wording constraints.
+
 ## Refactored remaining publication lane
 
 Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
 
 P20 remains an **umbrella only**. Monolithic P20 execution is rejected. Execute one bounded gate at a time:
 
-1. **P20A — Literature & Novelty Closure — 15%**
-2. **P20B — Venue Qualification & Selection — 15%**
-3. **P20C — Authorship / Credits / Rights Lock — 15%**
-4. **P20D — Final Manuscript & Source Package Integration — 25%**
-5. **P20E — Independent Submission-Readiness Validation — 20%**
-6. **P21 — Author Submission Authorization Packet — 5%**
-7. **P22 — Submission Execution & Receipt — 5%**
+1. **P20A — Literature & Novelty Closure — 15% — PASS**
+2. **P20B — Venue Qualification & Selection — 15% — NOT STARTED**
+3. **P20C — Authorship / Credits / Rights Lock — 15% — LOCKED**
+4. **P20D — Final Manuscript & Source Package Integration — 25% — LOCKED**
+5. **P20E — Independent Submission-Readiness Validation — 20% — LOCKED**
+6. **P21 — Author Submission Authorization Packet — 5% — LOCKED**
+7. **P22 — Submission Execution & Receipt — 5% — LOCKED**
 
-Remaining-lane weights total 100%. Progress is awarded only after each gate passes.
+Remaining-lane earned progress from the post-P19 refactor baseline: **15/100**.
 
-P20B–P22 are dependency-locked until their predecessors pass.
+P20C–P22 remain dependency-locked. P20B is the only next executable gate and still requires current authorization.
 
 ## Exact next gate — DO NOT EXECUTE WITHOUT CURRENT AUTHORIZATION
 
-### WP2-P20A — LITERATURE & NOVELTY CLOSURE
+### WP2-P20B — VENUE QUALIFICATION & SELECTION
 
-Mandate:
+P20B must use **current official venue guidance** to produce a ranked primary/backup venue matrix covering scope/article-type fit, indexing legitimacy, APC/charges, manuscript limits, supplement/artifact policy, formatting requirements, editorial fit, and material submission constraints.
 
-`handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
+P20B may recommend a primary target but must not silently commit the author to a venue. Venue-specific source/manuscript transformation belongs to P20D after the prerequisite gates pass.
 
-P20A must perform a current venue-neutral literature/novelty closure, including Gaspar et al. 2026 full-text comparison if legitimately accessible, verify all material bibliography/prior-art anchors, and freeze the comparator/novelty boundary without changing measured science or adding claims.
-
-Do not perform venue-specific formatting, final authorship/rights lock, final source packaging, or submission during P20A.
+Do not perform authorship/rights lock, final source packaging, portal submission, license acceptance, or payment commitment during P20B.
 
 ## Immutable prohibitions
 
-Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB threshold; deterministic RF-only recovery; exact broker latency from E10-D; population reliability from message counts or three FIT runs; pooled FIT+POWDER inference; or unsupported field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation.
+Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB threshold; deterministic RF-only recovery; exact broker latency from E10-D; population reliability from message counts or three FIT runs; pooled FIT+POWDER inference; historical firstness for persistence/store-and-forward/end-to-end confirmation; or unsupported field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation.
 
 ## Stop state
 
@@ -213,6 +232,16 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 `WP2_P19=PASS_REVIEWER_SUPPLEMENT_AND_SANITIZED_ARTIFACT`
 
 `POST_P19_WP_ARCHITECTURE_REVIEW=PASS`
+
+`WP2_P20A=PASS_LITERATURE_AND_NOVELTY_CLOSURE`
+
+`P20A_MATERIAL_ANCHORS_VERIFIED=11_OF_11`
+
+`P20A_CLOSEST_NEW_COMPARATOR=MOHAMMED_ET_AL_2026_ETASR_16945`
+
+`P20A_NOVELTY_ACTION=WORDING_NARROWING_ONLY`
+
+`P20A_SCIENTIFIC_BLOCKERS=0`
 
 `P18RC_REOPEN=NO`
 
@@ -224,10 +253,12 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `NEW_EXPERIMENT_REQUIRED=NO`
 
+`NEW_EMPIRICAL_CLAIM_REQUIRED=NO`
+
 `LIVE_POWDER_DEPENDENCY=NONE`
 
 `P20_MONOLITHIC_EXECUTION=REJECTED`
 
-`CURRENT_PHASE=WP2_P20A_GATE_NOT_STARTED`
+`CURRENT_PHASE=WP2_P20B_GATE_NOT_STARTED`
 
 `SUBMISSION_AUTHORIZED=NO`
