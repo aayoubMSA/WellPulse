@@ -46,7 +46,7 @@ Filename:
 `WellPulse_Submission_Package_R14_RF9H_2026-08-30.zip`
 
 SHA-256:
-`d62a86645d3169d1f0215f2b529b99b30b0d6c0c2933cb9cfd8e140377b24aea`
+`62c79223c0bd825250f7dbf92fc9cb51c2e40678285b40d5b5432a4452bd8b33`
 
 ChatGPT Library durable checkpoint:
 `/My Research Artifacts/WellPulse/WellPulse_Submission_Package_R14_RF9H_2026-08-30.zip`
