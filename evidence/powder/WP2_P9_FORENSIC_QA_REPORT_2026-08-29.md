@@ -20,6 +20,17 @@ Every surviving reconstructed value must follow:
 
 For E7/E8/E9, raw files reside inside standalone frozen run ZIPs preserved redundantly inside the Drive-authoritative private preservation bundle; the standalone hashes are preserved by its manifest, the P8 evidence index and the P9 trace map.
 
+## Archive-native manifest re-audit
+
+A second independent read-only audit rehashed the archive-native manifest entries against the immutable downloaded archives.
+
+- Master `meta/SHA256_ALL_FILES.txt`: all parsed entries matched except `meta/collection.log`. Its stored SHA256 matches exactly the first **5611 bytes**; the only remaining bytes are the collector's final `creating final ZIP` log line appended after inventory/hash generation.
+- E10/E11 `meta/SHA256_ALL_COLLECTED.txt`: all parsed entries matched except `meta/collector.log`. Its stored SHA256 matches exactly through byte **8570**; the only remaining bytes are its final `creating final ZIP` line.
+- Private preservation `SHA256_ALL.txt`: all parsed entries verified with no mismatch.
+- The three outer frozen ZIP SHA256 values independently recomputed from authenticated Drive downloads still match their canonical anchors exactly.
+
+These two collector-log differences are classified `DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND`, not corruption. Neither collector log is used for metric reconstruction. They are now preserved as anomaly `A-018`.
+
 ## Reconstruction QA
 
 - ICMP tx/rx/loss and average RTT were parsed from raw ping summaries; no prose value was copied when a ping log existed.
@@ -31,9 +42,11 @@ For E7/E8/E9, raw files reside inside standalone frozen run ZIPs preserved redun
 - E10-C-A contributes no scientific metric.
 - E11 R1-R3 contribute only UE-side ICMP/IP-transition results because independent CORE collector evidence is absent.
 
+Independent re-audit also reproduced the principal receiver-side MQTT results directly from raw files: E1R2 `65/65`, E1R3 `100/100`, E1R4 `93/100`, E2 `151/160`, E3 `222/255`, E4/E5/E6/E7/E8 `40/60` unique, and E9 `60/60`. E8 retains 80 sender log lines but only 60 unique sequence IDs.
+
 ## Census QA
 
-The read-only central-directory walk enumerates 598 immutable file members across the three Drive-verified frozen authorities. Full path/hash enumeration remains inside the archive-native manifests (`meta/SHA256_ALL_FILES.txt`, `meta/FILE_INVENTORY.csv`, `meta/SHA256_ALL_COLLECTED.txt`, `meta/RUN_STATUS.csv`, `SHA256_ALL.txt`, `PRESERVATION_MANIFEST.json`). All 89 screenshots are individually enumerated in the private package SHA manifest but remain unclassified by run and are not used numerically.
+The read-only central-directory walk enumerates 598 immutable file members across the three Drive-verified frozen authorities: master 357, E10/E11 46, private preservation 195. Full path/hash enumeration remains inside the archive-native manifests (`meta/SHA256_ALL_FILES.txt`, `meta/FILE_INVENTORY.csv`, `meta/SHA256_ALL_COLLECTED.txt`, `meta/RUN_STATUS.csv`, `SHA256_ALL.txt`, `PRESERVATION_MANIFEST.json`). All 89 screenshots are individually enumerated in the private package SHA manifest but remain unclassified by run and are not used numerically.
 
 ## Negative/failed evidence QA
 
@@ -71,6 +84,8 @@ No P9 output changes either classification.
 ## Unsupported-value gate
 
 Every numeric result retained in the reconstructed metric tables resolves through `WP2_P9_FORENSIC_TRACE_MAP_2026-08-29.md` to raw evidence and a Drive-verified frozen authority. Values blocked by absent evidence are represented as censored/missing/caveated rather than invented.
+
+`DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND=2`
 
 `UNSUPPORTED_SURVIVING_VALUES=0`
 
