@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20B-R1 PASS — publisher-neutral venue requalification**.  
+Last updated: 2026-08-29 after **WP2-P20B-R2 PASS — national publishing-agreement reweighting**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -26,8 +26,9 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P19 reviewer supplement + sanitized artifact: **PASS / CURRENT REVIEWER-ARTIFACT AUTHORITY**
 - post-P19 consortium WP architecture review: **PASS / FUTURE LANE REFACTORED**
 - P20A literature & novelty closure: **PASS / CURRENT NOVELTY-BOUNDARY AUTHORITY**
-- P20B original venue qualification: **HISTORICAL / SUPERSEDED FOR RANKING — PUBLISHER-COVERAGE BIAS**
-- P20B-R1 publisher-neutral venue requalification: **PASS / CURRENT VENUE AUTHORITY / AUTHOR COMMITMENT NOT MADE**
+- P20B original venue qualification: **HISTORICAL / SUPERSEDED FOR RANKING**
+- P20B-R1 publisher-neutral venue requalification: **PASS / CURRENT SCOPE-AND-EDITORIAL VENUE AUTHORITY**
+- P20B-R2 national publishing-agreement reweighting: **PASS / CURRENT ECONOMIC-AND-ROUTE AUTHORITY**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -67,15 +68,16 @@ No P8+ result may be promoted or relabelled as scored P7B.
 19. `analysis/WP2_P18RB_POST_P18R_HIGH_STANDARD_BENCHMARK_2026-08-29.md`
 20. `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`
 21. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
-22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
-23. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
-24. `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`
-25. `analysis/WP2_P20B_R1_PUBLISHER_NEUTRAL_VENUE_REQUALIFICATION_2026-08-29.md`
-26. `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`
-27. Google Sheet `Research & Grants — Lessons Learned Ledger` before venue/submission-facing decisions; publication rules LL-036 through LL-043 are canonical reusable-experience authority.
-28. Original P20B matrix/closure only as historical/superseded comparison.
-29. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
-30. P18/P18B only for historical comparison.
+22. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
+23. `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`
+24. `analysis/WP2_P20B_R1_PUBLISHER_NEUTRAL_VENUE_REQUALIFICATION_2026-08-29.md`
+25. `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`
+26. `analysis/WP2_P20B_R2_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING_2026-08-29.md`
+27. `docs/WP2_P20B_R2_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING_CLOSURE_2026-08-29.md`
+28. Google Sheet `Research & Grants — Lessons Learned Ledger`; publication rules LL-036 through **LL-044** are canonical reusable-experience authority.
+29. Original P20B matrix/closure only as historical/superseded comparison.
+30. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+31. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
@@ -137,17 +139,7 @@ Parent research folder: `P12_WellPulse` / `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`.
 
 Raw FIT/POWDER frozen archives remain higher measurement authorities.
 
-### Historical P18R release
-
-`WellPulse_P18R_Scientific_Figure_Engineering_Release_2026-08-29.zip` — Drive `1alitbv9479Mq9URhXIBHkQql7zuuA51o`, SHA-256 `5586091bc518cc541c3c9b75e9a0c965913877cd6bf83d1644fa6f05264e1083`.
-
-### Deterministic F1 hotfix
-
-Pre-normalization generator `analysis/wp2_p18r_generate_f1_hotfix.py`, blob `bf344808414b78d9b0c688140e9de9a755d9a1e7`, SHA-256 `3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`; pre-normalization PDF SHA-256 `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`. Archive Drive `12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`, read-back PASS.
-
 ### P18RC current production main figures
-
-Closure: `docs/WP2_P18RC_MAIN_FIGURE_PRODUCTION_NORMALIZATION_CLOSURE_2026-08-29.md`.
 
 Archive: `WellPulse_P18RC_Main_Figure_Production_Normalization_2026-08-29.zip`  
 Drive ID `1rdFq7ktppFBUp54UoeS5AP3kukDiU9sW`  
@@ -160,11 +152,9 @@ Current PDF SHA-256:
 - F3 `faccbef11762df7c293728992e59ac9b17e4b455e4d2023dcddeb50f41e5e9b8`;
 - F4 `87d2c703e4308477b3d89c5d0a9594a7380f2e0c8350d5d74721f779785a1b38`.
 
-P18RC: F2 semantic cleanup PASS; embedded Arial-compatible sans PASS; grids/ordinary strokes normalized; F1–F4 alt text frozen; grayscale PASS; metadata normalized; zero known clipping/overlap/crossing; two-build 12/12 hash equality PASS. F1 scientific/topological semantics remain the deterministic hotfix authority.
+F1 scientific/topological semantics remain the deterministic hotfix authority.
 
 ### P19 reviewer supplement + sanitized artifact
-
-Closure: `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`.
 
 Archive: `WellPulse_P19_Reviewer_Supplement_Sanitized_Artifact_2026-08-29.zip`  
 Drive ID `1t5S_L-S0hfmyMPLdXh8Fd-jGBOH8SCkl`  
@@ -173,93 +163,104 @@ Drive read-back: PASS.
 
 P19 includes reviewer-facing FIT + E0–E11 atlas, sanitized validity/anomaly register, derived non-sensitive CSVs, P13 claim map, P18RC figures/alt text, analysis/rebuild code, claim→script→output map, standard-library self-check, dependency record, privacy/security review and manifests.
 
-Independent consortium recheck after closure:
-- archive hash exact match: PASS;
-- manifest `54/54`: PASS;
-- isolated `python -I artifact_selfcheck.py`: PASS;
-- scientific reopening required: NO.
+Independent recheck: manifest `54/54` PASS; isolated `python -I artifact_selfcheck.py` PASS; scientific reopening required NO.
 
-Non-blocking packaging hygiene exception: two `__pycache__/*.pyc` files are present in the current P19 archive. No obvious credential/privacy/scientific leak was identified, but compiled-cache files must be excluded from the final externally distributed package during P20D/P20E.
+Non-blocking packaging exception: two `__pycache__/*.pyc` files must be excluded from the final external package during P20D/P20E.
 
-## P20A current novelty-boundary authority
-
-Closure: `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`.  
-Comparator matrix: `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`.
-
-P20A current-search result:
+## P20A — current novelty authority
 
 - material P17 literature/testbed/technical anchors: **11/11 verified**;
-- closest newly identified conceptual comparator: Mohammed et al. 2026, DOI `10.48084/etasr.16945`;
-- material action: **WORDING NARROWING ONLY**;
-- no novelty claim is permitted for generic persistence, disk-backed buffering, retransmission, store-and-forward, offline-first continuity, application/database acknowledgment, end-to-end subscriber confirmation, testbed repeatability, or historical priority for decoupling data reliability from network availability;
+- closest new comparator: Mohammed et al. 2026, DOI `10.48084/etasr.16945`;
+- action: **WORDING NARROWING ONLY**;
 - E-MQTT (2023) constrains receiver-confirmation priority wording;
-- Radwan et al. (Scientific Reports, 17 Aug 2026, DOI `10.1038/s41598-026-66865-8`) is current load/congestion MQTT reliability prior work with no collision to the frozen claim envelope;
-- Gaspar et al. DOI `10.1109/MIOT.2026.3681190` is bibliographically verified; a current author page advertises a PDF, but the full text was not recovered through the available retrieval channel, so detailed method/result attribution remains prohibited;
-- final defensible contribution is the **compound failure-domain-aware evaluation structure and bounded evidence package**, not historical uniqueness of persistence/store-and-forward/reconciliation ingredients.
+- Radwan et al. 2026 Scientific Reports DOI `10.1038/s41598-026-66865-8` has no collision with the frozen claim envelope;
+- Gaspar et al. DOI `10.1109/MIOT.2026.3681190` remains bibliographic-only for detailed attribution unless full text is directly recovered;
+- final defensible contribution is the compound failure-domain-aware evaluation structure and bounded evidence package, not persistence/store-and-forward/end-to-end-confirmation historical novelty.
 
-P20D later must add Mohammed et al. 2026, account for E-MQTT and Radwan et al. 2026, and preserve the P20A wording constraints.
+P20D later must add Mohammed et al. 2026, account for E-MQTT and Radwan et al. 2026, and preserve all P20A wording constraints.
 
-## P20B-R1 current venue authority
+## P20B-R1 — publisher-neutral scope/editorial authority
 
-Current decision matrix: `analysis/WP2_P20B_R1_PUBLISHER_NEUTRAL_VENUE_REQUALIFICATION_2026-08-29.md`.  
-Current closure: `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`.
+R1 corrected the original Elsevier-concentrated search. Serious current publisher families were screened, including IEEE, ACM, Elsevier and Springer Nature.
 
-The original P20B matrix/closure are **historical/superseded for ranking** because the candidate universe was too Elsevier-concentrated.
+Scope/editorial ranking before national-agreement economics:
 
-Current publisher-neutral recommendation:
-
-1. **IEEE Internet of Things Journal** — **PRIMARY / GO**;
-2. **Internet of Things (Elsevier)** — **BACKUP #1 / GO**;
-3. **ACM Transactions on Internet of Things** — **BACKUP #2 / GO subject to institutional/APC cost gate**;
-4. **IEEE Transactions on Network and Service Management** — **BACKUP #3 / CONDITIONAL GO**;
-5. **Computer Networks** — **GO / LOWER PRIORITY**;
-6. **IEEE Open Journal of the Communications Society** — **TECHNICAL GO / ECONOMIC HOLD**;
-7. **Journal of Systems Architecture** — **CONDITIONAL GO**;
-8. **Journal of Network and Systems Management** — **HOLD**.
+1. **IEEE Internet of Things Journal** — primary specialist GO;
+2. **Internet of Things (Elsevier)** — strong specialist GO;
+3. **ACM Transactions on Internet of Things** — strong scientific GO, cost/institutional gate;
+4. **IEEE Transactions on Network and Service Management** — conditional GO;
+5. **Computer Networks** — lower-priority GO;
+6. **IEEE Open Journal of the Communications Society** — technical GO / economic hold;
+7. **Journal of Systems Architecture** — conditional;
+8. **Journal of Network and Systems Management** — hold because management emphasis is required.
 
 ESWA and EAAI remain killed for the current frozen manuscript.
 
-Why IEEE IoT-J leads now:
+IEEE IoT-J is a direct match for IoT architecture, embedded software, networking, and testbeds/trials. If selected later, P20D must run a lossless IEEE-format/page-count simulation before commitment because overlength charges may apply and destructive compression is prohibited.
 
-- direct fit to IoT architecture, embedded software, communication/networking protocols, IoT services and testbeds/trials/experiments;
-- current recent publications include MQTT-centered and resilience/testbed work;
-- official journal material reports average first decision around 6.9 weeks and submission-to-ePublication around 14.5 weeks;
-- traditional publication is possible without an OA APC;
-- author preference for IEEE is compatible with, not overriding, the scientific fit.
+## P20B-R2 — national publishing-agreement authority
 
-Main IEEE IoT-J constraint: mandatory overlength charge currently applies beyond 8 published pages. If the author later selects IoT-J, P20D must conduct a lossless IEEE two-column/page-count simulation before any submission commitment. If fitting near the threshold would materially damage evidence, caveats, figure legibility or novelty discipline, the fallback is Elsevier Internet of Things rather than destructive compression.
+R2 adds current national/institutional OA economics without changing science.
 
-ACM TIOT is a very strong scientific match for end-to-end architecture, dependability/robustness, testbeds and strong experimental evidence, but 2026 ACM Open institutional/APC status must be verified before commitment.
+### Verified Springer Nature / STDF / EKB coverage
 
-IEEE TNSM is viable for reliability/fault/performance evaluation but is narrower around network/service management. IEEE OJ-COMS is technically strong but its fully OA 2026 APC creates an economic hold absent confirmed coverage.
+- current agreement runs through **2029-12-31**;
+- **October University for Modern Sciences and Arts** is explicitly listed as participating;
+- eligible corresponding authors may receive OA publication-fee coverage subject to STDF/EKB eligibility verification and approval;
+- corresponding-author and primary-affiliation conditions apply;
+- the majority-of-research / article-type / journal-family rules must be satisfied;
+- **Scientific Reports** is explicitly included in current agreement guidance;
+- recent MSA Springer Nature papers demonstrate that STDF/EKB OA publication funding is operational in practice.
 
-P20B-R1 makes **no author venue commitment** and authorizes no portal action, copyright/license acceptance, APC/payment, or submission.
+Important distinction: **publication-fee coverage is not research funding**. Do not state that STDF/EKB funded the WellPulse research unless independent evidence supports that. At most, if later approved, record publication/OA funding in the publisher-required metadata.
 
-`P20B_R1_PRIMARY_RECOMMENDATION=IEEE_INTERNET_OF_THINGS_JOURNAL`
+### Current multi-objective route strategy
 
-`P20B_R1_BACKUP_1=ELSEVIER_INTERNET_OF_THINGS`
+Do not collapse the choice into one scalar ranking without stating the author's objective.
 
-`P20B_R1_BACKUP_2=ACM_TRANSACTIONS_ON_INTERNET_OF_THINGS_COST_GATE`
+**Specialist / IEEE route:**  
+`IEEE Internet of Things Journal` — strongest specialist scholarly home and current primary when domain fit/IEEE visibility dominate.
 
-`P20B_R1_BACKUP_3=IEEE_TNSM_CONDITIONAL`
+**Agreement-advantaged speed / zero-expected-APC route:**  
+`Scientific Reports` — co-primary strategic route when acceptance plausibility, broad legitimacy, speed, package reuse, and verified Springer Nature national OA coverage dominate. Article-level funding remains conditional on STDF/EKB approval.
 
-`P20B_R1_AUTHOR_COMMITMENT=NO`
+**Specialist fallback:**  
+`Internet of Things (Elsevier)` — direct fit; subscription route avoids mandatory OA; no broad national MSA APC-free Elsevier publishing agreement has been verified.
+
+**Springer specialist fallback:**  
+`Telecommunication Systems` — agreement-advantaged specialist alternative; still lower direct IoT-resilience readership fit than IEEE IoT-J / Elsevier Internet of Things.
+
+Additional publisher-agreement state:
+
+- Taylor & Francis: EKB OA-agreement existence verified; exact MSA/article/journal-level coverage remains unresolved and must be checked before use;
+- Elsevier: EKB access/research-tool partnership verified; broad national APC-free publishing for MSA not verified;
+- IEEE: no national MSA/SCU/EKB APC waiver verified; database access/subscription must never be treated as a publishing waiver.
+
+`P20B_R2_CO_PRIMARY_SPECIALIST=IEEE_INTERNET_OF_THINGS_JOURNAL`
+
+`P20B_R2_CO_PRIMARY_ZERO_APC_SPEED=SCIENTIFIC_REPORTS`
+
+`P20B_R2_SPECIALIST_BACKUP=ELSEVIER_INTERNET_OF_THINGS`
+
+`P20B_R2_SPRINGER_SPECIALIST_BACKUP=TELECOMMUNICATION_SYSTEMS`
+
+`P20B_R2_AUTHOR_COMMITMENT=NO`
+
+`P20B_R2_PAYMENT_AUTHORIZED=NO`
 
 ## Refactored remaining publication lane
 
 Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
 
-P20 remains an **umbrella only**. Monolithic P20 execution is rejected. Execute one bounded gate at a time:
-
 1. **P20A — Literature & Novelty Closure — 15% — PASS**
-2. **P20B / P20B-R1 — Venue Qualification & Publisher-Neutral Requalification — 15% — PASS**
+2. **P20B / R1 / R2 — Venue Qualification, Publisher-Neutral Requalification & Agreement Reweighting — 15% — PASS**
 3. **P20C — Authorship / Credits / Rights Lock — 15% — NOT STARTED**
 4. **P20D — Final Manuscript & Source Package Integration — 25% — LOCKED**
 5. **P20E — Independent Submission-Readiness Validation — 20% — LOCKED**
 6. **P21 — Author Submission Authorization Packet — 5% — LOCKED**
 7. **P22 — Submission Execution & Receipt — 5% — LOCKED**
 
-Remaining-lane earned progress from the post-P19 refactor baseline: **30/100**.
+Remaining-lane earned progress: **30/100**.
 
 P20D–P22 remain dependency-locked. P20C is the only next executable gate and requires current authorization.
 
@@ -267,17 +268,18 @@ P20D–P22 remain dependency-locked. P20C is the only next executable gate and r
 
 ### WP2-P20C — AUTHORSHIP / CREDITS / RIGHTS LOCK
 
-P20C must verify, from canonical project records and user-controlled evidence where needed:
+P20C must verify from canonical project records and user-controlled evidence where needed:
 
 - exact author list and order;
 - corresponding-author identity;
+- whether the corresponding-author / MSA affiliation arrangement preserves Springer Nature STDF/EKB eligibility if that route remains live;
 - CRediT contributions;
-- affiliation wording;
-- funding statements;
+- exact affiliation wording;
+- research-funding statement separately from possible publication/OA funding;
 - conflict-of-interest declaration basis;
 - FIT IoT-LAB / POWDER / institutional / collaborator acknowledgments;
 - rights/permissions status of figures, data, software and externally sourced material;
-- which license/public-release statements are actually supportable.
+- supportable license/public-release statements.
 
 P20C must not invent a coauthor, contribution, funder, permission, license, waiver, institutional approval or conflict statement. It must separate verified fact from `UNKNOWN / AUTHOR INPUT REQUIRED`.
 
@@ -297,27 +299,25 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `WP2_P20A=PASS_LITERATURE_AND_NOVELTY_CLOSURE`
 
-`P20A_MATERIAL_ANCHORS_VERIFIED=11_OF_11`
-
-`P20A_CLOSEST_NEW_COMPARATOR=MOHAMMED_ET_AL_2026_ETASR_16945`
-
-`P20A_NOVELTY_ACTION=WORDING_NARROWING_ONLY`
-
 `P20A_SCIENTIFIC_BLOCKERS=0`
 
 `WP2_P20B_ORIGINAL=HISTORICAL_SUPERSEDED_FOR_RANKING`
 
 `WP2_P20B_R1=PASS_PUBLISHER_NEUTRAL_REQUALIFICATION`
 
-`P20B_R1_PRIMARY_RECOMMENDATION=IEEE_INTERNET_OF_THINGS_JOURNAL`
+`WP2_P20B_R2=PASS_NATIONAL_PUBLISHING_AGREEMENT_REWEIGHTING`
 
-`P20B_R1_BACKUP_1=ELSEVIER_INTERNET_OF_THINGS`
+`MSA_SPRINGER_NATURE_OA_AGREEMENT=VERIFIED_ACTIVE_TO_2029_12_31`
 
-`P20B_R1_BACKUP_2=ACM_TRANSACTIONS_ON_INTERNET_OF_THINGS_COST_GATE`
+`P20B_R2_CO_PRIMARY_SPECIALIST=IEEE_INTERNET_OF_THINGS_JOURNAL`
 
-`P20B_R1_BACKUP_3=IEEE_TNSM_CONDITIONAL`
+`P20B_R2_CO_PRIMARY_ZERO_APC_SPEED=SCIENTIFIC_REPORTS`
 
-`P20B_R1_AUTHOR_COMMITMENT=NO`
+`P20B_R2_SPECIALIST_BACKUP=ELSEVIER_INTERNET_OF_THINGS`
+
+`P20B_R2_SPRINGER_SPECIALIST_BACKUP=TELECOMMUNICATION_SYSTEMS`
+
+`P20B_AUTHOR_COMMITMENT=NO`
 
 `P20C_LOCK_RELEASED=YES`
 
