@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20B PASS — venue qualification & selection**.  
+Last updated: 2026-08-29 after **WP2-P20B-R1 PASS — publisher-neutral venue requalification**.  
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
@@ -26,7 +26,8 @@ This file is the canonical operational retrieval point. GitHub is the scientific
 - P19 reviewer supplement + sanitized artifact: **PASS / CURRENT REVIEWER-ARTIFACT AUTHORITY**
 - post-P19 consortium WP architecture review: **PASS / FUTURE LANE REFACTORED**
 - P20A literature & novelty closure: **PASS / CURRENT NOVELTY-BOUNDARY AUTHORITY**
-- P20B venue qualification & selection: **PASS / PRIMARY RECOMMENDED / AUTHOR COMMITMENT NOT MADE**
+- P20B original venue qualification: **HISTORICAL / SUPERSEDED FOR RANKING — PUBLISHER-COVERAGE BIAS**
+- P20B-R1 publisher-neutral venue requalification: **PASS / CURRENT VENUE AUTHORITY / AUTHOR COMMITMENT NOT MADE**
 - current scientific blockers: **0**
 - new experiment required: **NO**
 - new empirical claim required: **NO**
@@ -69,11 +70,12 @@ No P8+ result may be promoted or relabelled as scored P7B.
 22. `handover/AGENT_MANDATE_WP2_P20A_2026-08-29.md`
 23. `analysis/WP2_P20A_COMPARATOR_NOVELTY_MATRIX_2026-08-29.md`
 24. `docs/WP2_P20A_LITERATURE_NOVELTY_CLOSURE_2026-08-29.md`
-25. `analysis/WP2_P20B_VENUE_QUALIFICATION_MATRIX_2026-08-29.md`
-26. `docs/WP2_P20B_VENUE_QUALIFICATION_SELECTION_CLOSURE_2026-08-29.md`
-27. Google Sheet `Research & Grants — Lessons Learned Ledger` before venue/submission-facing decisions; publication rules LL-036 through LL-042 are canonical reusable-experience authority.
-28. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
-29. P18/P18B only for historical comparison.
+25. `analysis/WP2_P20B_R1_PUBLISHER_NEUTRAL_VENUE_REQUALIFICATION_2026-08-29.md`
+26. `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`
+27. Google Sheet `Research & Grants — Lessons Learned Ledger` before venue/submission-facing decisions; publication rules LL-036 through LL-043 are canonical reusable-experience authority.
+28. Original P20B matrix/closure only as historical/superseded comparison.
+29. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+30. P18/P18B only for historical comparison.
 
 ## Frozen scientific doctrine
 
@@ -197,39 +199,51 @@ P20A current-search result:
 
 P20D later must add Mohammed et al. 2026, account for E-MQTT and Radwan et al. 2026, and preserve the P20A wording constraints.
 
-## P20B current venue authority
+## P20B-R1 current venue authority
 
-Decision matrix: `analysis/WP2_P20B_VENUE_QUALIFICATION_MATRIX_2026-08-29.md`.  
-Closure: `docs/WP2_P20B_VENUE_QUALIFICATION_SELECTION_CLOSURE_2026-08-29.md`.
+Current decision matrix: `analysis/WP2_P20B_R1_PUBLISHER_NEUTRAL_VENUE_REQUALIFICATION_2026-08-29.md`.  
+Current closure: `docs/WP2_P20B_R1_PUBLISHER_NEUTRAL_REQUALIFICATION_CLOSURE_2026-08-29.md`.
 
-Current venue recommendation:
+The original P20B matrix/closure are **historical/superseded for ranking** because the candidate universe was too Elsevier-concentrated.
 
-1. **Internet of Things (Elsevier)** — **PRIMARY / GO** — internal utility `95/100`;
-2. **Computer Networks (Elsevier)** — **BACKUP #1 / GO** — `86/100`;
-3. **Journal of Systems Architecture (Elsevier)** — **BACKUP #2 / CONDITIONAL GO** — `76/100`;
-4. **Journal of Network and Computer Applications** — **HOLD / LOWER PRIORITY**;
-5. **Expert Systems with Applications** — **KILL for current manuscript**;
-6. **Engineering Applications of Artificial Intelligence** — **KILL for current manuscript**.
+Current publisher-neutral recommendation:
 
-Utility scores are decision aids, not acceptance probabilities.
+1. **IEEE Internet of Things Journal** — **PRIMARY / GO**;
+2. **Internet of Things (Elsevier)** — **BACKUP #1 / GO**;
+3. **ACM Transactions on Internet of Things** — **BACKUP #2 / GO subject to institutional/APC cost gate**;
+4. **IEEE Transactions on Network and Service Management** — **BACKUP #3 / CONDITIONAL GO**;
+5. **Computer Networks** — **GO / LOWER PRIORITY**;
+6. **IEEE Open Journal of the Communications Society** — **TECHNICAL GO / ECONOMIC HOLD**;
+7. **Journal of Systems Architecture** — **CONDITIONAL GO**;
+8. **Journal of Network and Systems Management** — **HOLD**.
 
-Why the primary leads:
+ESWA and EAAI remain killed for the current frozen manuscript.
 
-- direct IoT domain fit and explicit reliability scope;
-- Full Research + Open Software/Data compatibility;
-- current official guidance states high priority on timely publication;
-- actual recent MQTT robustness research in the journal confirms editorial/readership fit;
-- current P18RC/P19 package can be reused without changing the paper into an AI, protocol-design or generic networking paper.
+Why IEEE IoT-J leads now:
 
-P20B makes **no author venue commitment**. It authorizes no portal action, copyright/license acceptance, open-access purchase, APC/payment, or submission. Optional OA price/discount/tax and exact Guide-for-Authors constraints must be rechecked before any downstream commitment/transformation.
+- direct fit to IoT architecture, embedded software, communication/networking protocols, IoT services and testbeds/trials/experiments;
+- current recent publications include MQTT-centered and resilience/testbed work;
+- official journal material reports average first decision around 6.9 weeks and submission-to-ePublication around 14.5 weeks;
+- traditional publication is possible without an OA APC;
+- author preference for IEEE is compatible with, not overriding, the scientific fit.
 
-`P20B_PRIMARY_RECOMMENDATION=INTERNET_OF_THINGS_ELSEVIER`
+Main IEEE IoT-J constraint: mandatory overlength charge currently applies beyond 8 published pages. If the author later selects IoT-J, P20D must conduct a lossless IEEE two-column/page-count simulation before any submission commitment. If fitting near the threshold would materially damage evidence, caveats, figure legibility or novelty discipline, the fallback is Elsevier Internet of Things rather than destructive compression.
 
-`P20B_BACKUP_1=COMPUTER_NETWORKS_ELSEVIER`
+ACM TIOT is a very strong scientific match for end-to-end architecture, dependability/robustness, testbeds and strong experimental evidence, but 2026 ACM Open institutional/APC status must be verified before commitment.
 
-`P20B_BACKUP_2=JOURNAL_OF_SYSTEMS_ARCHITECTURE_CONDITIONAL`
+IEEE TNSM is viable for reliability/fault/performance evaluation but is narrower around network/service management. IEEE OJ-COMS is technically strong but its fully OA 2026 APC creates an economic hold absent confirmed coverage.
 
-`P20B_AUTHOR_COMMITMENT=NO`
+P20B-R1 makes **no author venue commitment** and authorizes no portal action, copyright/license acceptance, APC/payment, or submission.
+
+`P20B_R1_PRIMARY_RECOMMENDATION=IEEE_INTERNET_OF_THINGS_JOURNAL`
+
+`P20B_R1_BACKUP_1=ELSEVIER_INTERNET_OF_THINGS`
+
+`P20B_R1_BACKUP_2=ACM_TRANSACTIONS_ON_INTERNET_OF_THINGS_COST_GATE`
+
+`P20B_R1_BACKUP_3=IEEE_TNSM_CONDITIONAL`
+
+`P20B_R1_AUTHOR_COMMITMENT=NO`
 
 ## Refactored remaining publication lane
 
@@ -238,7 +252,7 @@ Authority: `docs/WP2_POST_P19_CONSORTIUM_WP_ARCHITECTURE_REVIEW_2026-08-29.md`.
 P20 remains an **umbrella only**. Monolithic P20 execution is rejected. Execute one bounded gate at a time:
 
 1. **P20A — Literature & Novelty Closure — 15% — PASS**
-2. **P20B — Venue Qualification & Selection — 15% — PASS**
+2. **P20B / P20B-R1 — Venue Qualification & Publisher-Neutral Requalification — 15% — PASS**
 3. **P20C — Authorship / Credits / Rights Lock — 15% — NOT STARTED**
 4. **P20D — Final Manuscript & Source Package Integration — 25% — LOCKED**
 5. **P20E — Independent Submission-Readiness Validation — 20% — LOCKED**
@@ -291,15 +305,19 @@ Do not claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQ
 
 `P20A_SCIENTIFIC_BLOCKERS=0`
 
-`WP2_P20B=PASS_VENUE_QUALIFICATION_AND_SELECTION`
+`WP2_P20B_ORIGINAL=HISTORICAL_SUPERSEDED_FOR_RANKING`
 
-`P20B_PRIMARY_RECOMMENDATION=INTERNET_OF_THINGS_ELSEVIER`
+`WP2_P20B_R1=PASS_PUBLISHER_NEUTRAL_REQUALIFICATION`
 
-`P20B_BACKUP_1=COMPUTER_NETWORKS_ELSEVIER`
+`P20B_R1_PRIMARY_RECOMMENDATION=IEEE_INTERNET_OF_THINGS_JOURNAL`
 
-`P20B_BACKUP_2=JOURNAL_OF_SYSTEMS_ARCHITECTURE_CONDITIONAL`
+`P20B_R1_BACKUP_1=ELSEVIER_INTERNET_OF_THINGS`
 
-`P20B_AUTHOR_COMMITMENT=NO`
+`P20B_R1_BACKUP_2=ACM_TRANSACTIONS_ON_INTERNET_OF_THINGS_COST_GATE`
+
+`P20B_R1_BACKUP_3=IEEE_TNSM_CONDITIONAL`
+
+`P20B_R1_AUTHOR_COMMITMENT=NO`
 
 `P20C_LOCK_RELEASED=YES`
 
