@@ -1,33 +1,32 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion of **WP2-P15 — MANUSCRIPT CONSTRUCTION**.
+Last updated: 2026-08-29 after completion of **WP2-P16 — ADVERSARIAL PUBLICATION QA**.
 
 ## Canonical authority
 
 Repository: `aayoubMSA/WellPulse`  
 Branch: `main`
 
-This file is the current operational retrieval point. Do not reconstruct current state from conversation memory. Detailed evidence, analysis, caveats and claim wording remain in the canonical files referenced below.
+This file is the current operational retrieval point. Do not reconstruct current state from conversation memory.
 
 ## Executive scientific state
 
-- WP0: **PASS / EARLIER PAPER STORY PARTIALLY SUPERSEDED BY P10 EVIDENCE-BOUND CONTRACT**
-- WP1: **PASS / FROZEN HISTORICAL CONFIRMATORY DESIGN**
-- WP2: **ACTIVE — PUBLICATION QA**
-- WP2-P8 manual RF campaign: **COMPLETE / GOLDEN / NON-SCORED MANUAL REFERENCE**
-- WP2-P9 forensic reconciliation: **PASS / COMPLETE / INDEPENDENT RE-AUDIT PASS**
+- WP0: **PASS / historical paper story superseded where necessary by P10 evidence-bounded contract**
+- WP1: **PASS / frozen historical confirmatory design**
+- WP2-P8 manual RF campaign: **COMPLETE / GOLDEN / MANUAL REFERENCE**
+- WP2-P9 forensic reconciliation: **PASS / COMPLETE**
 - WP2-P10 scientific analysis contract: **PASS / FROZEN**
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
 - WP2-P12 cross-evidence integration: **PASS / COMPLETE**
 - WP2-P13 claim–evidence matrix: **PASS / FROZEN**
-- WP2-P14 publication tables and figures: **PASS / FROZEN / VISUAL QA PASS**
+- WP2-P14 publication tables/figures: **PASS / FROZEN / VISUAL QA PASS**
 - WP2-P15 manuscript construction: **PASS / COMPLETE / INTERNAL FULL DRAFT**
-- WP2-P16 adversarial publication QA: **NOT STARTED**
-- P7B scored physical qualification: **NOT PASSED**
-- scored execution: **NOT AUTHORIZED**
-- live POWDER dependency for current phase: **NONE**
+- WP2-P16 adversarial publication QA: **PASS / SCIENTIFIC QA COMPLETE**
+- new experiment required for current bounded manuscript: **NO**
+- submission authorization: **NOT YET**
+- live POWDER dependency: **NONE**
 
-Historical scored state remains unchanged:
+Historical scored state remains unchanged and is internal control truth:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -35,9 +34,9 @@ Historical scored state remains unchanged:
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No P8/P9/P10/P11/P12/P13/P14/P15 result may be promoted, reinterpreted or relabelled as scored P7B.
+No P8+ result may be promoted or relabelled as scored P7B.
 
-## Mandatory read order for P16+
+## Mandatory read order for any continuation
 
 1. `HANDOVER_CURRENT.md`
 2. `docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
@@ -47,71 +46,65 @@ No P8/P9/P10/P11/P12/P13/P14/P15 result may be promoted, reinterpreted or relabe
 6. `analysis/WP2_P14_PUBLICATION_TABLES_FIGURES_2026-08-29.md`
 7. `analysis/WP2_P14_FIGURE_CAPTIONS_AND_ALT_TEXT_2026-08-29.md`
 8. `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P15_2026-08-29.md`
-9. `manuscript/WP2_P15_MANUSCRIPT_CONSTRUCTION_REPORT_2026-08-29.md`
-10. P9 forensic authorities when exact POWDER trace/caveat semantics are needed.
+9. `manuscript/WP2_P16_ADVERSARIAL_PUBLICATION_QA_2026-08-29.md`
+10. `manuscript/WP2_P16_MANDATORY_EDITORIAL_PATCHES_2026-08-29.md`
+11. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
 
-## Canonical evidence roles
+## Frozen evidence roles
 
-### FIT — architecture comparison
+### FIT = architecture-level record-state survival
 
 Authority: `FINAL_WP_RT01_FIT_A8`.
 
-- FIT IoT-LAB Grenoble, A8-100;
 - `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`;
 - 10,000 records/cell;
 - B0 = non-durable publish-only baseline;
-- W1 = WellPulse durable queue + reconciliation;
-- C0 healthy; C1 broker outage; C2 broker outage + gateway-process exec restart.
+- W1 = durable queue + receiver reconciliation.
 
 Principal results:
 
 - C0: B0 100%, W1 100% in 3/3;
-- C1: B0 80%, W1 100% in 3/3; `+20 pp` each replicate;
-- C2: B0 80%, W1 100% in 3/3; `+20 pp` each replicate;
-- every B0 C1/C2 run missed exactly 2,000/10,000 records;
-- every W1 final run contained all 10,000 generated IDs exactly once;
-- W1 backlog-drain mean: C1 `67.731246 s`; C2 `67.870252 s`.
+- C1: B0 80%, W1 100% in 3/3, `+20 pp` each replicate;
+- C2: B0 80%, W1 100% in 3/3, `+20 pp` each replicate;
+- B0 C1/C2 permanently misses exactly 2,000/10,000 records;
+- W1 final reconciliation retains all 10,000 generated IDs exactly once;
+- W1 backlog-drain means: C1 `67.731246 s`, C2 `67.870252 s`.
 
 These are repeated outcomes under the exact treatment, not population reliability probabilities.
 
-### W1 implementation semantics rechecked in P15
-
-Canonical source confirms:
+Canonical W1 implementation semantics:
 
 - `record_id = run_id:boot_id:sequence`;
-- canonical JSON record representation and SHA-256 checksum;
-- SQLite durable queue with WAL and `synchronous=FULL`;
-- explicit `PENDING` / `SENT` state;
-- exact re-enqueue idempotence;
-- conflicting record-ID reuse raises an integrity error.
+- canonical serialization + SHA-256;
+- SQLite WAL with `synchronous=FULL`;
+- explicit `PENDING` / `SENT` states;
+- exact duplicate re-enqueue is idempotent;
+- conflicting identity reuse raises an integrity error.
 
-These source-level semantics support the manuscript description of application-level durable identity/state. They do not create new experimental evidence.
+### POWDER = communication-path degradation/recovery characterization
 
-### POWDER — physical RF/recovery characterization
+Campaign: `WP2-P8`; profile `srslte-controlled-rf`.
 
-Campaign: `WP2-P8`, profile `srslte-controlled-rf`, classification:
+Internal evidence classification remains:
 
 `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
 
-Role: physical-RF/LTE/MQTT transition, direction/repeatability, failure-domain separation, mechanism-specific recovery timing, broker/no-fault controls. It does **not** provide a scored B1-vs-W1 architecture comparison.
+Publication-facing role: **separately executed reference characterization; not architecture-effect estimation**.
 
-Principal transition evidence:
+Principal evidence:
 
 - E1R4 48–50 dB: ICMP clean, MQTT 20/20;
 - E1R4 51 dB: ICMP 30% loss, MQTT 20/20;
 - E1R4 52 dB: ICMP 60% loss, MQTT 13/20;
-- E3 52 dB: ICMP loss `80/65/70%`, MQTT completeness `60/25/55%`.
+- E3 52 dB: ICMP loss `80/65/70%`, MQTT completeness `60/25/55%`;
+- E10-A: no recovery observed inside preserved RF-only window;
+- E10-B RF restore + UE restart: action-begin→first MQTT publish `6.063318 s`, first ping `6.609430 s`, publish→CORE receipt `0.060172 s`;
+- E10-C-B: RF restore→first ping `29.247733 s`, first publish `29.248129 s`;
+- E10-D: `<=10.908749 s` upper bound only;
+- E8: broker interruption disrupts MQTT while LTE ping remains healthy;
+- E9: no-fault control MQTT 60/60.
 
-Interpretation: experiment-specific transition region around 50–52 dB, not a universal threshold.
-
-Recovery semantics:
-
-- E10-A: censored no recovery inside preserved RF-only window;
-- E10-B RF restore + UE restart: action-begin→first MQTT publish `6.063318 s`; first ping `6.609430 s`; publish→CORE receipt `0.060172 s`;
-- E10-C-B: RF restore→first ping `29.247733 s`; first publish `29.248129 s`;
-- E10-D: broker-start action-begin→manual successful publish `<=10.908749 s`, upper bound only;
-- E8: broker interruption broke MQTT while LTE ping remained healthy;
-- E9: no-fault control MQTT 60/60 with clean bidirectional ping.
+Interpretation remains an experiment-specific transition region, not a universal 52 dB threshold.
 
 ## Frozen integration doctrine
 
@@ -120,26 +113,21 @@ FIT and POWDER are complementary, not substitutable:
 - **FIT = record-state survival / architecture comparison**.
 - **POWDER = communication-path degradation / recovery characterization**.
 
-The project-level synthesis is **failure-domain-aware triangulation**. Durable record survival and communication-path recovery are distinct resilience properties. No pooled FIT+POWDER reliability statistic is allowed.
+The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER reliability statistic is allowed.
 
-## Frozen claim envelope
+## P13 claim envelope
 
-Nine P13 claims remain manuscript-eligible with bounded wording.
+Nine manuscript-eligible bounded claims remain frozen.
 
 Primary empirical claims:
 
-- `IC-01` FIT W1 vs B0 durability/integrity effect under C1/C2;
-- `IC-04` POWDER experiment-specific transition region;
-- `IC-06` failure/recovery mechanism dependence and non-deterministic RF-only restoration.
+- `IC-01` FIT W1 vs B0 durability/integrity effect;
+- `IC-04` POWDER transition-region characterization;
+- `IC-06` failure/recovery mechanism dependence.
 
-Supporting empirical claims:
+Supporting claims: `IC-02`, `IC-03`, `IC-05`, `IC-07`.
 
-- `IC-02`, `IC-03`, `IC-05`, `IC-07`.
-
-Methodological synthesis:
-
-- `IC-08` two-property resilience validation;
-- `IC-09` receiver-side evidence-first reconciliation/provenance.
+Methodological synthesis: `IC-08`, `IC-09`.
 
 `P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
 
@@ -147,7 +135,7 @@ Methodological synthesis:
 
 ## P14 frozen displays
 
-- Figure 1 — FIT architecture-level final completeness.
+- Figure 1 — FIT architecture-level completeness.
 - Figure 2 — FIT W1 backlog-drain cost.
 - Figure 3 — POWDER ascending/descending cross-layer transition.
 - Figure 4 — POWDER E3 near-transition repeatability.
@@ -155,67 +143,94 @@ Methodological synthesis:
 - Table 2 — POWDER transition summary.
 - Table 3 — POWDER recovery timing semantics.
 
-Rendering remains vector-first (SVG/PDF) with 600-dpi PNG fallback and final visual QA PASS.
+`P14_VISUAL_QA=PASS`
 
-`WP2_P14=PASS_PUBLICATION_TABLES_AND_FIGURES_FROZEN`
+## P15 manuscript
 
-## P15 closure — manuscript construction
-
-Canonical manuscript:
+Canonical internal full draft:
 
 `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P15_2026-08-29.md`
 
-Construction/QA report:
+P15 contains Abstract, Introduction/RQs, related work, architecture, Methods, RQ1–RQ4 Results, Discussion, threats/limitations, reproducibility, conclusion, references, and P14 display insertion points.
 
-`manuscript/WP2_P15_MANUSCRIPT_CONSTRUCTION_REPORT_2026-08-29.md`
+## P16 adversarial publication QA
 
-Working title:
+Canonical QA report:
 
-**WellPulse: Failure-Domain-Aware Validation of Durable IIoT Telemetry Across Embedded and Controlled-RF Testbeds**
+`manuscript/WP2_P16_ADVERSARIAL_PUBLICATION_QA_2026-08-29.md`
 
-The full internal draft contains:
+Mandatory editorial patches:
 
-- abstract and keywords;
-- Introduction and four RQs;
-- related-work/novelty boundary;
-- architecture and two-property resilience model;
-- FIT and POWDER Methods;
-- RQ1–RQ4 Results with P14 display insertion points/captions;
-- Discussion;
-- threats to validity/limitations;
-- reproducibility/evidence availability;
-- conclusion;
-- focused reference list.
+`manuscript/WP2_P16_MANDATORY_EDITORIAL_PATCHES_2026-08-29.md`
 
-### P15 literature refresh
+### P16 scientific verdict
 
-The closest literature was refreshed through 2026-08-29. The refresh confirms that buffering, store-and-forward, MQTT retransmission/robustness testing, offline-first execution, edge/cloud reconciliation, 5G S&F, and testbed use are prior art and are not standalone WellPulse novelty claims.
+**The existing evidence is sufficient for a defensible paper without a new experiment, provided the manuscript remains within the frozen claim envelope.**
 
-The surviving contribution package remains:
+Strongest residual limitation: FIT B0 is intentionally non-durable and is not the strongest durable MQTT comparator. Therefore the paper reports a bounded durability effect relative to B0 and must never claim general MQTT superiority.
 
-1. application-level durable identity/state with receiver reconciliation;
-2. explicit failure-domain decomposition;
-3. real-embedded architecture evidence;
-4. separate controlled physical-RF characterization;
-5. claim-to-immutable-evidence reproducibility.
+P16 reviewer attacks covered:
 
-Gaspar et al. 2026 (`10.1109/MIOT.2026.3681190`) was bibliographically confirmed, but accessible sources during P15 did not expose enough methods/results for detailed comparison. The manuscript does not infer those missing details. A final pre-submission/full-text check remains mandatory if accessible in P16/submission QA.
+- store-and-forward novelty;
+- strawman/comparator risk;
+- two-testbed cohesion;
+- manual POWDER characterization;
+- statistical pseudoreplication;
+- universal-threshold risk;
+- recovery-clock ambiguity;
+- sender-vs-receiver accounting;
+- architecture specification;
+- internal workflow jargon;
+- literature completeness;
+- artifact privacy/release.
 
-### P15 status
+### Mandatory publication-facing patches before submission
 
-`P15_MANUSCRIPT_FULL_DRAFT=YES`
+Twelve patches are frozen. Key ones:
 
-`P15_PRIMARY_CLAIMS_WITHIN_P13=PASS`
+1. use title: **WellPulse: Failure-Domain-Aware Validation of Durable IIoT Telemetry with Embedded Durability and Controlled-RF Characterization**;
+2. remove reader-facing `P7B/scored/non-scored` jargon while retaining internal control truth;
+3. insert exact W1 implementation semantics from `records.py` and `store.py`;
+4. keep B0 explicitly identified as non-durable whenever the +20 pp FIT effect is summarized;
+5. explicitly state the non-overlapping FIT/POWDER inferential roles early in Methods;
+6. remove WP identifiers/internal workflow names from submitted prose;
+7. remove the internal manuscript-control note from submitted copy;
+8. keep Gaspar et al. at bibliographic/scope level until full-text comparison is completed;
+9. promise only a sanitized public artifact, not release of private credential-bearing preservation bundles.
 
-`P15_LITERATURE_REFRESH=PASS_WITH_GASPAR_FULLTEXT_LIMITATION`
+These patches change neither results nor frozen claims.
 
-`P15_NEW_EXPERIMENT_REQUIRED=NO_AT_THIS_STAGE`
+### Literature verification in P16
 
-`WP2_P15=PASS_MANUSCRIPT_CONSTRUCTED_EVIDENCE_BOUNDED`
+Bibliographic anchors were re-verified on 2026-08-29. Gaspar et al. DOI `10.1109/MIOT.2026.3681190` is independently confirmed, but detailed full-text comparison remains a submission-date gate if accessible.
 
-## Immutable caveats and prohibitions
+### P16 closure
 
-Carry all P9/P11 caveats forward, including E5 missing forward recovery ping, E8 duplicate recovery sends, E10-A censoring, E10-C setup artifact A, E10-D upper-bound timing, E1R4/E3 sender-vs-receiver disagreements, E11 one-sided collector, E7 RTT outlier, unresolved runtime UHD identity/attenuator physical-path mapping, and FIT `SHA256SUMS.txt` self-reference anomaly with verified non-self entries and outer ZIP hashes.
+`P16_SCIENTIFIC_BLOCKERS=0`
+
+`P16_NEW_EXPERIMENT_REQUIRED=NO`
+
+`P16_MANDATORY_EDITORIAL_PATCHES=YES`
+
+`P16_PUBLIC_ARTIFACT_SANITIZATION_REQUIRED=YES`
+
+`WP2_P16=PASS_ADVERSARIAL_PUBLICATION_QA`
+
+## Remaining gates before submission authorization
+
+These are publication-preparation gates, not evidence-generation gates:
+
+1. apply all frozen P16 editorial patches to a clean submission-facing manuscript;
+2. produce sanitized public/reviewer artifact package;
+3. perform final submission-date literature check, especially Gaspar et al. if full text is accessible;
+4. select/re-verify target journal, scope, indexing/quartile/APC and author instructions at submission time;
+5. format/type-set manuscript and integrate the frozen P14 figures/tables;
+6. final proof/claim-reference-artifact consistency check;
+7. explicit user authorization before external submission.
+
+No new POWDER or FIT experiment is authorized or currently required.
+
+## Immutable prohibitions
 
 Do not claim:
 
@@ -227,30 +242,13 @@ Do not claim:
 - exact broker latency from E10-D;
 - population reliability from message counts or three FIT replicates;
 - rural/field/Siwa/pump/hydraulic/groundwater/agronomic validation;
-- unresolved RF-path or runtime USRP identity;
+- unresolved RF-path/runtime-radio identity;
 - pooled FIT+POWDER inferential statistics.
-
-## P16 mission
-
-P16 must adversarially test the manuscript as a skeptical reviewer/editor would, including:
-
-- baseline strength / strawman risk;
-- cohesion of the two-testbed paper;
-- novelty versus 2024–2026 literature;
-- title/abstract risk of implying a POWDER W1 comparison;
-- methods completeness and reproducibility;
-- statistical language;
-- manual/non-scored POWDER framing;
-- claim/display consistency;
-- artifact privacy/release risk;
-- whether any critical deficiency requires analysis revision, manuscript revision, or a future experiment.
-
-P16 may recommend a new experiment only if a manuscript-critical claim cannot survive without it. It must not execute one without separate explicit authorization.
 
 ## Storage authority
 
 1. **Google Drive = primary durable authority for frozen/raw binary evidence.**
-2. **GitHub = canonical scientific/control record** for manifests, hashes, analysis code, derived tables, claims, figures, manuscript and handovers.
+2. **GitHub = canonical scientific/control record.**
 3. **Home PC = independent third copy where applicable.**
 
 Raw evidence remains immutable.
@@ -277,10 +275,10 @@ Raw evidence remains immutable.
 
 `WP2_P15=PASS_MANUSCRIPT_CONSTRUCTED_EVIDENCE_BOUNDED`
 
-`PRIMARY_ARCHITECTURE_COMPARISON=FIT_B0_VS_W1`
+`WP2_P16=PASS_ADVERSARIAL_PUBLICATION_QA`
 
-`POWDER_ROLE=CONTROLLED_PHYSICAL_RF_AND_RECOVERY_CHARACTERIZATION`
+`LIVE_POWDER_DEPENDENCY=NONE`
 
-`LIVE_POWDER_DEPENDENCY=NONE_FOR_CURRENT_PHASE`
+`SUBMISSION_AUTHORIZED=NO`
 
-`NEXT_PHASE=WP2_P16_ADVERSARIAL_PUBLICATION_QA`
+`NEXT_PHASE=SUBMISSION_PREPARATION_NOT_STARTED`
