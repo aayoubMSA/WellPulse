@@ -1,12 +1,16 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after **WP2-P20D-R5 Role Model Paper rebuild + WP2-P20E-R5 Scientific/Editorial Red-Hat PASS**.  
+Last updated: 2026-08-29 after **R9 / RF9B final submission-readiness PASS**.  
 Repository: `aayoubMSA/WellPulse`  
-Branch: `main`
+Branch: `main`  
+Canonical handover identity: this file (`HANDOVER_CURRENT.md`) — do not create a competing handover.
 
-This is the canonical operational retrieval point. GitHub is the scientific/control record; Google Drive is the durable binary-evidence authority. Repository/Drive evidence overrides chat memory.
+Source-chat pointer: current WellPulse manuscript branch; direct chat URL is not exposed in this environment and must not be fabricated.  
+Receiving-chat pointer: **PENDING**. On transfer to a new chat, keep this same handover and increment the navigation/Continuation Revision there; do not restart the project.
 
-## Executive state
+This is the canonical operational retrieval point. GitHub remains the scientific/control record. Google Drive remains the authority for durable promoted binary evidence. ChatGPT Library may hold cross-chat checkpoint artifacts until they are explicitly promoted to Drive. Repository/verified evidence overrides chat memory.
+
+## 1. Executive state
 
 - P8 POWDER campaign: **COMPLETE / GOLDEN**
 - P9 forensic reconciliation: **PASS**
@@ -16,96 +20,191 @@ This is the canonical operational retrieval point. GitHub is the scientific/cont
 - P13 claim–evidence matrix: **PASS / FROZEN CLAIM AUTHORITY**
 - P16 adversarial publication QA: **PASS**
 - P17/P17V manuscript + independent claim validation: **PASS / HISTORICAL SCIENTIFIC BASELINE**
-- P18R/P18RC historical figure authorities: **PASS / SUPERSEDED FOR CURRENT MAIN DISPLAY BY R5 FIGURE REBUILD; SCIENTIFIC VALUES PRESERVED**
 - P19 reviewer/reproducibility artifact: **PASS**
 - P20A literature baseline: **PASS / HISTORICAL INPUT**
-- P20B-R6 venue switch: **PASS / INTERNET OF THINGS (ELSEVIER) SELECTED**
+- P20B-R6 venue route: **PASS / INTERNET OF THINGS (ELSEVIER) SELECTED**
 - P20C authorship/credits/rights/IP: **PASS**
-- R3/R4/R4-R1 manuscripts and red-hats: **HISTORICAL / SUPERSEDED BY R5 BYTES**
-- **P20D-R5 Role Model Paper doctrine rebuild: PASS / CURRENT MANUSCRIPT AUTHORITY**
-- **P20E-R5 Scientific + Editorial Red-Hat: PASS / CURRENT SUBMISSION-READINESS AUTHORITY**
-- **P21-R5 author submission authorization packet: NEXT / NOT STARTED**
-- P22 submission execution: **LOCKED**
+- All pre-R9 manuscript bytes: **HISTORICAL / SUPERSEDED FOR SUBMISSION BY R9**
+- **R9 / RF9B manuscript: PASS / CURRENT MANUSCRIPT AUTHORITY**
+- **RF9B exact-artifact scientific/editorial gate: PASS / CURRENT SUBMISSION-READINESS AUTHORITY**
+- **P21-R9 author-authorization + portal packet: NEXT / NOT STARTED**
+- P22 external submission execution: **LOCKED**
 - scientific blockers: **0**
-- production blockers: **0**
-- new experiment required for current bounded claims: **NO**
+- production blockers in the prepared artifact: **0**
+- new experiment required for the current bounded claims: **NO**
 - new empirical claim required: **NO**
 - submission authorized: **NO**
 
-Publication-lane earned progress: **90/100**.
+Publication-lane earned progress remains **90/100**. The final 10% is protected: 5% author/portal authorization packet + 5% actual submission/receipt.
 
-## Global publication identity — HARD RULE
+## 2. Last accepted checkpoint
 
-Research & Grants Lessons Learned authority: **LL-048**.
+**RF9B — PASS.** The paper is scientifically and editorially ready for the selected journal route. No external submission occurred.
 
-Publication-facing name is exactly:
+The bounded RF9B pass closed only reviewer/readiness issues. It did **not** open new experiments, modify raw evidence, change frozen derived source-data values, or upgrade external-validity claims.
+
+Current status string:
+
+`SCIENTIFIC + EDITORIAL READY — NOT SUBMITTED`
+
+## 3. Current manuscript authority — R9 / RF9B
+
+Title:
+
+**Beyond Reconnection: Failure-Domain-Aware Evaluation of Data Durability and Recovery in MQTT-Based IoT Telemetry**
+
+Publication-facing author name — HARD RULE:
 
 **Ahmed Ayoub**
 
-Do not use expanded variants in manuscripts, portal metadata, CRediT, citations, correspondence, repository release metadata, ORCID/Scopus/Google-Scholar-facing records, or submission artifacts unless explicitly overridden for a specific legal/administrative form.
+Do not replace it with expanded variants in manuscript, submission portal metadata, CRediT, correspondence, citations, repository release metadata, ORCID/Scopus/Google-Scholar-facing records, or publication artifacts unless an explicit legal/administrative form requires otherwise.
 
-## Role Model Paper requirement — HARD PUBLICATION STANDARD
+Target route:
 
-Research & Grants authority: **LL-049 / Research Operating Doctrine v2.2 §22A**.
+- Journal: **Internet of Things (Elsevier)**
+- Article type: **Full Research paper**
+- Initial route: **Subscription / non-OA**
+- Backup #1: **IEEE Internet of Things Journal**
+- No APC, paid-OA route, copyright/licence acceptance, payment, or external submission is authorized.
 
-Scope: scholarly research/publication work only.
+Exact R9 manuscript checkpoint:
 
-Target:
-**Teach → Prove → Translate → Persuade**.
+- PDF: `WellPulse_Role_Model_R9_RF9B_SubmissionReady.pdf`
+- pages: **24**
+- PDF SHA-256: `f8f1fc73a50049e1308e6779267e2a52d5024e3bdcaac73b82df728cfd658bd3`
+- editable TeX: `source/wellpulse_role_model_r9_rf9b.tex`
+- TeX SHA-256: `c879212140dc1f12cce840d1b08eb7740ad88fbb38d85e4f97ab33dd8884a224`
+- abstract: **216 words**
+- keywords: **7**
+- bibliography: **38 entries / 38 cited**
+- highlights: **5 / 5**, each within the current <=85-character gate
+- undefined citations/references: **0**
+- overfull boxes: **0**
+- fonts embedded: **PASS**
+- PDF openable / unencrypted: **PASS**
+- clean-package replay: **PASS**
+- 24/24 rendered pages: **pixel-identical** to the packaged PDF in replay QA
+- main visual inspection: **PASS**
+- Supplement S1 visual inspection: **PASS**
 
-Current R5 applies:
-- one governing scientific question/intellectual spine;
-- visible literature synthesis that defines the claim boundary;
-- mandatory Field-Native Glossary Gate;
-- mathematics only where it removes endpoint ambiguity;
-- fair comparator boundaries;
-- claim → evidence → analysis → validation → limitation trace;
-- negative/adverse evidence kept visible;
-- reviewer-question-driven figures and synthesis tables;
-- practical engineering interpretation without upgrading evidence to field/industrial validation;
-- separate Scientific and Editorial Red Hats.
+Exact R9 source package:
 
-Field-native glossary is paper/subfield-specific. Publication prose must prefer established MQTT/IoT/dependability vocabulary and block generic AI synonyms and internal WP/agent/control jargon where a field-native term exists.
+- archive: `WellPulse_ROLE_MODEL_R9_RF9B_SubmissionReady_Package_2026-08-29.zip`
+- size: **4,318,357 bytes**
+- archive SHA-256: `90d42f32a0487afa31a0af44567f696672f0eeff708e367a5660fdbe3765bdfe`
+- members: **49 archive entries**
 
-## Active survey-visibility requirement
+Cross-chat checkpoint copies are preserved in ChatGPT Library:
 
-The paper must visibly show the literature effort and how it changes the research claim.
+- `/My Research Artifacts/WellPulse/WellPulse_Role_Model_R9_RF9B_SubmissionReady.pdf`
+- `/My Research Artifacts/WellPulse/WellPulse_ROLE_MODEL_R9_RF9B_SubmissionReady_Package_2026-08-29.zip`
 
-Current R5 state:
-- direct novelty-control source/axis groups: **32**;
-- peer-reviewed scholarly articles inside the direct audit: **25**;
-- normative MQTT standard: **1**;
-- official technical/platform sources: **6**;
-- additional framing references: **2**;
-- total manuscript bibliography: **34 / 34 cited**;
-- wording-narrowing outcomes in S1: **17**;
-- contextual/no-impact outcomes: **15**;
-- scientific blockers from novelty audit: **0**.
+Important provenance boundary: this branch has **not** independently promoted and hash-read-back-verified the R9 PDF/ZIP in Google Drive. Do not label R9 as a Drive-durable binary authority until that promotion/read-back is actually performed. The older R5 Drive package remains historical, not the current submission bytes.
 
-The audit is explicitly a **targeted, submission-date claim-bounding synthesis**, not a PRISMA systematic review, meta-analysis, prevalence study, or exhaustive bibliographic census.
+## 4. What RF9B changed — bounded editorial/scientific clarification only
 
-Supplement S1 preserves the full 32-group collision matrix.
+R9 closed the second review by:
 
-`SURVEY_VISIBILITY_REQUIREMENT=ACTIVE`
+1. defining **failure domain** separately from failure mechanism and recovery action;
+2. clarifying POWDER timing as **first-observed endpoint events under preserved probing sequences**;
+3. stating that no prospective **probe-cadence sensitivity** study was performed;
+4. retaining cross-node publish-to-receipt timing as **descriptive only** because the frozen record provides no independent inter-node clock-error bound;
+5. quantifying E8 duplicate sender activity as **20/80 sender-log entries = 25%**, without attributing those duplicates to MQTT QoS retransmission;
+6. adding a clearly hypothetical two-SLO engineering example using existing measurements to distinguish path recovery from data-state recovery;
+7. naming a matched file-persistent/equivalently durable MQTT comparator and larger run populations as **future extensions**, not current evidence;
+8. verifying and adding three reviewer-suggested adjacent sources: **Luzuriaga et al. (2017)**, **Ferrari et al. (2018)**, and **Lima et al. (2025)**;
+9. tightening Figure 3/4 captions and cross-domain reporting language without pooling heterogeneous experiments.
 
-## Mandatory current read order
+Frozen items unchanged R8 -> R9:
 
-1. `HANDOVER_CURRENT.md`
-2. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md`
-3. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
-4. `docs/WP2_P19_REVIEWER_SUPPLEMENT_SANITIZED_ARTIFACT_CLOSURE_2026-08-29.md`
-5. `analysis/WP2_P20B_R6_DESK_TRIAGE_PRIORITY_VENUE_SWITCH_2026-08-29.md`
-6. `analysis/WP2_P20C_AUTHORSHIP_CREDITS_RIGHTS_IP_LOCK_2026-08-29.md`
-7. `analysis/WP2_P20D_R5_ROLE_MODEL_DOCTRINE_REBUILD_2026-08-29.md`
-8. `docs/WP2_P20D_R5_ROLE_MODEL_DOCTRINE_REBUILD_CLOSURE_2026-08-29.md`
-9. `analysis/WP2_P20E_R5_ROLE_MODEL_RED_HAT_2026-08-29.md`
-10. `docs/WP2_P20E_R5_ROLE_MODEL_RED_HAT_CLOSURE_2026-08-29.md`
-11. Research & Grants Lessons Learned Ledger: **LL-047 venue doctrine + LL-048 publication identity + LL-049 Role Model Paper doctrine**.
-12. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
+- FIT and POWDER raw evidence;
+- generated/received IDs;
+- all three source-data CSV metric values and hashes: **IDENTICAL 3/3**;
+- experiment treatments;
+- run validity classes/exclusions;
+- figure source data;
+- no FIT+POWDER statistical pooling;
+- no field/Siwa/pump/agronomic claim;
+- no durable-MQTT superiority claim.
 
-Old P21 packets and all R3/R4/R4-R1 submission bytes are historical only. **Do not use them to unlock P22.**
+`NEW_EXPERIMENT=NO`
 
-## Historical scored state — immutable
+`SCIENTIFIC_SOURCE_DATA_CHANGE=NONE`
+
+## 5. Active survey / novelty-control state
+
+The literature audit is a **targeted submission-date claim-bounding synthesis**, not PRISMA, a systematic review, meta-analysis, prevalence study, or exhaustive bibliographic census.
+
+Current R9 Supplement S1:
+
+- direct novelty-control groups: **36**
+- wording-narrowing: **19**
+- contextual/no-impact: **17**
+- scientific blockers: **0**
+- Supplement S1 CSV SHA-256: `145ab1a5a279ce2cf2680f75a1eb0cb25474a270bca0c258bc421358d7c4e1ef`
+- Supplement S1 PDF SHA-256: `472ddf5f7549d96a9f8ef30d2376da928e57b8776a52dcd0b44805b26e38847b`
+
+The novelty claim remains the **compound evaluation structure and evidence discipline**, not firstness of persistence, buffering, retransmission, store-and-forward, offline recovery, end-to-end acknowledgement, or real-testbed use.
+
+## 6. Frozen scientific doctrine — do not reopen during submission preparation
+
+### FIT — data durability / end-to-end completeness
+
+Authority: `FINAL_WP_RT01_FIT_A8`.
+
+Design: `B0/W1 × C0/C1/C2 × 3 runs = 18 cells`, exactly **10,000 generated records/run**.
+
+Scientific unit: **run/replicate**. The 10,000 within-run records are reconciliation observations, not 10,000 independent samples.
+
+Frozen results:
+
+- healthy C0: B0/W1 = **100%** in all runs;
+- broker-outage C1: B0 = **80%**, W1 = **100%** in all runs;
+- outage + gateway-process-restart C2: B0 = **80%**, W1 = **100%** in all runs;
+- B0 C1/C2 permanently miss exactly **2,000 records/run**;
+- W1 final reconciliation contains all **10,000 generated IDs exactly once**;
+- W1 final missing/duplicate/unexpected = **0**;
+- W1 queue-drain means: C1 `67.731246 s`; C2 `67.870252 s`;
+- reconnect is near **1.3 s** and remains descriptive engineering characterization, not a powered latency-superiority result.
+
+C2 is a gateway-process `exec` restart, not a node/hardware reboot. B0 is non-durable and is not the strongest durable MQTT comparator.
+
+### POWDER — communication-path / failure-domain characterization
+
+Profile: `srslte-controlled-rf`.
+
+POWDER is separately executed physical-RF/LTE/MQTT characterization, not architecture treatment-effect estimation.
+
+Frozen interpretation:
+
+- E1/E2/E3 support an experiment-specific transition region; **52 dB is not universal**;
+- MQTT can remain complete while ICMP is already degraded in the transition region;
+- E8 isolates broker/service failure while LTE remains healthy;
+- E9 is a no-fault control;
+- E10-A remains **censored** with no scalar recovery latency;
+- E10-B exact: `6.063318 s` first MQTT, `6.609430 s` first ping, `0.060172 s` publish-to-receiver receipt;
+- E10-C-B exact: `29.247733 s` first ping, `29.248129 s` first MQTT;
+- E10-D remains an **upper bound only**, `<=10.908749 s`;
+- receiver-side unique-ID reconciliation governs delivery;
+- FIT and POWDER are complementary/non-substitutable and are **not statistically pooled**.
+
+## 7. Immutable claim prohibitions
+
+Never claim:
+
+- scored P7B success;
+- POWDER B1-vs-W1 advantage;
+- strongest-durable-MQTT superiority;
+- generic `WellPulse beats MQTT`;
+- universal 52 dB threshold;
+- deterministic RF-only recovery;
+- exact broker-recovery latency from E10-D;
+- population reliability from message counts or three FIT runs;
+- pooled FIT+POWDER inference;
+- historical firstness for persistence/store-and-forward/end-to-end acknowledgment/offline recovery/real-testbed use;
+- unsupported field, rural, Siwa, pump, hydraulic, groundwater, agronomic, crop, or industrial-process validation.
+
+Historical scored state remains immutable:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -113,258 +212,137 @@ Old P21 packets and all R3/R4/R4-R1 submission bytes are historical only. **Do n
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No later evidence may be relabelled as scored P7B success.
+## 8. Role Model Paper doctrine — still binding
 
-## Frozen scientific doctrine
+Research publication standard: **Teach → Prove → Translate → Persuade**.
 
-### FIT — data durability / end-to-end completeness
+Maintain:
 
-Authority: `FINAL_WP_RT01_FIT_A8`.
+- one governing scientific question/intellectual spine;
+- visible literature synthesis that changes the claim boundary;
+- field-native MQTT/IoT/dependability vocabulary;
+- mathematics only where it removes endpoint ambiguity;
+- fair comparator boundaries;
+- claim -> evidence -> analysis -> validation -> limitation trace;
+- adverse/negative evidence visible;
+- reviewer-question-driven figures/tables;
+- practical engineering interpretation without upgrading to field validation;
+- separate scientific and editorial red-hat gates.
 
-`B0/W1 × C0/C1/C2 × 3 runs = 18 cells`, exactly 10,000 records/run.
+Current publication-facing endpoint bookkeeping remains:
 
-Internal labels remain traceability labels; R5 publication prose uses field-native descriptions.
-
-- healthy C0: B0/W1 = 100% in all runs;
-- broker-outage C1: B0 = 80%, W1 = 100% in all runs;
-- outage + gateway-process-restart C2: B0 = 80%, W1 = 100% in all runs;
-- B0 C1/C2 permanently miss exactly 2,000 records/run;
-- W1 final reconciliation contains all 10,000 generated IDs exactly once;
-- W1 final missing/duplicate/unexpected = 0;
-- W1 queue-drain means: C1 `67.731246 s`; C2 `67.870252 s`;
-- reconnect means remain descriptive engineering observations, not powered latency comparisons.
-
-Run/replicate is the scientific unit. The 10,000 within-run records are reconciliation observations, not 10,000 independent samples. C2 is a gateway-process `exec` restart, not node/hardware reboot. B0 is non-durable and is not the strongest durable MQTT comparator.
-
-### POWDER — communication-path / failure-domain characterization
-
-WP2-P8 profile `srslte-controlled-rf` remains separately executed physical-RF/LTE/MQTT characterization, not architecture-effect estimation.
-
-- E1/E2/E3 transition region is experiment-specific; 52 dB is not universal;
-- E8 isolates broker/service failure while LTE remains healthy;
-- E9 is no-fault control;
-- E10-A remains censored with no scalar recovery latency;
-- E10-B exact: 6.063318 s first MQTT, 6.609430 s first ping, 0.060172 s publish-to-receiver receipt;
-- E10-C-B exact: 29.247733 s first ping, 29.248129 s first MQTT;
-- E10-D remains upper bound only, `<=10.908749 s`;
-- receiver-side unique-ID reconciliation governs delivery;
-- FIT and POWDER are complementary/non-substitutable and are not statistically pooled.
-
-`P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
-
-`P13_STATISTICAL_POOLING=NONE`
-
-## Immutable claim prohibitions
-
-Never claim scored P7B success; POWDER B1-vs-W1 advantage; strongest-durable-MQTT superiority; generic `WellPulse beats MQTT`; universal 52 dB; deterministic RF-only recovery; exact broker recovery latency from E10-D; population reliability from message counts/three FIT runs; pooled FIT+POWDER inference; historical firstness for persistence/store-and-forward/end-to-end acknowledgment/offline recovery/real-testbed use; or unsupported field/rural/pump/hydraulic/groundwater/agronomic/crop/industrial-process validation.
-
-## Current venue / route authority
-
-Selected first route:
-
-**Internet of Things (Elsevier)**
-
-Article type: **Full Research paper**.
-
-Initial route: **Subscription / non-OA**.
-
-Backup 1: **IEEE Internet of Things Journal**.
-
-No APC, paid-OA route, copyright/licence acceptance or payment is authorized.
-
-## Current manuscript authority — R5 Role Model Paper
-
-Title:
-**Beyond Reconnection: Failure-Domain-Aware Evaluation of Data Durability and Recovery in MQTT-Based IoT Telemetry**
-
-Author:
-**Ahmed Ayoub**
-
-R5 deliberately removes the undergraduate/project-report signals identified in R4-R1:
-- project brand removed from title lead;
-- internal experiment codes removed from reader-facing narrative/figure legends where unnecessary;
-- field-native glossary applied;
-- literature synthesis drives the claim boundary;
-- endpoint model mathematically formalized;
-- methodology organized by evidence role rather than execution chronology;
-- main figures rebuilt as scientific argument artifacts;
-- Engineering Interpretation and Design Guidance section added;
-- conclusion states a reusable engineering reliability contract rather than project status.
-
-Current production state:
-- manuscript PDF: `WellPulse_Role_Model_R5_RedHat_Cleared.pdf`;
-- pages: **23**;
-- abstract: **240 words**;
-- keywords: **7**;
-- references: **34 / 34 cited**;
-- PDF SHA-256: `28f508b1c6abf91c555e9cfa72148a47efde6dda6e7c91fc8054d27f4d4af7e3`;
-- TeX SHA-256: `46d95f42b2bbbf8d9d561ad866248058e63bb36d03c75149020d4a89ae628402`;
-- publication name: **Ahmed Ayoub**;
-- PDF openable / unencrypted / not scanned;
-- fonts embedded;
-- overfull hbox warnings: 0;
-- final visual QA: PASS.
-
-## Mathematical endpoint model — publication-facing
-
-R5 defines:
 - receiver-reconciled completeness `C_e2e = |G ∩ R| / |G|`;
 - permanent missing set `M = G \ R`;
 - duplicates `D = N_R - |R|`;
 - endpoint-specific path recovery `T_path(e)=t_e-t_0`;
 - queue-drain time `T_drain=t_complete-t_reconnect`;
-- recovery observations that retain failure domain, action, endpoint, timing, and exact/censored/upper-bound semantics.
+- recovery observations retain failure domain, intervention, endpoint, timing, and exact/censored/upper-bound semantics.
 
-These definitions are measurement bookkeeping, not a claimed universal reliability theory.
+These definitions are measurement bookkeeping, not a universal reliability theory.
 
-## R5 figures — current display authority
+## 9. Residual reviewer risks — disclosed, not blockers
 
-R5 uses four deterministic publication-facing figures generated from frozen derived data or bounded conceptual definitions:
-1. failure-domain-aware evaluation framework;
-2. delivery completeness + path reconnection + queue-drain cost;
-3. cross-layer transition behavior + repeatability;
-4. failure-domain intervention matrix + recovery endpoint semantics.
-
-R5 display authority supersedes R4 main-display layout for the current manuscript. It does **not** supersede frozen numerical/scientific evidence authorities.
-
-## Current R5 package — durable binary authority
-
-Archive:
-`WellPulse_ROLE_MODEL_R5_RedHat_Cleared_Package_2026-08-29.zip`
-
-Drive ID:
-`13Yegfc_i6axvNSOj0AVzkgPqonqTVVPi`
-
-Archive size:
-`4,194,563 bytes`
-
-Archive SHA-256:
-`bd98d49b7bd975177dd093a3172a2404410dff633c50778292cd719eaa303c7a`
-
-Drive raw read-back: **exact size/hash match / PASS**.
-
-Package:
-- 31 manifest rows + manifest/hash files;
-- ZIP integrity PASS;
-- TeX source;
-- PDF/SVG/PNG figures;
-- deterministic figure generator + frozen source data;
-- `FIELD_NATIVE_GLOSSARY.md`;
-- Role Model doctrine application record;
-- Scientific and Editorial Red-Hat reports;
-- Supplement S1 literature audit;
-- Supplement S2 reproducibility artifact;
-- editable highlights DOCX + text;
-- build-validation receipt;
-- SHA-256 manifest.
-
-Supplement S1:
-- rows: 32;
-- CSV SHA-256 `c9c5e17367cddca13cc523a95a0dd92734734c0ca04e1580e416413bc7bf8462`.
-
-Supplement S2:
-- SHA-256 `99ed7c4dfc42c1f0f4b659489abf7ad328584f413c0318210dace29b4912b48d`;
-- isolated `python -I artifact_selfcheck.py`: **PASS**.
-
-Highlights DOCX:
-- SHA-256 `e1a16519d800f1e4e6b74d1df0da8ef9f9ace3dcb290a98b52a121659d9a6a0c`;
-- render QA: PASS;
-- 5 highlights, each <=72 characters.
-
-## Current red-hat authority — P20E-R5
-
-Status: **PASS / ROLE MODEL PAPER GATE PASSED / NO SCIENTIFIC OR PRODUCTION BLOCKER**.
-
-Fresh version-bound checks:
-- frozen FIT values independently recomputed and matched;
-- POWDER exact/censored/upper-bound semantics matched;
-- non-durable comparator boundary explicit;
-- three-run inferential limit explicit;
-- 34/34 references cited;
-- targeted literature status explicit;
-- no internal WP/run-code narrative regression;
-- no forbidden claim regression;
-- no FIT+POWDER pooling;
-- mathematics endpoint-bound and non-ornamental;
-- engineering guidance explicitly non-field-validation;
-- all 23 PDF pages visually inspected;
-- Supplement S2 self-check PASS;
-- independent clean rebuild = **23 pages / 0 changed pages / 0.0% changed pixels**.
-
-Role Model gate:
-- Teach: PASS;
-- Prove: PASS;
-- Translate: PASS;
-- Persuade: PASS;
-- Field-Native Glossary: PASS;
-- Scientific Red Hat: PASS;
-- Editorial Red Hat: PASS.
-
-Residual reviewer risks — disclosed, not blockers:
-1. a matched durable MQTT comparator may be requested for stronger architecture-superiority claims;
-2. three FIT run-level replicates limit inferential breadth;
-3. literature audit is targeted, not exhaustive/systematic;
+1. A matched durable MQTT comparator may be requested for stronger architecture-superiority claims.
+2. Three FIT run-level replicates limit inferential breadth.
+3. The literature audit is targeted, not exhaustive/systematic.
 4. POWDER remains descriptive characterization, not architecture treatment-effect estimation.
+5. Probe-cadence sensitivity was not experimentally varied.
+6. The frozen record does not provide an independent inter-node clock-error bound; cross-node publish-to-receipt timing is descriptive only.
 
-## Publication identity / disclosures
+None of these requires new evidence to preserve the **current bounded R9 claim**.
 
-- sole/corresponding author: **Ahmed Ayoub**;
-- affiliation: **Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City 12451, Egypt**;
-- institutional email: `aelsayedo@msa.edu.eg`;
-- canonical ORCID: `0009-0004-7895-3191`;
-- research funding: no external research funding;
-- competing interests: none currently identified;
-- FIT IoT-LAB + POWDER acknowledgment/citations: present;
-- CRediT: present;
-- data availability: present;
-- Elsevier generative-AI declaration: present;
-- repository public disclosure exists; no patentability claim;
-- commercialization verdict remains `NO_IP_ACTION -> PUBLISH`.
+## 10. Publication identity / disclosures
 
-## Publication lane
+- sole/corresponding author: **Ahmed Ayoub**
+- affiliation: **Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City 12451, Egypt**
+- institutional email: `aelsayedo@msa.edu.eg`
+- canonical ORCID: `0009-0004-7895-3191`
+- research funding: no external research funding identified for this paper
+- competing interests: none currently identified
+- FIT IoT-LAB + POWDER acknowledgments/citations: present
+- CRediT: present
+- data availability: present
+- Elsevier generative-AI declaration: present
+- repository public disclosure exists; no patentability claim
+- commercialization verdict remains `NO_IP_ACTION -> PUBLISH`
 
-1. P20A — 15% — **PASS / historical literature baseline**
-2. P20B / R1-R6 — 15% — **PASS / ELSEVIER ROUTE CURRENT**
-3. P20C — 15% — **PASS**
-4. **P20D-R5 — 25% — PASS / CURRENT ROLE MODEL MANUSCRIPT AUTHORITY**
-5. **P20E-R5 — 20% — PASS / SCIENTIFIC + EDITORIAL RED-HAT CLEARED**
-6. **P21-R5 — Author Submission Authorization Packet — 5% — NEXT / NOT STARTED**
-7. P22 — Submission Execution & Receipt — 5% — LOCKED
+## 11. Mandatory current read order for a receiving chat
 
-Earned progress: **90/100**.
+Read only what is needed; do not rebuild the whole history.
 
-## Exact next gate — P21-R5
+1. `HANDOVER_CURRENT.md` — this file.
+2. R9 exact checkpoint artifacts in ChatGPT Library under `/My Research Artifacts/WellPulse/`.
+3. Inside the R9 ZIP, read in this order when exact submission readiness is needed:
+   - `RF9B_SUBMISSION_READINESS_GATE.md`
+   - `RF9B_EXACT_ARTIFACT_QA.md`
+   - `RF9B_CHANGE_RECEIPT.md`
+   - `RF9B_AI_REVIEW_ACTION_MATRIX.md`
+   - `BUILD_VALIDATION_RECEIPT.md`
+   - `README.md`
+4. `analysis/WP2_P13_CLAIM_EVIDENCE_MATRIX_2026-08-29.md` only when a manuscript claim needs evidence-level adjudication.
+5. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md` only when independent claim validation is needed.
+6. P9 forensic authorities only when exact POWDER trace/caveat semantics are required.
 
-P21-R5 may prepare an internal author-authorization packet against the **exact R5 package above**. It must recheck current Editorial Manager requirements, concurrent-submission state, author/ORCID/contact metadata, file-role mapping, and Subscription/non-OA route.
+All pre-R9 manuscript bytes and historical P21 packets are superseded for submission-byte authority. They may be used only for provenance, not to unlock P22.
 
-P21-R5 must not submit externally and must not infer authorization from `continue`, `go on`, `next`, journal preference, manuscript approval, or historical P21 packets.
+## 12. Exact next gate — P21-R9
 
-P22 remains locked until a new explicit author authorization based on the exact R5 bytes.
+**NEXT:** prepare the internal author-authorization / portal-readiness packet against the **exact R9 bytes above**.
 
-## Stop state
+P21-R9 must:
 
-`WP2_P20D_R5=PASS_ROLE_MODEL_DOCTRINE_REBUILD`
+1. recheck current Editorial Manager requirements for *Internet of Things*;
+2. verify concurrent-submission state;
+3. verify author name, ORCID, email, affiliation, corresponding-author data, and any required phone/postal metadata;
+4. map exact R9 files to portal roles;
+5. preserve Subscription/non-OA as the initial route unless explicitly changed;
+6. re-verify APC/EKB/STDF or other institutional coverage **before** accepting any paid OA option;
+7. prepare the final pre-submit checklist;
+8. stop before any irreversible submission action.
 
-`R5_CURRENT_MANUSCRIPT_AUTHORITY=YES`
+Human/external gates still required:
 
-`WP2_P20E_R5_SCIENTIFIC_RED_HAT=PASS`
+- final explicit author approval by Dr. Ahmed Ayoub;
+- portal metadata/contact completion;
+- current APC/EKB/STDF coverage re-verification before any paid OA acceptance;
+- final inspection of the portal-generated PDF/render immediately before submission.
 
-`WP2_P20E_R5_EDITORIAL_RED_HAT=PASS`
+P21-R9 must **not** infer submission authorization from `continue`, `go on`, `next`, manuscript approval, venue preference, or this handover request.
+
+P22 remains locked until a fresh explicit authorization to submit the exact current bytes.
+
+## 13. Stop state
+
+`R9_CURRENT_MANUSCRIPT_AUTHORITY=YES`
+
+`RF9B_SCIENTIFIC_GATE=PASS`
+
+`RF9B_EDITORIAL_GATE=PASS`
+
+`RF9B_EXACT_ARTIFACT_QA=PASS`
 
 `ROLE_MODEL_PAPER_GATE=PASS`
 
+`NOVELTY_GROUPS=36`
+
+`NOVELTY_NARROWING=19`
+
+`NOVELTY_NO_IMPACT=17`
+
+`NOVELTY_BLOCKERS=0`
+
 `PUBLICATION_LANE_PROGRESS=90_OF_100`
 
-`P21_R4=SUPERSEDED_BY_R5_BYTES`
+`P21_R5=SUPERSEDED_BY_R9_BYTES`
 
-`P21_R5=NEXT_NOT_STARTED`
+`P21_R9=NEXT_NOT_STARTED`
 
 `P22_LOCKED=YES`
+
+`SUBMISSION_AUTHORIZED=NO`
 
 `PAYMENT_AUTHORIZED=NO`
 
 `COPYRIGHT_OR_LICENSE_ACCEPTANCE_AUTHORIZED=NO`
 
-`CURRENT_PHASE=STOP_AFTER_P20E_R5_PASS`
-
-`SUBMISSION_AUTHORIZED=NO`
+`CURRENT_PHASE=HANDOVER_READY_AFTER_RF9B_PASS`
