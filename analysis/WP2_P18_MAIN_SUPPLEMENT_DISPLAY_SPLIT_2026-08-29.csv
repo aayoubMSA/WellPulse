@@ -1,0 +1,12 @@
+Slot,Display,Claim role,Destination
+Main Figure 1,Architecture + evidence-role schematic,IC-08/IC-09 + Methods,MAIN
+Main Figure 2,FIT final unique-record completeness,IC-01/IC-02,MAIN
+Main Figure 3,POWDER transition / direction response,IC-04/IC-05,MAIN
+Main Figure 4,POWDER E3 repeatability,IC-04,MAIN
+Main Table 1,Failure-domain taxonomy,IC-06/IC-07/IC-08,MAIN
+Main Table 2,FIT run-level summary,IC-01/IC-02/IC-03,MAIN
+Main Table 3,Recovery endpoint semantics,IC-06/IC-07,MAIN
+Supplement Figure S1,FIT backlog-drain raw runs,IC-03,SUPPLEMENT
+Supplement Atlas,POWDER E0/E4–E11 experiment visuals,supporting/limitations,SUPPLEMENT
+Supplement Register,Run validity + anomaly register,IC-09,SUPPLEMENT
+Artifact,Derived CSVs + scripts + manifests,reproducibility,ARTIFACT
