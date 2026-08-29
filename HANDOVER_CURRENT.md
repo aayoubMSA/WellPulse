@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion and independent closure re-audit of **WP2-P9 — GOLDEN EVIDENCE FORENSIC RECONCILIATION**.
+Last updated: 2026-08-29 after completion of **WP2-P10 — SCIENTIFIC ANALYSIS CONTRACT**.
 
 ## Canonical authority
 
@@ -11,17 +11,16 @@ This file is the current operational retrieval point. Do not reconstruct current
 
 ## Executive scientific state
 
-- WP0: **PASS**
-- WP1: **PASS / FROZEN**
+- WP0: **PASS / EARLIER PAPER STORY PARTIALLY SUPERSEDED BY P10 EVIDENCE-BOUND CONTRACT**
+- WP1: **PASS / FROZEN HISTORICAL CONFIRMATORY DESIGN**
 - WP2: **ACTIVE — OFFLINE SCIENTIFIC INTEGRATION**
-- WP2-P8 manual RF campaign: **COMPLETE / GOLDEN EVIDENCE PRESERVED / NON-SCORED MANUAL REFERENCE**
-- WP2-P9 golden evidence forensic reconciliation: **PASS / COMPLETE / INDEPENDENT CLOSURE RE-AUDIT PASS**
-- WP3: **BLOCKED ON SCIENTIFIC WP2 CLOSURE / CONFIRMATORY DECISION**
-- WP4: **BLOCKED**
-- WP5: **PREPARED / NOT EXECUTED**
-- P6 Golden baseline: **VALID / FROZEN**
+- WP2-P8 manual RF campaign: **COMPLETE / GOLDEN / NON-SCORED MANUAL REFERENCE**
+- WP2-P9 forensic reconciliation: **PASS / COMPLETE / INDEPENDENT RE-AUDIT PASS**
+- WP2-P10 scientific analysis contract: **PASS / FROZEN**
+- WP2-P11 full raw-data scientific analysis: **NOT STARTED**
 - P7B scored physical qualification: **NOT PASSED**
 - scored execution: **NOT AUTHORIZED**
+- live POWDER dependency for current phase: **NONE**
 
 Historical scored state remains unchanged:
 
@@ -31,116 +30,63 @@ Historical scored state remains unchanged:
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No P8/P9 result may be promoted, reinterpreted or relabelled as scored P7B.
+No P8/P9/P10 result may be promoted, reinterpreted or relabelled as scored P7B.
 
-## Completed live lane
+## Canonical evidence authorities
 
-Campaign: `WP2-P8 — Modular Manual RF Experiment Campaign`
+### FIT final architecture-comparison evidence
 
-Platform:
+Source: `experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md`
 
-- POWDER reservation `WP-07-C`
-- profile `srslte-controlled-rf`
+- Evidence class: `FINAL_WP_RT01_FIT_A8`
+- Grenoble A8-100
+- `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`
+- exactly 10,000 records/cell
+- 18/18 final reconciliation PASS
+- B0 = non-durable publish-only baseline
+- W1 = WellPulse durable queue + reconciliation
+- C0 = healthy
+- C1 = deterministic broker outage
+- C2 = broker outage + gateway-process exec restart
+
+This is the current final evidence class supporting a direct architecture-level `B0 vs W1` comparison.
+
+### POWDER golden physical-RF evidence
+
+- Campaign: `WP2-P8`
+- reservation: `WP-07-C`
+- profile: `srslte-controlled-rf`
 - `enb1 -> nuc1 / CORE`
 - `rue1 -> nuc2 / UE`
+- classification: `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
 
-The live campaign is complete. P9 was entirely offline: no POWDER contact, RF mutation, service restart, reservation action, or new live experiment occurred.
+P8 supports controlled physical-RF/LTE/MQTT characterization, threshold behavior, hysteresis, near-threshold variability, recovery-mechanism comparison, controls and timing. It does **not** provide a scored `B1 vs W1` POWDER architecture comparison.
 
-## WP2-P9 closure
+## WP2-P9 forensic closure
 
-### P9-A — Evidence census: PASS
+P9 remains authoritative for all POWDER numeric reconstruction.
 
-Three authenticated Drive authorities were downloaded read-only and their SHA256 values recomputed successfully. Their ZIP central directories enumerate **598 immutable file members**: master P8 `357`, E10/E11 `46`, private golden preservation `195`.
+Three authenticated Drive authorities were downloaded read-only and outer SHA256 values matched the canonical anchors:
 
-Full path/hash enumeration remains inside the immutable archive-native manifests:
+| Authority | SHA256 | Drive ID |
+|---|---|---|
+| Master P8 evidence | `6952565D8ED630496EB7A801DB90583F2FED2EFCDC81FEACD1A2072F18FA8878` | `1TYqlzrsYLWqmM0jEEmrFWS8_QUuLShiR` |
+| E10/E11 collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` |
+| Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` |
 
-- master: `meta/SHA256_ALL_FILES.txt` + `meta/FILE_INVENTORY.csv`;
-- E10/E11: `meta/SHA256_ALL_COLLECTED.txt` + `meta/RUN_STATUS.csv` + node SHA manifests;
-- private preservation: `SHA256_ALL.txt` + `PRESERVATION_MANIFEST.json`.
+Census: **598 immutable members** across the three authorities.
 
-Independent closure re-audit found two deterministic archive-native self-log post-manifest appends: master `meta/collection.log` and E10/E11 `meta/collector.log` each received only their final `creating final ZIP` line after their own hash was recorded. The stored hashes exactly match the pre-append byte prefixes, the outer ZIP SHA256 values match Drive, all other parsed manifest entries verify, and neither collector log is used for metrics. Classified `A-018 / DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND`, not corruption.
+Principal receiver-side MQTT reconstructions include E1R2 `65/65`, E1R3 `100/100`, E1R4 `93/100`, E2 `151/160`, E3 `222/255`, E4/E5/E6/E7/E8 `40/60` unique, E9 `60/60`. E8 retains 80 sender lines but 60 unique IDs.
 
-All **89** unclassified PNG screenshots are individually preserved and hashed in the private package; their UUID names do not support defensible run attribution and they are not used numerically.
-
-### P9-B — Validity classification: PASS
-
-Allowed classes only:
-
-`VALID / VALID_WITH_CAVEAT / CONTROL / NULL / ABORTED / SETUP_ARTIFACT`
-
-Important classifications:
-
-- E1 initial `p8-e1-20260828T1707Z`: `NULL` — treatment proceeded after a failed 0 dB prerequisite.
-- E5 setup/pre-science artifacts/fragments: `p8-master-20260828A-e5`, `p8-master-20260828A-e5-a01`, `p8-e5-20260829-000402`, `p8-e5-20260829-000744`.
-- E5 manual: `VALID_WITH_CAVEAT` — forward recovery-ping observed live but not frozen.
-- E8: `VALID_WITH_CAVEAT` — duplicate recovery send preserved.
-- E9: `CONTROL`.
-- E10-A: `VALID_WITH_CAVEAT` — censored non-recovery observation; no exact latency.
-- E10-C attempt A: `SETUP_ARTIFACT`; suffix B: `VALID_WITH_CAVEAT`.
-- E10-D: `VALID_WITH_CAVEAT` — upper-bound timing only.
-- E11 R1–R3: `VALID_WITH_CAVEAT` for UE-side impairment/recovery/IP-transition replication only; no independent CORE collector archive.
-
-### P9-C — Metric reconstruction: PASS
-
-All retained values were recomputed from immutable raw evidence where reconstruction was possible. Receiver-side unique IDs govern MQTT completeness.
-
-Selected forensic values, **not publication claims**:
-
-- E1R4 MQTT main sweep: `93/100` unique received.
-- E2: `151/160` unique received.
-- E3: `222/255` unique received.
-- E9 no-fault control: `60/60`.
-- E10-B: action-begin→first MQTT publish `6.063318 s`; action-begin→first ping `6.609430 s`; publish→CORE receipt `0.060172 s`.
-- E10-C-B: RF-restore→first ping `29.247733 s`; RF-restore→first publish `29.248129 s`.
-- E10-D: broker-start action-begin→first manually initiated successful publish `<=10.908749 s`; command-complete→same probe `<=10.872618 s`; neither is exact broker recovery latency.
-- E10-A: no scalar recovery latency because recovery was not observed inside the preserved window.
-
-Independent closure re-audit directly reproduced the principal receiver-side MQTT results from raw files: E1R2 `65/65`, E1R3 `100/100`, E1R4 `93/100`, E2 `151/160`, E3 `222/255`, E4/E5/E6/E7/E8 `40/60` unique, and E9 `60/60`. E8 retains 80 sender lines but only 60 unique sequence IDs.
-
-### P9-D — Cross-node reconciliation: PASS
-
-Explicit surviving disagreements/asymmetries:
-
-1. E1R4 seq `96`: sender present, receiver absent, no matching sender `MQTT_FAIL`; receiver governs completeness.
-2. E3 seq `150`: sender present, receiver absent, no matching sender failure event; receiver governs completeness.
-3. E5 forward recovery ping is missing from frozen evidence; reverse recovery/MQTT evidence remains available.
-4. E8 recovery seq `41–60` was sent twice; unique IDs govern completeness.
-5. E10-C-B later CORE verification line is duplicated; it is not double-counted.
-6. E11 R1–R3 are nuc2-only in the collector; no reverse-path/MQTT cross-node metric is inferred.
-
-### P9-E — Anomaly register: PASS
-
-Mandatory anomalies are preserved plus additional forensic findings. No negative result, failed attempt, setup artifact, duplicate, outlier, missing artifact or unresolved mapping was cleaned away.
-
-`A-018` additionally records the two collector self-log post-manifest append exceptions discovered during closure re-audit.
-
-### P9-F — Claim-independent forensic QA: PASS
-
-Required trace chain verified for every surviving reconstructed value:
+Required trace chain is closed:
 
 `reported value → reconstructed table → raw-file root → frozen archive → SHA256 → Drive evidence`
-
-`DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND=2`
 
 `UNSUPPORTED_SURVIVING_VALUES=0`
 
 `UNRESOLVED_ARCHIVE_HASH_DISCREPANCIES=0`
 
-No value requires invented attenuator-ID→physical-path mapping. Runtime UHD identity remains unresolved and is not claimed.
-
-## P9 Drive authority verification
-
-| Authority | SHA256 | Drive ID | P9 verification |
-|---|---|---|---|
-| Master P8 evidence | `6952565D8ED630496EB7A801DB90583F2FED2EFCDC81FEACD1A2072F18FA8878` | `1TYqlzrsYLWqmM0jEEmrFWS8_QUuLShiR` | PASS |
-| E10/E11 frozen collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` | PASS |
-| Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` | PASS |
-
-Additional preservation anchors remain authoritative in `WP2_P8_GOLDEN_EVIDENCE_INDEX_2026-08-29.md` and `WP2_P8_DRIVE_PRESERVATION_RECEIPT_2026-08-29.md`.
-
-## Canonical P9 outputs
-
-Read these before any P10+ scientific interpretation:
+Canonical P9 outputs:
 
 1. `evidence/powder/WP2_P9_CANONICAL_EVIDENCE_CENSUS_2026-08-29.md`
 2. `evidence/powder/WP2_P9_CENSUS_E10_E11_SHA256_2026-08-29.csv`
@@ -152,45 +98,90 @@ Read these before any P10+ scientific interpretation:
 8. `evidence/powder/WP2_P9_FORENSIC_QA_REPORT_2026-08-29.md`
 9. `analysis/powder/wp2_p9_reconstruct.py`
 
-P8 source authorities remain:
+## Immutable P9 caveats carried forward
 
-- `docs/WP2_P8_GOLDEN_EXPERIMENT_HANDOVER_2026-08-29.md`
-- `evidence/powder/WP2_P8_GOLDEN_EVIDENCE_INDEX_2026-08-29.md`
-- `evidence/powder/WP2_P8_DRIVE_PRESERVATION_RECEIPT_2026-08-29.md`
-- `experiments/WP-PWD01/WP2_P8_MANUAL_RF_EXPERIMENT_CAMPAIGN_2026-08-28.md`
-- current Research & Grants Lessons Learned Ledger.
+- E5 forward recovery-ping observed live but not frozen.
+- E8 duplicate recovery-send attempt; unique IDs govern completeness.
+- E10-A no recovery within preserved observation window; no exact latency.
+- E10-C attempt A = setup artifact; B = valid with timing caveat.
+- E10-D timing = upper bound, not exact broker recovery latency.
+- departure `CAPTURE_STATUS.txt` post-manifest append on both nodes = documented exception, not corruption.
+- master `meta/collection.log` and E10/E11 `meta/collector.log` each contain one deterministic collector self-log append after their own manifest hash; outer ZIP hashes match and neither log is a metric source (`A-018`).
+- runtime UHD device not independently exposed; no runtime USRP serial/firmware claim.
+- attenuator-ID→physical-path mapping unresolved; never infer it.
+- E1R4 seq 96 and E3 seq 150 remain sender/event-vs-receiver disagreements; receiver governs completeness.
+- E10-C-B later CORE verification line duplicated; do not double-count.
+- E11 R1-R3 collector is UE-side only; no independent CORE metric may be inferred.
+- E7 reverse baseline 481.046 ms RTT maximum preserved as observed.
+- 89 screenshots preserved and hashed but unclassified by run; do not invent attribution.
+- final profile/RSpec capture remains PRIVATE because it contains credential-bearing/encrypted portal material.
 
-## Immutable caveats carried forward
+## WP2-P10 closure — scientific analysis contract
 
-- E5 missing frozen forward recovery-ping artifact.
-- E8 duplicate recovery-send attempt.
-- E10-A no recovery within observation window.
-- E10-C attempt A invalid setup; attempt B valid with timing caveat.
-- E10-D upper-bound timing only.
-- Departure `CAPTURE_STATUS.txt` documented post-manifest append on both nodes; not corruption.
-- Master `meta/collection.log` and E10/E11 `meta/collector.log` each contain one documented self-log append after their own manifest hash was generated; outer ZIP hashes remain exact and the logs are not metric sources.
-- Final profile/RSpec capture is PRIVATE because it contains credential-bearing/encrypted portal material.
-- Runtime UHD probes did not independently expose a USRP device; no runtime radio serial/firmware identity may be claimed.
-- Individual attenuator ID→physical-path mapping remains unresolved and must not be inferred.
-- E1R4 seq 96 and E3 seq 150 are sender/event-vs-receiver disagreements; receiver reconciliation governs completeness.
-- E10-C-B later CORE verification line is duplicated and not double-counted.
-- E11 collector is UE-side only for R1–R3.
-- E7 reverse baseline contains a preserved `481.046 ms` RTT maximum; do not clean it away.
-- 89 screenshots are preserved but unclassified by run.
+Canonical contract:
+
+`docs/WP2_P10_SCIENTIFIC_ANALYSIS_CONTRACT_2026-08-29.md`
+
+P10 resolves a material mismatch between the earlier planned paper and the evidence actually obtained.
+
+The earlier WP0 story anticipated a scored POWDER `B1_MQTT_QOS1 vs W1_OFFLINE_FIRST` comparison and possible B2 durable-client sensitivity. That scored comparison was not completed and must not be implied.
+
+The frozen post-P10 paper thesis is instead **failure-domain-aware resilience using complementary real-hardware evidence**:
+
+1. FIT supplies the direct architecture comparison (`B0 vs W1`) under healthy, broker-outage and broker-outage+gateway-restart conditions.
+2. POWDER P8/P9 supplies controlled physical-RF/LTE/MQTT degradation, threshold, hysteresis, variability, recovery and control evidence.
+3. FIT and POWDER are complementary validation layers and must never be pooled statistically as one population.
+
+### Frozen research questions
+
+- **RQ1 — Embedded durability/integrity:** W1 vs B0 under FIT C0/C1/C2.
+- **RQ2 — Physical RF degradation/transition:** ICMP/MQTT behavior, threshold region, hysteresis and variability from POWDER E1-E3.
+- **RQ3 — Failure-domain/recovery separation:** RF-only, UE restart, CORE restart, combined recovery, broker-only control and timing from E4-E11.
+- **RQ4 — Cross-layer triangulation:** structured complementary interpretation across FIT and POWDER without pooled inference.
+
+### Frozen contribution package
+
+- C1: real-embedded durability evidence against a non-durable baseline.
+- C2: controlled two-node physical-RF/LTE/MQTT characterization.
+- C3: failure-domain separation across RF, radio/UE, CORE, broker and combined recovery cases.
+- C4: evidence-first reproducibility with immutable hashes, receiver reconciliation and claim-to-raw-evidence traceability.
+
+### P10 claim prohibitions
+
+Do not claim:
+
+- scored P7B success;
+- POWDER B1-vs-W1 advantage;
+- superiority to the strongest available durable MQTT client;
+- universal RF thresholds;
+- exact E10-D broker latency;
+- deterministic RF-only recovery;
+- rural/field/Siwa/pump/hydraulic/agronomic validation;
+- unresolved RF-path or runtime USRP identity;
+- statistical independence from message count.
+
+B2 remains a comparator limitation/qualification issue, not current comparative evidence. B2 execution is not required for P11 and is not authorized by P10.
+
+## P11 entry gate
+
+P11 may now begin. It must:
+
+- analyze FIT at the run/replicate level;
+- analyze POWDER using only P9-accepted evidence and endpoint semantics;
+- preserve all anomalies/censoring;
+- keep FIT and POWDER statistically separate;
+- reproduce analyses from canonical evidence/code;
+- introduce no unsupported architecture comparison.
+
+P11 does not authorize manuscript prose, final publication figures, journal selection, new experiments, POWDER access, B2 execution or scored P7B retry.
 
 ## Storage authority
 
 1. **Google Drive = primary durable authority for frozen/raw binary evidence.**
-2. **GitHub = canonical scientific/control record** for manifests, hashes, contracts, analysis scripts, derived tables, anomaly register, results and handovers.
+2. **GitHub = canonical scientific/control record** for manifests, hashes, contracts, analysis scripts, derived tables, anomaly registers, results and handovers.
 3. **Home PC = independent third copy where applicable.**
 
 Raw archives remain immutable. Do not commit credential-bearing or large raw bundles into ordinary Git history.
-
-## Scope boundary and next phase
-
-`WP2-P10` and later scientific integration/publication work are **NOT STARTED** by this handover.
-
-P9 did not draft manuscript prose, generate publication claims, choose a journal, create final figures, reopen scientific scope, reinterpret negative results, or create a new live experiment.
 
 ## Stop state
 
@@ -202,6 +193,12 @@ P9 did not draft manuscript prose, generate publication claims, choose a journal
 
 `WP2_P9=PASS_GOLDEN_EVIDENCE_RECONCILED`
 
+`WP2_P10=PASS_SCIENTIFIC_ANALYSIS_CONTRACT_FROZEN`
+
+`PRIMARY_ARCHITECTURE_COMPARISON=FIT_B0_VS_W1`
+
+`POWDER_ROLE=CONTROLLED_PHYSICAL_RF_AND_RECOVERY_CHARACTERIZATION`
+
 `LIVE_POWDER_DEPENDENCY=NONE_FOR_CURRENT_PHASE`
 
-`NEXT_PHASE=WP2_P10_NOT_STARTED`
+`NEXT_PHASE=WP2_P11_FULL_RAW_DATA_ANALYSIS`
