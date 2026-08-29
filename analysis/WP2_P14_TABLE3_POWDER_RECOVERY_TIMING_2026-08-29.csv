@@ -1,0 +1,8 @@
+Run,Mechanism,Endpoint,Semantics,Value
+E10-A,RF-only restoration,No recovery observed,Censored,No scalar latency
+E10-B,RF restore + UE restart,action-begin → first MQTT publish,Exact,6.063318 s
+E10-B,RF restore + UE restart,action-begin → first ping,Exact,6.609430 s
+E10-B,RF restore + UE restart,publish → CORE receipt,Exact,0.060172 s
+E10-C-B,CORE-related recovery sequence,RF restore → first ping,Exact,29.247733 s
+E10-C-B,CORE-related recovery sequence,RF restore → first MQTT publish,Exact,29.248129 s
+E10-D,Broker restart control,action-begin → manually initiated successful publish,Upper bound,≤10.908749 s
