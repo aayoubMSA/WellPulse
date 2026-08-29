@@ -110,7 +110,7 @@ For methodological contribution:
 Material collision review result:
 
 - `SCIENTIFIC BLOCKER`: **0**
-- `WORDING NARROWING`: **9 source/axis groups** (including the material Mohammed et al. 2026 comparator and conservative Gaspar handling)
+- `WORDING NARROWING`: **11 source/axis groups** (including the material Mohammed et al. 2026 comparator and conservative Gaspar handling)
 - `NO IMPACT`: **6 source/axis groups**
 
 No collision requires a new experiment or a new empirical claim for the current bounded manuscript.
