@@ -18,7 +18,7 @@ Every surviving reconstructed value must follow:
 | E10/E11 collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | exact match | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` | PASS |
 | Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | exact match | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` | PASS |
 
-For E7/E8/E9, the raw files reside inside standalone frozen run ZIPs preserved redundantly inside the Drive-authoritative private preservation bundle; the standalone hashes are preserved by its manifest, the P8 evidence index and the P9 trace map.
+For E7/E8/E9, raw files reside inside standalone frozen run ZIPs preserved redundantly inside the Drive-authoritative private preservation bundle; the standalone hashes are preserved by its manifest, the P8 evidence index and the P9 trace map.
 
 ## Reconstruction QA
 
@@ -33,13 +33,14 @@ For E7/E8/E9, the raw files reside inside standalone frozen run ZIPs preserved r
 
 ## Census QA
 
-The read-only member walk produced 598 immutable member records. Full hash enumeration remains inside the frozen archive-native manifests (`meta/SHA256_ALL_FILES.txt`, `meta/SHA256_ALL_COLLECTED.txt`, `SHA256_ALL.txt`, `PRESERVATION_MANIFEST.json`), while GitHub holds the canonical census/index, the E10/E11 member-level cross-check and raw-to-Drive trace map. This preserves the Drive-as-binary-authority policy without duplicating private/large raw bundles into ordinary Git history.
+The read-only central-directory walk enumerates 598 immutable file members across the three Drive-verified frozen authorities. Full path/hash enumeration remains inside the archive-native manifests (`meta/SHA256_ALL_FILES.txt`, `meta/FILE_INVENTORY.csv`, `meta/SHA256_ALL_COLLECTED.txt`, `meta/RUN_STATUS.csv`, `SHA256_ALL.txt`, `PRESERVATION_MANIFEST.json`). All 89 screenshots are individually enumerated in the private package SHA manifest but remain unclassified by run and are not used numerically.
 
 ## Negative/failed evidence QA
 
 Failed, NULL and setup evidence remains present in the census and validity register:
+
 - E1 initial NULL prerequisite-violating treatment run;
-- three E5 pre-treatment setup artifacts;
+- four E5 setup/pre-science attempts or fragments: `p8-master-20260828A-e5`, `p8-master-20260828A-e5-a01`, `p8-e5-20260829-000402`, `p8-e5-20260829-000744`;
 - E10-C attempt A setup artifact;
 - E10-A censored non-recovery observation.
 
@@ -47,11 +48,17 @@ No failed or negative artifact was deleted.
 
 ## Cross-node QA
 
-Receiver-side evidence governs end-to-end completeness. E1R4 seq 96 and E3 seq 150 are explicit sender/event-vs-receiver disagreements and remain in the anomaly register. E8 duplicate sends are reconciled using unique sequence IDs. E10-C-B duplicated later verification evidence is not double-counted.
+Receiver-side evidence governs end-to-end completeness. E1R4 seq 96 and E3 seq 150 are explicit sender/event-vs-receiver disagreements and remain in the anomaly register. E8 duplicate sends are reconciled using unique sequence IDs. E10-C-B duplicated later verification evidence is not double-counted. E11 has no independent CORE archive; no reverse/MQTT metric is inferred.
 
 ## Mapping and hardware QA
 
 No result requires an individual attenuator-ID→physical-path mapping. Runtime UHD identity remains unresolved and is not used to derive any metric.
+
+## Endpoint-semantic QA
+
+- E10-B: RF0+srsUE action-begin→first publish = 6.063318 s; first publish→CORE receipt = 0.060172 s; action-begin→first ping = 6.609430 s.
+- E10-C-B: RF restore→first ping = 29.247733 s; RF restore→first publish = 29.248129 s; later receiver verification is separate and duplicated, not substituted for primary timing.
+- E10-D: broker-start action-begin→first manually initiated successful publish = 10.908749 s; command-complete→same publish = 10.872618 s. Both are upper bounds only.
 
 ## P7B boundary QA
 
@@ -63,6 +70,10 @@ No P9 output changes either classification.
 
 ## Unsupported-value gate
 
-Every numeric result retained in the reconstructed metric/timing tables resolves through `WP2_P9_FORENSIC_TRACE_MAP_2026-08-29.md` to raw evidence and a Drive-verified frozen authority. Values blocked by absent evidence are represented as censored/missing/caveated rather than invented.
+Every numeric result retained in the reconstructed metric tables resolves through `WP2_P9_FORENSIC_TRACE_MAP_2026-08-29.md` to raw evidence and a Drive-verified frozen authority. Values blocked by absent evidence are represented as censored/missing/caveated rather than invented.
+
+`UNSUPPORTED_SURVIVING_VALUES=0`
+
+`UNRESOLVED_ARCHIVE_HASH_DISCREPANCIES=0`
 
 `P9_F_FORENSIC_QA=PASS`
