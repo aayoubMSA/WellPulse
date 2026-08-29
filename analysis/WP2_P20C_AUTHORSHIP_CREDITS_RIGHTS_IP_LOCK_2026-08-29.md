@@ -13,9 +13,15 @@ P20C does not perform IEEE formatting, copyright-form acceptance, payment, publi
 
 ## 2. Author lock
 
+### Canonical publication identity
+
+**Publication name: Ahmed Ayoub.**
+
+This exact form is mandatory across manuscript bylines, IEEE submission metadata, CRediT, citation metadata, ORCID/Scopus/Google Scholar-facing records, repositories and publication-related correspondence. Expanded variants such as `Ahmed Elsayed Ayoub` or `Ahmed El-Sayed Ayoub` are not permitted in publication-facing metadata unless the author explicitly overrides this rule for a specific legal/administrative form.
+
 ### Author list and order
 
-**Sole author:** Ahmed Elsayed Ayoub.
+**Sole author:** Ahmed Ayoub.
 
 No second author is currently supported by manuscript/repository evidence.
 
@@ -23,15 +29,15 @@ The active WellPulse graduation-project students, Nadeem Abdelhamid and Mohamed 
 
 `AUTHOR_COUNT=1`
 
-`AUTHOR_ORDER=AHMED_ELSAYED_AYOUB`
+`AUTHOR_ORDER=AHMED_AYOUB`
 
 ### Corresponding author
 
-Ahmed Elsayed Ayoub is the corresponding author.
+Ahmed Ayoub is the corresponding author.
 
 Repository commit metadata identifies the current MSA email as `aelsayedo@msa.edu.eg`. P20D/P21 must recheck the address immediately before portal submission.
 
-`CORRESPONDING_AUTHOR=AHMED_ELSAYED_AYOUB`
+`CORRESPONDING_AUTHOR=AHMED_AYOUB`
 
 ## 3. Canonical affiliation
 
@@ -223,6 +229,7 @@ P20C does not authorize copyright-form acceptance. It verifies that no identifie
 
 ## 12. Acceptance gate
 
+- exact publication name: **PASS — Ahmed Ayoub**
 - exact author list/order: **PASS**
 - corresponding author: **PASS**
 - affiliation: **PASS**
@@ -240,6 +247,8 @@ P20C does not authorize copyright-form acceptance. It verifies that no identifie
 - submission authorized: **NO**
 
 `WP2_P20C=PASS_AUTHORSHIP_CREDITS_RIGHTS_IP_LOCK`
+
+`PUBLICATION_NAME=AHMED_AYOUB`
 
 `P20D_UNLOCKED=YES`
 
