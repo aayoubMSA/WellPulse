@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion of **WP2-P17 — RESEARCH PACK + CONSORTIUM MANUSCRIPT REVISION + QA**.
+Last updated: 2026-08-29 after **WP2-P17V — SUPERIOR INDEPENDENT CONSORTIUM VALIDATION**.
 
 ## Canonical authority
 
@@ -19,16 +19,18 @@ This file is the current operational retrieval point. Do not reconstruct current
 - WP2-P11 full raw-data scientific analysis: **PASS / COMPLETE**
 - WP2-P12 cross-evidence integration: **PASS / COMPLETE**
 - WP2-P13 claim–evidence matrix: **PASS / FROZEN**
-- WP2-P14 publication tables/figures: **PASS / FROZEN / VISUAL QA PASS**
-- WP2-P15 manuscript construction: **PASS / COMPLETE / HISTORICAL INTERNAL FULL DRAFT**
-- WP2-P16 adversarial publication QA: **PASS / SCIENTIFIC QA COMPLETE**
-- WP2-P17 dossier research pack + consortium revision: **PASS / CONSORTIUM-REVISED INTERNAL DRAFT + QA**
+- WP2-P14 publication tables/figures: **PASS / FROZEN / historical main-display set**
+- WP2-P15 manuscript construction: **PASS / historical internal full draft**
+- WP2-P16 adversarial publication QA: **PASS / scientific QA complete**
+- WP2-P17 dossier research pack + first consortium revision: **PASS / consortium-revised internal draft + QA**
+- WP2-P17V superior independent validation: **PASS / VALIDATED WITH PRE-SUBMISSION CONDITIONS**
 - new experiment required for current bounded manuscript: **NO**
 - new empirical claims required: **NO**
+- scientific blockers in P17V: **0**
 - submission authorization: **NO**
 - live POWDER dependency: **NONE**
 
-Historical scored state remains unchanged and is internal control truth:
+Historical scored state remains unchanged:
 
 `B1=NULL_ABORTED_AFTER_Q3`
 
@@ -52,8 +54,10 @@ No P8+ result may be promoted or relabelled as scored P7B.
 10. `manuscript/WP2_P17_CONSORTIUM_MANUSCRIPT_REVIEW_2026-08-29.md`
 11. `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
 12. `manuscript/WP2_P17_CONSORTIUM_REVISION_QA_2026-08-29.md`
-13. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
-14. P14 display files only when revising or auditing the current publication display set.
+13. `analysis/WP2_P17V_INDEPENDENT_CLAIM_VALIDATION_MATRIX_2026-08-29.md`
+14. `manuscript/WP2_P17V_SUPERIOR_INDEPENDENT_CONSORTIUM_VALIDATION_2026-08-29.md`
+15. P9 forensic authorities when exact POWDER trace/caveat semantics are required.
+16. P14 display files only when auditing the historical display set; P18 is expected to redesign the main display set under a new QA gate.
 
 ## Frozen evidence roles
 
@@ -63,7 +67,7 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 
 - FIT IoT-LAB Grenoble A8-100;
 - `B0/W1 × C0/C1/C2 × 3 replicates = 18 cells`;
-- exactly 10,000 records/cell;
+- 10,000 records/cell;
 - B0 = non-durable publish-only baseline;
 - W1 = durable queue + receiver reconciliation;
 - C0 healthy; C1 broker outage; C2 broker outage + gateway-process exec restart.
@@ -71,9 +75,9 @@ Authority: `FINAL_WP_RT01_FIT_A8`.
 Principal results:
 
 - C0: B0 100%, W1 100% in 3/3;
-- C1: B0 80%, W1 100% in 3/3, `+20 pp` each replicate;
-- C2: B0 80%, W1 100% in 3/3, `+20 pp` each replicate;
-- every B0 C1/C2 run misses exactly 2,000/10,000 records, matching the imposed outage-period record block;
+- C1: B0 80%, W1 100% in 3/3, `+20 pp` each run;
+- C2: B0 80%, W1 100% in 3/3, `+20 pp` each run;
+- each B0 C1/C2 run misses exactly 2,000/10,000 records, matching the imposed outage-period record block;
 - every W1 final run contains all 10,000 generated IDs exactly once;
 - W1 backlog-drain means: C1 `67.731246 s`; C2 `67.870252 s`.
 
@@ -81,18 +85,19 @@ These are repeated outcomes under the exact treatment, not population reliabilit
 
 Canonical W1 implementation semantics:
 
-- `record_id = run_id:boot_id:sequence` with an eight-digit sequence representation;
-- canonical JSON serialization + SHA-256 checksum;
-- SQLite durable queue with WAL and `synchronous=FULL`;
-- explicit `PENDING` / `SENT` state;
+- `record_id = run_id:boot_id:sequence` with zero-padded sequence;
+- deterministic canonical JSON serialization;
+- SHA-256 checksum;
+- SQLite queue with WAL and `synchronous=FULL`;
+- `PENDING` / `SENT` state;
 - exact duplicate re-enqueue is idempotent;
-- conflicting reuse of an existing record identity raises an integrity error.
+- conflicting identity reuse raises an integrity error.
 
-## POWDER = communication-path degradation/recovery characterization
+### POWDER = communication-path degradation/recovery characterization
 
 Campaign: `WP2-P8`; profile `srslte-controlled-rf`.
 
-Internal evidence classification remains:
+Internal control classification:
 
 `P8_CLASS=MANUAL_NON_SCORED_REFERENCE`
 
@@ -111,9 +116,9 @@ Principal evidence:
 - E10-C-B: RF restore→first ping `29.247733 s`; first publish `29.248129 s`;
 - E10-D: `<=10.908749 s` upper bound only.
 
-Receiver-side reconciliation remains authoritative. Important concrete examples include E1R4 sequence 96 and E3 sequence 150 being sender-present/receiver-absent without matching sender failure flags, and E8 containing 80 sender-log lines but only 60 unique IDs because recovery IDs were duplicated.
+Receiver-side reconciliation is authoritative. Concrete examples: E1R4 seq 96 and E3 seq 150 are sender-present/receiver-absent without matching sender failure flags; E8 has 80 sender-log lines but only 60 unique IDs due to duplicated recovery sends.
 
-Interpretation remains experiment-specific. No universal 52 dB threshold exists.
+Interpretation remains experiment-specific. No universal 52 dB threshold is claimed.
 
 ## Frozen integration doctrine
 
@@ -126,68 +131,35 @@ The synthesis is **failure-domain-aware triangulation**. No pooled FIT+POWDER re
 
 ## Frozen claim envelope
 
-P13 remains the scientific claim authority. Nine claims are manuscript-eligible with bounded wording:
+P13 remains the scientific claim authority:
 
 - primary empirical: `IC-01`, `IC-04`, `IC-06`;
 - supporting empirical: `IC-02`, `IC-03`, `IC-05`, `IC-07`;
 - methodological synthesis: `IC-08`, `IC-09`.
 
+P17/P17V add no new empirical claims and do not expand P13.
+
 `P13_UNSUPPORTED_MANUSCRIPT_CLAIMS=0`
 
 `P13_STATISTICAL_POOLING=NONE`
 
-P17 adds **no new empirical claim** and does not expand P13.
-
 ## P17 durable research pack
 
-The final detailed experiment dossier is registered as a research input without superseding raw authorities.
+Drive parent: `P12_WellPulse`  
+Folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
 
-Drive parent folder: `P12_WellPulse`  
-Drive folder ID: `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
-
-- dossier PDF: `WellPulse_Experimental_Technical_Dossier_v2.2.pdf`
+- dossier PDF `WellPulse_Experimental_Technical_Dossier_v2.2.pdf`
   - Drive ID `12ec22A89ybsNoBpYcglx9Im6pW8Vk55-`
   - SHA-256 `a9274514cbf21de58291c2640f560f6082711e0a8696890419e918e595b40f3e`
-- reproducible dossier package:
-  - Drive ID `1ts__z8kN0fORwDksQZoj4eeaG--UyCAw`
-- experiment figure suite:
-  - Drive ID `1y8rStzWdGEivWjuFCP0h5Y6Amv6267sY`
-- figure-centered QA report:
-  - Drive ID `1ukEvwr3_uOoZcCn3TknwOcZL6HRaLo1a`
+- reproducible dossier package Drive ID `1ts__z8kN0fORwDksQZoj4eeaG--UyCAw`
+- experiment figure suite Drive ID `1y8rStzWdGEivWjuFCP0h5Y6Amv6267sY`
+- figure-centered QA report Drive ID `1ukEvwr3_uOoZcCn3TknwOcZL6HRaLo1a`
 
-Dossier authority role: **audit-grade detailed experiment atlas / manuscript and supplement input**. Raw archives, P9 and P11 remain higher measurement authorities.
+Dossier role: **audit-grade experiment atlas / manuscript-supplement input**. Raw archives, P9 and P11 remain higher measurement authorities.
 
-## P17 consortium
+## P17 manuscript baseline
 
-A role-based eight-reviewer consortium was used; no fictitious individual identities are asserted:
-
-1. systems / IoT scientific editor;
-2. MQTT protocol and persistence specialist;
-3. wireless/RF/testbed specialist;
-4. experimental design/statistics reviewer;
-5. reproducibility/artifact reviewer;
-6. literature/novelty reviewer;
-7. scientific visualization/information-design reviewer;
-8. adversarial journal reviewer / associate-editor simulation.
-
-### Consortium consensus
-
-The evidence base is stronger than P15 communicates. The correct strategy is **not** to add claims or experiments, but to exploit the existing record more defensibly.
-
-Strongest underused material now elevated in P17:
-
-- exact W1 durable-state implementation semantics;
-- E8 broker-only failure-domain control;
-- E10-A adverse/censored RF-only non-recovery;
-- seq96 / seq150 sender-receiver disagreements;
-- E8 duplicate-send case as receiver-reconciliation evidence;
-- reconnect versus backlog-drain separation;
-- structured failure-domain/recovery taxonomy;
-- negative/setup/anomalous evidence as reproducibility material.
-
-### P17 manuscript
-
-Canonical consortium-revised internal draft:
+Canonical revised internal draft:
 
 `manuscript/WELLPULSE_MANUSCRIPT_DRAFT_P17_CONSORTIUM_REVISION_2026-08-29.md`
 
@@ -195,9 +167,7 @@ Preferred working title:
 
 **WellPulse: Separating Record-State Survival from Communication-Path Recovery in Resilient IoT Telemetry**
 
-The draft uses three empirical RQs and treats cross-testbed triangulation as synthesis rather than as a fourth pooled experiment.
-
-P17 QA:
+P17 uses three empirical RQs and treats cross-testbed triangulation as synthesis rather than as a fourth pooled experiment.
 
 `WP2_P17_QA=PASS_CONSORTIUM_REVISION_EVIDENCE_BOUNDED`
 
@@ -205,26 +175,46 @@ P17 QA:
 
 `P17_QA_NUMERICAL_CONTRADICTIONS=0`
 
-`P17_NEW_EXPERIMENT_REQUIRED=NO`
+## P17V superior independent validation
 
-`P17_NEW_EMPIRICAL_CLAIMS=0`
+A second, independent role-based consortium of 12 reviewers validated P17 against P11/P12/P13/P16, canonical code, forensic authorities and an independent current baseline/literature check.
 
-## P17 literature strategy
+Roles:
 
-The related-work survey is expanded around four axes:
+1. senior systems/meta-review editor;
+2. MQTT protocol/persistence specialist;
+3. embedded storage/crash-consistency reviewer;
+4. wireless/RF experimentalist;
+5. cellular/LTE systems reviewer;
+6. experimental design/statistics reviewer;
+7. causal/measurement-methodology reviewer;
+8. reproducibility/forensic evidence auditor;
+9. research-software reviewer;
+10. literature/novelty meta-reviewer;
+11. scientific-visualization reviewer;
+12. adversarial associate-editor simulation.
 
-1. MQTT persistence / QoS / retransmission;
-2. robustness and fault injection;
-3. offline-first / edge-cloud continuity / store-and-forward;
-4. real testbeds, repeatability, and reproducibility.
+Independent verdict:
 
-High-priority anchors include the existing 2024–2026 MQTT/offline-first/store-and-forward literature plus the FIT IoT-LAB and POWDER platform papers and repeatable-testbed methodology.
+**VALIDATED WITH PRE-SUBMISSION CONDITIONS.**
 
-Gaspar et al. 2026 DOI `10.1109/MIOT.2026.3681190` remains a final full-text comparison gate if accessible before submission.
+- claims validated: `9/9`;
+- numerical contradictions: `0`;
+- unsupported new claims: `0`;
+- scientific blockers: `0`;
+- new experiment required: `NO`.
+
+Principal residual scientific limitation: B0 is non-durable and is not the strongest durable MQTT comparator. Independent official Paho documentation confirms that durable/persistent MQTT client state is established prior art. The current bounded paper remains defensible because it does not claim generic MQTT superiority.
+
+P17V also independently reconfirmed the novelty boundary: persistence, retransmission, offline-first reconciliation, store-and-forward and testbed repeatability are prior art. The defensible contribution is the compound evaluation: failure-domain-aware framing + bounded embedded durability evidence + controlled physical-path characterization + endpoint-specific recovery semantics + receiver-side evidence preservation.
+
+Gaspar et al. 2026 DOI `10.1109/MIOT.2026.3681190` is independently confirmed bibliographically. Detailed full-text comparison remains a pre-submission gate if accessible.
+
+`P17V_VERDICT=VALIDATED_WITH_PRE_SUBMISSION_CONDITIONS`
 
 ## Authorship, affiliation, credits, rights
 
-Canonical author identity for current internal project documents:
+Canonical current author identity for internal project documents:
 
 **Dr. Ahmed Elsayed Ayoub**  
 Assistant Professor of Computer Engineering  
@@ -232,51 +222,47 @@ Department of Computer Systems Engineering
 Faculty of Engineering, MSA University  
 Giza, Egypt
 
-Do not invent coauthors, funding, contributor roles, copyright ownership beyond verified records, or licensing terms.
+Do not invent coauthors, contributor roles, funding, copyright ownership, or licensing terms.
 
-Before submission, explicitly re-verify:
+Before submission explicitly verify:
 
-- final author list and order;
+- final author list/order;
 - CRediT/contributor roles;
 - MSA affiliation wording;
 - funding declarations;
 - collaborator acknowledgments;
-- FIT IoT-LAB acknowledgment/citation;
-- POWDER acknowledgment/citation;
+- FIT IoT-LAB citation/acknowledgment;
+- POWDER citation/acknowledgment;
 - copyright/licensing requirements of the selected venue and applicable institutional/testbed policies.
 
-## P17 recommended display/supplement strategy — NOT YET FROZEN
+## Remaining gates before submission authorization
 
-The consortium recommends reopening the publication display design under a new QA gate, not silently changing P14.
+### P18 — Main-display redesign + claim/display QA
 
-Candidate main figures:
+- architecture + evidence-role schematic;
+- failure-domain taxonomy display/table;
+- final main-versus-supplement display split;
+- independent display QA against P13/P17/P17V.
 
-1. architecture + evidence-role schematic;
-2. FIT architecture-level completeness;
-3. POWDER transition/direction;
-4. POWDER E3 repeatability.
+### P19 — Reviewer-facing supplementary atlas + sanitized artifact
 
-Candidate main tables:
+- derive concise reviewer supplement from dossier v2.2;
+- include E0–E11, validity, anomalies, FIT ledger and endpoint semantics;
+- package analysis code, derived non-sensitive data, manifests and figures;
+- privacy/security sanitization before release.
 
-1. failure-domain / treatment / endpoint taxonomy;
-2. FIT run-level summary;
-3. recovery timing semantics.
+### P20 — Final literature/credits/venue/submission preparation
 
-Candidate supplement:
+Only after P18/P19 PASS:
 
-- complete E0–E11 experiment atlas;
-- run-validity register;
-- anomaly register;
-- FIT 18-cell ledger;
-- recovery endpoint definitions;
-- evidence/claim traceability;
-- sanitized derived CSVs / analysis scripts / manifests.
+- submission-date literature check and Gaspar full-text comparison if accessible;
+- target-journal and author-instruction verification;
+- final authorship/credits/funding/rights audit;
+- clean submission-facing manuscript with internal control/status notes removed;
+- proof and claim-reference-display-artifact consistency QA;
+- explicit user authorization before external submission.
 
-The standalone FIT backlog-drain plot is a candidate for supplement while retaining the numerical result in main text/table.
-
-`P17_DISPLAY_REDESIGN=OPEN_NEXT_GATE`
-
-`P17_SUPPLEMENTARY_ATLAS=OPEN_NEXT_GATE`
+No new POWDER or FIT experiment is authorized or currently required.
 
 ## Immutable prohibitions
 
@@ -292,36 +278,8 @@ Do not claim:
 - population reliability from message counts or three FIT replicates;
 - field/rural/Siwa/pump/hydraulic/groundwater/agronomic/industrial-process validation;
 - unresolved RF-path/runtime USRP identity;
-- pooled FIT+POWDER inferential statistics.
-
-## Remaining gates before submission authorization
-
-### P18 — Main-display redesign + claim/display QA
-
-- build architecture + evidence-role schematic;
-- build failure-domain taxonomy display/table;
-- determine final main versus supplement figure split;
-- independently QA every changed display against P13/P17.
-
-### P19 — Reviewer-facing supplementary experiment atlas + sanitized artifact
-
-- derive compact supplement from dossier v2.2;
-- include E0–E11, run validity, anomalies, FIT ledger and endpoint semantics;
-- package analysis code/derived non-sensitive data/manifests;
-- privacy/security sanitization before any public/reviewer release.
-
-### P20 — Final submission preparation
-
-Only after P18/P19 PASS:
-
-- submission-date literature check and Gaspar full-text comparison if accessible;
-- target journal re-verification and author instructions;
-- final author/credits/funding/rights audit;
-- clean submission-facing manuscript with internal status/control notes removed;
-- final proof, claim-reference-display-artifact consistency QA;
-- explicit user authorization before external submission.
-
-No new POWDER or FIT experiment is authorized or currently required.
+- pooled FIT+POWDER inferential statistics;
+- historical uniqueness of the two-property model unless separately established by literature evidence.
 
 ## Storage authority
 
@@ -358,6 +316,10 @@ Raw evidence remains immutable.
 `P17_DOSSIER_RESEARCH_PACK=REGISTERED`
 
 `WP2_P17_QA=PASS_CONSORTIUM_REVISION_EVIDENCE_BOUNDED`
+
+`WP2_P17V=PASS_SUPERIOR_INDEPENDENT_VALIDATION`
+
+`P17V_VERDICT=VALIDATED_WITH_PRE_SUBMISSION_CONDITIONS`
 
 `LIVE_POWDER_DEPENDENCY=NONE`
 
