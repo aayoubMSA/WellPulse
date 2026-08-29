@@ -1,7 +1,7 @@
 # WP2-P18R-F1-HOTFIX — Deterministic Figure-1 Correction and QA
 
 Date: 2026-08-29  
-Status: **PASS / ACCEPTED / CURRENT FIGURE-1 AUTHORITY**
+Status: **PASS / ACCEPTED / CURRENT FIGURE-1 AUTHORITY / PROVENANCE REPAIRED**
 
 ## 1. Trigger
 
@@ -47,9 +47,15 @@ Canonical generator:
 
 `analysis/wp2_p18r_generate_f1_hotfix.py`
 
-Generator source SHA-256:
+Current Git blob SHA-1:
 
-`201897de563448037798678a73c998bd8b7a01f74bb4096995587f13d6667d48`
+`bf344808414b78d9b0c688140e9de9a755d9a1e7`
+
+Current exact generator source SHA-256:
+
+`3de810672749001e9fb2d50c43b531e87fec7c359878a5aa7c58deb8ad0e7be5`
+
+The earlier QA receipt value `201897de563448037798678a73c998bd8b7a01f74bb4096995587f13d6667d48` is superseded for current generator identity by the value above. The current generator reproduces the already-frozen final PDF bit-for-bit; therefore this was provenance drift, not a scientific or visual-content change.
 
 The generator validates source semantics in:
 - `src/wellpulse/powder_w1.py`;
@@ -60,13 +66,13 @@ The generator validates source semantics in:
 
 It consumes no AI-generated image asset.
 
-Two consecutive independent builds produced the same PDF SHA-256.
-
 ## 5. Final figure integrity
 
 Final Figure 1 PDF SHA-256:
 
 `4733d6fe171f14fd62e8d50d38f16a276a953481ee991045fbea86b7a5ab3578`
+
+A fresh archival rebuild from the current GitHub generator reproduced exactly the same PDF SHA-256.
 
 Production:
 - PDF vector master;
@@ -78,7 +84,7 @@ Production:
 
 ## 6. Visual QA
 
-Three deterministic iterations were reviewed.
+Three deterministic iterations were reviewed during the hotfix lifecycle.
 
 The first two were rejected before release because they still contained layout/topology defects.
 
@@ -91,11 +97,31 @@ Final released design:
 - FIT/POWDER role separation: PASS;
 - synthesis convergence without text collision: PASS.
 
-## 7. Caption
+## 7. Durable archive verification
+
+Final archival bundle:
+
+`WellPulse_P18R_F1_Hotfix_Final_2026-08-29.zip`
+
+Drive file ID:
+
+`12Q6QOTQWH2-t-Ryxy32ys2bXB3tw-B1M`
+
+ZIP SHA-256:
+
+`e9d5a54b24506b879a748b5a06b39699e6f6ec1ed31093491c27b2be7d7e6e1d`
+
+The object was fetched back from Drive and re-hashed; read-back SHA matched the local archival package exactly.
+
+Canonical storage/provenance closure:
+
+`docs/WP2_P18R_F1_DRIVE_ARCHIVAL_CLOSURE_2026-08-29.md`
+
+## 8. Caption
 
 **System, record-state, and evidence architecture of WellPulse.** The upper panel separates the sender-local durable lifecycle from independent receiver-side evidence. Each generated telemetry record receives a stable `run:boot:sequence` identity and SHA-256 checksum before entering a SQLite write-ahead-logged `PENDING` state. Publish attempts use MQTT QoS 1; unavailable delivery returns to the durable queue, while a QoS 1 PUBACK permits the sender-local record to transition to `SENT`. Independently, the receiver stores unique record identities idempotently, and final delivery is reported from generated-versus-received identity reconciliation. The lower panels assign non-overlapping experimental roles: FIT IoT-LAB evaluates architecture-level record-state survival under B0/W1 × C0/C1/C2 (three runs per cell, 10,000 records per run), whereas POWDER provides E0–E11 controlled communication-path degradation/recovery evidence across RF, UE, CORE, broker, and no-fault domains. These evidence layers support two distinct resilience properties—record-state survival and communication-path recovery—and are integrated as complementary evidence without pooled cross-platform reliability statistics or a POWDER W1-versus-baseline effect.
 
-## 8. Verdict
+## 9. Current project-line verdict
 
 `P18R_F1_HOTFIX=PASS_DETERMINISTIC_F1_ACCEPTED`
 
@@ -105,6 +131,12 @@ Final released design:
 
 `P18R_F1_SCIENTIFIC_SEMANTICS=PASS`
 
+`P18R_F1_DRIVE_ARCHIVE=PASS`
+
+`PROVENANCE_DRIFT=REPAIRED`
+
 `AI_F1=REFERENCE_ONLY_NOT_CANONICAL`
 
-The project returns to the pre-hotfix project line after this bounded correction. The next main gate remains the post-P18R benchmark before P19 packaging.
+`SCIENTIFIC_CONTENT_CHANGED=NO`
+
+P18RB is already complete. The exact next main gate is **WP2-P18RC — MAIN-FIGURE PRODUCTION NORMALIZATION** before P19 packaging.
