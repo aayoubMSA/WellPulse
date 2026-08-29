@@ -1,6 +1,6 @@
 # WellPulse — Current Handover
 
-Last updated: 2026-08-29 after completion of **WP2-P9 — GOLDEN EVIDENCE FORENSIC RECONCILIATION**.
+Last updated: 2026-08-29 after completion and independent closure re-audit of **WP2-P9 — GOLDEN EVIDENCE FORENSIC RECONCILIATION**.
 
 ## Canonical authority
 
@@ -15,7 +15,7 @@ This file is the current operational retrieval point. Do not reconstruct current
 - WP1: **PASS / FROZEN**
 - WP2: **ACTIVE — OFFLINE SCIENTIFIC INTEGRATION**
 - WP2-P8 manual RF campaign: **COMPLETE / GOLDEN EVIDENCE PRESERVED / NON-SCORED MANUAL REFERENCE**
-- WP2-P9 golden evidence forensic reconciliation: **PASS / COMPLETE**
+- WP2-P9 golden evidence forensic reconciliation: **PASS / COMPLETE / INDEPENDENT CLOSURE RE-AUDIT PASS**
 - WP3: **BLOCKED ON SCIENTIFIC WP2 CLOSURE / CONFIRMATORY DECISION**
 - WP4: **BLOCKED**
 - WP5: **PREPARED / NOT EXECUTED**
@@ -58,6 +58,8 @@ Full path/hash enumeration remains inside the immutable archive-native manifests
 - E10/E11: `meta/SHA256_ALL_COLLECTED.txt` + `meta/RUN_STATUS.csv` + node SHA manifests;
 - private preservation: `SHA256_ALL.txt` + `PRESERVATION_MANIFEST.json`.
 
+Independent closure re-audit found two deterministic archive-native self-log post-manifest appends: master `meta/collection.log` and E10/E11 `meta/collector.log` each received only their final `creating final ZIP` line after their own hash was recorded. The stored hashes exactly match the pre-append byte prefixes, the outer ZIP SHA256 values match Drive, all other parsed manifest entries verify, and neither collector log is used for metrics. Classified `A-018 / DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND`, not corruption.
+
 All **89** unclassified PNG screenshots are individually preserved and hashed in the private package; their UUID names do not support defensible run attribution and they are not used numerically.
 
 ### P9-B — Validity classification: PASS
@@ -93,6 +95,8 @@ Selected forensic values, **not publication claims**:
 - E10-D: broker-start action-begin→first manually initiated successful publish `<=10.908749 s`; command-complete→same probe `<=10.872618 s`; neither is exact broker recovery latency.
 - E10-A: no scalar recovery latency because recovery was not observed inside the preserved window.
 
+Independent closure re-audit directly reproduced the principal receiver-side MQTT results from raw files: E1R2 `65/65`, E1R3 `100/100`, E1R4 `93/100`, E2 `151/160`, E3 `222/255`, E4/E5/E6/E7/E8 `40/60` unique, and E9 `60/60`. E8 retains 80 sender lines but only 60 unique sequence IDs.
+
 ### P9-D — Cross-node reconciliation: PASS
 
 Explicit surviving disagreements/asymmetries:
@@ -108,11 +112,15 @@ Explicit surviving disagreements/asymmetries:
 
 Mandatory anomalies are preserved plus additional forensic findings. No negative result, failed attempt, setup artifact, duplicate, outlier, missing artifact or unresolved mapping was cleaned away.
 
+`A-018` additionally records the two collector self-log post-manifest append exceptions discovered during closure re-audit.
+
 ### P9-F — Claim-independent forensic QA: PASS
 
 Required trace chain verified for every surviving reconstructed value:
 
 `reported value → reconstructed table → raw-file root → frozen archive → SHA256 → Drive evidence`
+
+`DOCUMENTED_POST_MANIFEST_SELF_LOG_APPEND=2`
 
 `UNSUPPORTED_SURVIVING_VALUES=0`
 
@@ -160,6 +168,7 @@ P8 source authorities remain:
 - E10-C attempt A invalid setup; attempt B valid with timing caveat.
 - E10-D upper-bound timing only.
 - Departure `CAPTURE_STATUS.txt` documented post-manifest append on both nodes; not corruption.
+- Master `meta/collection.log` and E10/E11 `meta/collector.log` each contain one documented self-log append after their own manifest hash was generated; outer ZIP hashes remain exact and the logs are not metric sources.
 - Final profile/RSpec capture is PRIVATE because it contains credential-bearing/encrypted portal material.
 - Runtime UHD probes did not independently expose a USRP device; no runtime radio serial/firmware identity may be claimed.
 - Individual attenuator ID→physical-path mapping remains unresolved and must not be inferred.
