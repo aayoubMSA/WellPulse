@@ -31,13 +31,11 @@ Historical scored state remains unchanged:
 
 `SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
 
-No P8/P9 result may be promoted into scored P7B.
+No P8/P9 result may be promoted, reinterpreted or relabelled as scored P7B.
 
 ## Completed live lane
 
-Campaign:
-
-`WP2-P8 — Modular Manual RF Experiment Campaign`
+Campaign: `WP2-P8 — Modular Manual RF Experiment Campaign`
 
 Platform:
 
@@ -46,82 +44,91 @@ Platform:
 - `enb1 -> nuc1 / CORE`
 - `rue1 -> nuc2 / UE`
 
-The live campaign is complete. No P9 action contacted POWDER, reopened the testbed, or created new live evidence.
+The live campaign is complete. P9 was entirely offline: no POWDER contact, RF mutation, service restart, reservation action, or new live experiment occurred.
 
-## WP2-P9 forensic closure
-
-P9 executed only offline against immutable frozen evidence.
+## WP2-P9 closure
 
 ### P9-A — Evidence census: PASS
 
-- authenticated Drive read-back and SHA256 verification PASS for the three frozen authorities used in reconstruction;
-- **598** immutable archive members enumerated: 370 logs, 89 screenshots, 67 manifests/receipts, 72 other archived artifacts;
-- E0–E11, failed/setup attempts, manifests, receipts, screenshots, logs and SHA anchors retained;
-- large/private raw evidence remains on Drive; GitHub stores the canonical inventory/index and trace maps.
+Three authenticated Drive authorities were downloaded read-only and their SHA256 values recomputed successfully. Their ZIP central directories enumerate **598 immutable file members**: master P8 `357`, E10/E11 `46`, private golden preservation `195`.
+
+Full path/hash enumeration remains inside the immutable archive-native manifests:
+
+- master: `meta/SHA256_ALL_FILES.txt` + `meta/FILE_INVENTORY.csv`;
+- E10/E11: `meta/SHA256_ALL_COLLECTED.txt` + `meta/RUN_STATUS.csv` + node SHA manifests;
+- private preservation: `SHA256_ALL.txt` + `PRESERVATION_MANIFEST.json`.
+
+All **89** unclassified PNG screenshots are individually preserved and hashed in the private package; their UUID names do not support defensible run attribution and they are not used numerically.
 
 ### P9-B — Validity classification: PASS
 
-Permitted classes applied without promotion:
+Allowed classes only:
 
 `VALID / VALID_WITH_CAVEAT / CONTROL / NULL / ABORTED / SETUP_ARTIFACT`
 
 Important classifications:
 
-- E1 initial run: `NULL` — treatment proceeded after failed 0 dB prerequisite;
-- E5 pre-treatment attempts: `SETUP_ARTIFACT`;
-- E5 manual: `VALID_WITH_CAVEAT` — missing frozen forward recovery ping;
-- E8: `VALID_WITH_CAVEAT` — duplicate recovery send preserved;
-- E9: `CONTROL`;
-- E10-A: `VALID_WITH_CAVEAT` / censored non-recovery observation;
-- E10-C attempt A: `SETUP_ARTIFACT`; suffix B: `VALID_WITH_CAVEAT`;
-- E10-D: `VALID_WITH_CAVEAT` / upper-bound timing only;
-- E11 R1–R3: `VALID_WITH_CAVEAT` for UE-side recovery/IP-transition replication only because the collector contains no independent CORE archive.
+- E1 initial `p8-e1-20260828T1707Z`: `NULL` — treatment proceeded after a failed 0 dB prerequisite.
+- E5 setup/pre-science artifacts/fragments: `p8-master-20260828A-e5`, `p8-master-20260828A-e5-a01`, `p8-e5-20260829-000402`, `p8-e5-20260829-000744`.
+- E5 manual: `VALID_WITH_CAVEAT` — forward recovery-ping observed live but not frozen.
+- E8: `VALID_WITH_CAVEAT` — duplicate recovery send preserved.
+- E9: `CONTROL`.
+- E10-A: `VALID_WITH_CAVEAT` — censored non-recovery observation; no exact latency.
+- E10-C attempt A: `SETUP_ARTIFACT`; suffix B: `VALID_WITH_CAVEAT`.
+- E10-D: `VALID_WITH_CAVEAT` — upper-bound timing only.
+- E11 R1–R3: `VALID_WITH_CAVEAT` for UE-side impairment/recovery/IP-transition replication only; no independent CORE collector archive.
 
 ### P9-C — Metric reconstruction: PASS
 
-All retained values were recomputed from raw evidence where raw reconstruction was possible.
+All retained values were recomputed from immutable raw evidence where reconstruction was possible. Receiver-side unique IDs govern MQTT completeness.
 
-Selected forensic results, not publication claims:
+Selected forensic values, **not publication claims**:
 
-- E1R4 main MQTT sweep: `93/100` unique receiver completeness;
-- E2: `151/160` unique receiver completeness;
-- E3: `222/255` unique receiver completeness;
-- E9 no-fault control: `60/60`;
-- E10-B: MQTT publish success `6.063318 s` from declared action begin; ping success `6.609430 s`; CORE receipt followed publish by `0.060172 s`;
-- E10-C-B: ping `29.247733 s`; publish-side MQTT `29.248129 s` from RF-restore action;
-- E10-D: `<=10.908749 s` upper bound only;
-- E10-A: no scalar recovery latency because recovery was not observed in the recorded window.
+- E1R4 MQTT main sweep: `93/100` unique received.
+- E2: `151/160` unique received.
+- E3: `222/255` unique received.
+- E9 no-fault control: `60/60`.
+- E10-B: action-begin→first MQTT publish `6.063318 s`; action-begin→first ping `6.609430 s`; publish→CORE receipt `0.060172 s`.
+- E10-C-B: RF-restore→first ping `29.247733 s`; RF-restore→first publish `29.248129 s`.
+- E10-D: broker-start action-begin→first manually initiated successful publish `<=10.908749 s`; command-complete→same probe `<=10.872618 s`; neither is exact broker recovery latency.
+- E10-A: no scalar recovery latency because recovery was not observed inside the preserved window.
 
 ### P9-D — Cross-node reconciliation: PASS
 
-Receiver-side unique sequence evidence governs end-to-end completeness.
+Explicit surviving disagreements/asymmetries:
 
-Explicit surviving disagreements:
-
-1. E1R4 seq 96 is present in sender log, absent at receiver, and has no matching sender `MQTT_FAIL` event.
-2. E3 seq 150 is present in sender log, absent at receiver, and has no matching sender failure event.
-3. E10-C-B later CORE verification line is duplicated; it is not double-counted.
-4. E11 R1–R3 have nuc2-only collector evidence; no cross-node MQTT result is derived from them.
+1. E1R4 seq `96`: sender present, receiver absent, no matching sender `MQTT_FAIL`; receiver governs completeness.
+2. E3 seq `150`: sender present, receiver absent, no matching sender failure event; receiver governs completeness.
+3. E5 forward recovery ping is missing from frozen evidence; reverse recovery/MQTT evidence remains available.
+4. E8 recovery seq `41–60` was sent twice; unique IDs govern completeness.
+5. E10-C-B later CORE verification line is duplicated; it is not double-counted.
+6. E11 R1–R3 are nuc2-only in the collector; no reverse-path/MQTT cross-node metric is inferred.
 
 ### P9-E — Anomaly register: PASS
 
-Mandatory anomalies preserved plus additional findings. No anomaly or negative result was cleaned away.
+Mandatory anomalies are preserved plus additional forensic findings. No negative result, failed attempt, setup artifact, duplicate, outlier, missing artifact or unresolved mapping was cleaned away.
 
-### P9-F — Forensic QA: PASS
+### P9-F — Claim-independent forensic QA: PASS
 
-Required chain verified for every surviving reconstructed value:
+Required trace chain verified for every surviving reconstructed value:
 
-`reported value -> derived result -> raw file -> frozen authority -> SHA256 -> Drive evidence`
+`reported value → reconstructed table → raw-file root → frozen archive → SHA256 → Drive evidence`
 
-No value requiring an unresolved attenuator physical-path mapping survives. No runtime USRP serial/firmware identity is asserted.
+`UNSUPPORTED_SURVIVING_VALUES=0`
+
+`UNRESOLVED_ARCHIVE_HASH_DISCREPANCIES=0`
+
+No value requires invented attenuator-ID→physical-path mapping. Runtime UHD identity remains unresolved and is not claimed.
 
 ## P9 Drive authority verification
 
-| Authority | SHA256 | Drive ID | P9 read-back |
+| Authority | SHA256 | Drive ID | P9 verification |
 |---|---|---|---|
 | Master P8 evidence | `6952565D8ED630496EB7A801DB90583F2FED2EFCDC81FEACD1A2072F18FA8878` | `1TYqlzrsYLWqmM0jEEmrFWS8_QUuLShiR` | PASS |
 | E10/E11 frozen collector | `A6CEBA5107610639E62709F0041FB463CACBC45AA07847AFFE6600008B77C8F6` | `1ldR77IpSX5leGPQf-ISzl4qXCjHhiit0` | PASS |
 | Private golden preservation | `520B9EAE154EAF2527BC61E19A08547712C11555BAFC29C2743D34930D5FADD8` | `1GL1cLSBjKU9v_pyOd5Sl7SDF_S6-xT7K` | PASS |
+
+Additional preservation anchors remain authoritative in `WP2_P8_GOLDEN_EVIDENCE_INDEX_2026-08-29.md` and `WP2_P8_DRIVE_PRESERVATION_RECEIPT_2026-08-29.md`.
 
 ## Canonical P9 outputs
 
@@ -143,37 +150,38 @@ P8 source authorities remain:
 - `evidence/powder/WP2_P8_GOLDEN_EVIDENCE_INDEX_2026-08-29.md`
 - `evidence/powder/WP2_P8_DRIVE_PRESERVATION_RECEIPT_2026-08-29.md`
 - `experiments/WP-PWD01/WP2_P8_MANUAL_RF_EXPERIMENT_CAMPAIGN_2026-08-28.md`
-- current Research & Grants Lessons Learned Ledger
+- current Research & Grants Lessons Learned Ledger.
 
 ## Immutable caveats carried forward
 
-- E5: forward UE recovery-ping artifact observed live but not frozen.
-- E8: duplicate recovery-send attempt documented.
-- E10-A: no recovery within observation window.
-- E10-C: attempt A invalid setup; attempt B valid with timing caveat.
-- E10-D: interval is an upper bound, not exact broker-recovery latency.
-- Departure `CAPTURE_STATUS.txt`: documented post-manifest append on both nodes; not corruption.
+- E5 missing frozen forward recovery-ping artifact.
+- E8 duplicate recovery-send attempt.
+- E10-A no recovery within observation window.
+- E10-C attempt A invalid setup; attempt B valid with timing caveat.
+- E10-D upper-bound timing only.
+- Departure `CAPTURE_STATUS.txt` documented post-manifest append on both nodes; not corruption.
 - Final profile/RSpec capture is PRIVATE because it contains credential-bearing/encrypted portal material.
 - Runtime UHD probes did not independently expose a USRP device; no runtime radio serial/firmware identity may be claimed.
-- Individual attenuator ID -> physical-path mapping remains unresolved and must not be inferred.
+- Individual attenuator ID→physical-path mapping remains unresolved and must not be inferred.
 - E1R4 seq 96 and E3 seq 150 are sender/event-vs-receiver disagreements; receiver reconciliation governs completeness.
-- E10-C-B later CORE verification line is duplicated and is not double-counted.
-- E11 replications are nuc2-only in the collector and cannot support independent cross-node MQTT completeness claims.
-- E7 reverse baseline contains a preserved 481.046 ms RTT maximum; do not clean it away.
+- E10-C-B later CORE verification line is duplicated and not double-counted.
+- E11 collector is UE-side only for R1–R3.
+- E7 reverse baseline contains a preserved `481.046 ms` RTT maximum; do not clean it away.
+- 89 screenshots are preserved but unclassified by run.
 
-## Evidence storage policy
+## Storage authority
 
-1. **Google Drive = primary durable raw-evidence authority.**
-2. **GitHub = canonical scientific/control authority** for contracts, inventories, hashes, analysis code, derived tables, anomaly register, QA and handovers.
+1. **Google Drive = primary durable authority for frozen/raw binary evidence.**
+2. **GitHub = canonical scientific/control record** for manifests, hashes, contracts, analysis scripts, derived tables, anomaly register, results and handovers.
 3. **Home PC = independent third copy where applicable.**
 
-Do not commit large raw archives or credential-bearing bundles into ordinary Git history.
+Raw archives remain immutable. Do not commit credential-bearing or large raw bundles into ordinary Git history.
 
-## Next phase boundary
+## Scope boundary and next phase
 
-`WP2-P10` and later scientific integration/publication work are **NOT STARTED by this handover**.
+`WP2-P10` and later scientific integration/publication work are **NOT STARTED** by this handover.
 
-P9 did not draft manuscript prose, generate publication claims, choose a journal, create final figures, reopen scientific scope, reinterpret negative results, or create a new experiment.
+P9 did not draft manuscript prose, generate publication claims, choose a journal, create final figures, reopen scientific scope, reinterpret negative results, or create a new live experiment.
 
 ## Stop state
 
