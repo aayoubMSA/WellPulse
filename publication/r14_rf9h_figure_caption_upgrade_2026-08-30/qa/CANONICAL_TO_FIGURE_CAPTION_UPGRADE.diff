@@ -1,0 +1,46 @@
+--- R14_RF9H_CANONICAL.tex
++++ R14_RF9H_FIGURE_CAPTION_UPGRADE.tex
+@@ -131,8 +131,8 @@
+ 
+ \begin{figure}[t]
+ \centering
+-\input{../figure_source/Figure01_resilience_evaluation_framework.tikz.tex}
+-\caption{Failure-domain-aware evaluation framework. Application-record durability is assessed from receiver-reconciled delivery completeness and queue catch-up; communication-path recovery is assessed using endpoint-specific timing with exact, censored, or upper-bound semantics. FIT IoT-LAB and POWDER provide complementary evidence and are not statistically pooled.}
++\includegraphics[width=\linewidth]{../figures/Figure01_system_evidence_architecture_v2.pdf}
++\caption{Failure-domain-aware evaluation framework for durable MQTT telemetry. \textbf{(A)} W1 record lifecycle from generation and stable record identity through durable local queuing, MQTT QoS 1 publication, sender-local acknowledgement state, receiver-side reconciliation, and the declared completeness endpoint. A QoS 1 PUBACK changes only the sender-local state; final delivery authority is established separately by receiver-side identity reconciliation. Failed or unavailable publication attempts remain pending for retry, while the conflict guard rejects reuse of an existing identity with different content. \textbf{(B)} FIT IoT-LAB evaluates record-state survival by comparing the non-durable control B0 with the application-buffered durable path W1 under healthy operation (C0), broker outage (C1), and broker outage plus gateway-process restart (C2), using three independent run-level replicates and 10,000 generated records per run. \textbf{(C)} POWDER independently characterizes communication-path behavior across RF, UE, core-network, and broker failure domains using ICMP, receiver-observed MQTT delivery, and endpoint-specific recovery timing. The two testbeds address complementary resilience properties---\textbf{record-state survival} and \textbf{communication-path recovery}---and their quantitative results are not pooled.}
+ \label{fig:framework}
+ \end{figure}
+ 
+@@ -196,8 +196,8 @@
+ 
+ \begin{figure}[t]
+ \centering
+-\includegraphics[width=\linewidth]{../figures/Figure02_delivery_completeness_and_recovery_cost.pdf}
+-\caption{End-to-end delivery completeness and recovery cost on FIT IoT-LAB. The main panel shows three exact run-level observations per architecture and condition; these are descriptive repeated outcomes, not population estimates. The intentionally non-durable control isolates application-level durable state rather than representing a competing durable MQTT architecture. The right panels separate communication-path reconnection from queue-drain time.}
++\includegraphics[width=\linewidth]{../figures/Figure02_FIT_record_survival_reconnect_catchup_v2.pdf}
++\caption{FIT IoT-LAB evidence for record-state survival and recovery cost. \textbf{(A)} Receiver-reconciled unique-record counts for B0 and W1 across C0, C1, and C2. Both paths reached 10,000/10,000 records under C0. Under C1 and C2, B0 reached 8,000/10,000 records in every run, with the 2,000 outage-window records absent from the final receiver capture, whereas W1 reconciled all 10,000 generated records. This is a bounded comparison between the tested non-durable control and the tested durable application-buffered path; it is not evidence of superiority over durable MQTT configurations in general. \textbf{(B)} Run-level reconnection times under C1 and C2, with each marker representing one independent run and the horizontal mark indicating the arithmetic mean. \textbf{(C)} W1 backlog-drain durations for the same failure conditions. The separation between approximately 1.3-s reconnection and roughly 68-s queue drainage shows that restoration of connectivity and completion of durable record recovery are distinct events. Message-level observations within a run are not treated as independent replicates.}
+ \label{fig:fit}
+ \end{figure}
+ 
+@@ -213,8 +213,8 @@
+ 
+ \begin{figure}[t]
+ \centering
+-\includegraphics[width=\linewidth]{../figures/Figure03_cross_layer_transition_behavior.pdf}
+-\caption{Cross-layer transition behavior under programmed attenuation on POWDER. Network-layer ICMP response and application-layer MQTT delivery are reported separately for ascending/descending sweeps and three near-transition cycles. The observations are descriptive and profile-specific, not population estimates; they show a variable transition region rather than a universal failure threshold.}
++\includegraphics[width=\linewidth]{../figures/Figure03_POWDER_direction_and_cycle_variation_v2_LOSS_CORRECTED.pdf}
++\caption{POWDER attenuation-direction behavior and repeated-cycle variability. \textbf{(A--B)} ICMP response and receiver-observed MQTT completeness during controlled attenuation increase (E1R4) and decrease (E2). The measurements show that network-layer degradation and application-layer delivery do not necessarily change at the same programmed attenuation setting. \textbf{(C--D)} Three repeated E3 attenuation cycles, reporting ICMP loss and MQTT completeness at 49--52 dB. Variation between cycles becomes pronounced in the degraded operating region, including the 51--52 dB settings, demonstrating profile-specific transition variability rather than a universal attenuation threshold. Lines connect observations obtained at discrete programmed settings solely to aid visual comparison and do not represent interpolation or measurements between those settings. These results characterize the tested POWDER communication path and are not statistically combined with the FIT architecture experiment.}
+ \label{fig:powder_transition}
+ \end{figure}
+ 
+@@ -227,8 +227,8 @@
+ 
+ \begin{figure}[t]
+ \centering
+-\includegraphics[width=\linewidth]{../figures/Figure04_failure_domain_recovery_semantics.pdf}
+-\caption{Failure-domain interventions and recovery semantics. The matrix identifies which subsystem was manipulated in each scenario. The timing table applies one reporting schema across domains while preserving exact, censored, and upper-bound semantics; the scenario observations are not treated as samples from one recovery-time population.}
++\includegraphics[width=\linewidth]{../figures/Figure04_failure_domain_and_recovery_semantics_v2.pdf}
++\caption{Failure-domain coverage and recovery-time semantics in the POWDER campaign. \textbf{(A)} Experimental coverage of the RF, UE, core-network, and broker domains across the selected POWDER runs; filled cells indicate domains deliberately manipulated by the corresponding experiment, while E9 is retained as a no-fault control. A marked domain identifies the intervention applied in that run and does not, by itself, establish exclusive causal attribution of the observed outcome to that domain. \textbf{(B)} Recovery observations reported according to the strongest timing semantics supported by the evidence. RF-only restoration in E10-A is \textbf{censored} because recovery was not observed; E10-B and E10-C-B provide \textbf{exact, endpoint-defined} timing observations for UE-assisted and core-related recovery sequences; and E10-D provides only an \textbf{upper bound} because the successful post-restart MQTT publication was manually initiated. Exact, censored, and upper-bound observations are therefore retained as distinct evidence classes rather than collapsed into a common recovery-latency statistic.}
+ \label{fig:recovery}
+ \end{figure}
+ \FloatBarrier
