@@ -19,14 +19,14 @@ CloudLab repository-based profiles require a public HTTP(S) git repository with 
 
 ## Static gate
 
-GitHub Actions runs only an **offline** profile check in this revision:
+GitHub Actions runs only a **dependency-free offline source-contract check** in this revision:
 
-1. install the pinned `geni-lib` release;
-2. execute `profile.py` to emit request RSpec XML;
-3. validate two nodes, the LAN, and the declared IPs;
-4. upload the generated RSpec as CI evidence.
+1. compile the Python source without importing CloudLab libraries;
+2. validate exactly two `RawPC` declarations, one LAN, and the two declared IPs;
+3. reject startup services or external-runtime/network imports;
+4. freeze the profile, validator hashes, and runner fingerprint as a GitHub artifact.
 
-The workflow does **not** contact CloudLab, allocate hardware, expose credentials, or terminate resources.
+The CloudLab portal remains authoritative for evaluating the repository profile with its supported geni-lib runtime and producing the actual request topology/RSpec. The workflow does **not** contact CloudLab, allocate hardware, expose credentials, or terminate resources.
 
 ## Shortest next manual step after merge
 
@@ -34,7 +34,7 @@ In CloudLab:
 
 1. create a new **repository-based profile**;
 2. provide `https://github.com/aayoubMSA/WellPulse` as the repository URL;
-3. confirm CloudLab renders two raw PCs joined by one LAN;
+3. confirm CloudLab successfully evaluates `profile.py` and renders two raw PCs joined by one LAN;
 4. record the CloudLab profile identity before instantiation.
 
 If a one-time manual smoke allocation is faster than completing Portal API authentication setup, use it. Manual intervention is preferred whenever it reduces total path length without weakening evidence or safety controls.
