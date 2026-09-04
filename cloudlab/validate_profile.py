@@ -10,6 +10,7 @@ from pathlib import Path
 EXPECTED_NODES = {"edge", "cloud"}
 EXPECTED_LINK = "lan"
 EXPECTED_IPS = {"10.10.0.1", "10.10.0.2"}
+EXPECTED_SLIVER_TYPE = "raw-pc"
 
 
 def local_name(tag: str) -> str:
@@ -47,12 +48,18 @@ def main() -> int:
 
     for node in nodes:
         sliver_types = [
-            e for e in node.iter() if local_name(e.tag) == "sliver_type"
+            e.attrib.get("name")
+            for e in node.iter()
+            if local_name(e.tag) == "sliver_type"
         ]
-        # RawPC profiles should not request a VM sliver type.
-        if sliver_types:
+        if sliver_types != [EXPECTED_SLIVER_TYPE]:
             errors.append(
-                f"node {node.attrib.get('client_id')} unexpectedly requests sliver_type"
+                f"node {node.attrib.get('client_id')} sliver_types={sliver_types} "
+                f"expected={[EXPECTED_SLIVER_TYPE]}"
+            )
+        if node.attrib.get("exclusive") != "true":
+            errors.append(
+                f"node {node.attrib.get('client_id')} exclusive={node.attrib.get('exclusive')} expected=true"
             )
 
     if errors:
@@ -63,6 +70,8 @@ def main() -> int:
 
     print("CLWP01_STATIC_PROFILE_GATE=PASS")
     print("nodes=edge,cloud")
+    print("sliver_type=raw-pc")
+    print("exclusive=true")
     print("lan=lan")
     print("data_plane_ips=10.10.0.1,10.10.0.2")
     print("live_resource_mutation=NO")
