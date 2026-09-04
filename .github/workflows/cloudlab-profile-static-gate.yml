@@ -23,25 +23,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install pinned CloudLab profile dependency
-        run: python -m pip install --disable-pip-version-check "geni-lib==0.9.7.9"
-
-      - name: Generate request RSpec offline
+      - name: Fingerprint runner
         run: |
           mkdir -p .ci/cloudlab
-          python profile.py > .ci/cloudlab/request-rspec.xml
+          python3 --version | tee .ci/cloudlab/python-version.txt
+          uname -a | tee .ci/cloudlab/runner-uname.txt
 
-      - name: Validate CL-WP-01 structural contract
-        run: python cloudlab/validate_profile.py .ci/cloudlab/request-rspec.xml
+      - name: Compile profile source
+        run: python3 -m py_compile profile.py cloudlab/validate_profile.py
 
-      - name: Hash static evidence
-        run: sha256sum profile.py .ci/cloudlab/request-rspec.xml > .ci/cloudlab/SHA256SUMS.txt
+      - name: Validate CL-WP-01 source contract offline
+        run: python3 cloudlab/validate_profile.py profile.py | tee .ci/cloudlab/static-gate.txt
+
+      - name: Freeze static evidence
+        run: |
+          cp profile.py .ci/cloudlab/profile.py
+          sha256sum profile.py cloudlab/validate_profile.py > .ci/cloudlab/SHA256SUMS.txt
 
       - name: Upload static-gate evidence
         uses: actions/upload-artifact@v4
