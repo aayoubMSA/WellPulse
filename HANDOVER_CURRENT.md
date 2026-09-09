@@ -1,215 +1,155 @@
 # WellPulse — Current Handover
 
-**Last updated:** 2026-08-30 after the R14/RF9H Figure + Caption Upgrade surgical closure and durable archive promotion.  
+**Last updated:** 2026-09-09 after IEEE TNSM SUB02 submission and confirmation verification  
 **Repository:** `aayoubMSA/WellPulse`  
 **Branch:** `main`
 
-This is the canonical operational handover. Do not create a competing current-state document.
+This is the canonical operational handover. Do not reconstruct current state from older Elsevier/IoT handovers or chat memory.
 
 ## Current state
 
-- **R14/RF9H Figure + Caption Upgrade: CURRENT MANUSCRIPT AUTHORITY**
-- Parent R14/RF9H scientific baseline: **PRESERVED / SUPERSEDED FOR DISPLAY BY THE FIGURE+CAPTION UPGRADE**
-- Figure/caption surgical QA: **PASS**
-- Google Drive archive promotion: **PASS**
-- Google Drive raw-file read-back hash: **PASS**
-- Original P5 journal-facing package: **HISTORICAL / VALID FOR ITS PRE-UPGRADE BYTES**
-- Existing WP3/WP4 anonymous portal bundle: **HISTORICAL / STALE RELATIVE TO CURRENT MANUSCRIPT**
-- Portal bundle synchronized to current manuscript: **NO**
-- Portal-generated PDF inspection: **NOT YET PERFORMED**
-- External submission: **LOCKED / NOT EXECUTED**
-- Scientific blockers for the bounded claim: **0**
-- New experiment required: **NO**
+- **Venue:** IEEE Transactions on Network and Service Management (TNSM)
+- **Article type:** Regular Issue submission
+- **Lifecycle:** **SUBMITTED / WAITING — OFFICIAL SCHOLARONE MANUSCRIPT ID PENDING**
+- **Submission date:** 2026-09-09
+- **Author Portal / ReX submission ID:** `cac73869-ae6f-416c-8a36-7d82afeff8eb`
+- **IEEE confirmation email:** Gmail message `1a0864e91a440449`
+- **Confirmation status:** verified — manuscript successfully submitted and being delivered to the TNSM Editorial Office
+- **Official TNSM Manuscript ID:** **PENDING**; IEEE states ScholarOne will send it in the next several days
+- **External submission:** **EXECUTED / VERIFIED**
+- **Reviewer-PDF QA:** **PASS**
+- **New experiment required:** **NO**
+- **Active scientific work:** **CLOSED while waiting for external response**
 
-## Current manuscript authority
+## Submitted manuscript authority
 
-Title: **Beyond Reconnection: Failure-Domain-Aware Evaluation of Data Durability and Recovery in MQTT-Based IoT Telemetry**
+**Title:** *Beyond Reconnection: Receiver-Verified Service Recovery in MQTT Telemetry Across Failure Domains*
 
-Author/corresponding author: **Ahmed Ayoub**  
-Affiliation: Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City 12451, Egypt  
-Email: `aelsayedo@msa.edu.eg`  
-ORCID: `0009-0004-7895-3191`
+**Author/corresponding author:** Ahmed Ayoub  
+**Affiliation:** Computer Systems Engineering Department, Faculty of Engineering, October University for Modern Sciences and Arts (MSA University), 6th of October City 12451, Egypt  
+**Email:** `aelsayedo@msa.edu.eg`  
+**ORCID:** `0009-0004-7895-3191`
 
-Target route:
-- journal: **Internet of Things (Elsevier)**;
-- live portal article-type wording: **Full Length Article**;
-- default publication model: **Subscription / non-OA**;
-- backup: **IEEE Internet of Things Journal** only if rerouting becomes necessary.
+The IEEE account UI currently greets the user as `Ahemd`, but the manuscript and submission author metadata were verified as **Ahmed Ayoub**. Do not treat the UI-profile typo as manuscript metadata.
 
-Current credited manuscript:
-- PDF: `WellPulse_R14_RF9H_FIGURE_CAPTION_UPGRADE.pdf`
-- pages: **29**
-- PDF SHA-256: `7f48cfb6f02bff65afda2532ec90c737215b0f5f7330a959f9c16b70af55b67b`
-- TeX: `wellpulse_role_model_r14_rf9h_FIGURE_CAPTION_UPGRADE.tex`
-- TeX SHA-256: `b80e9b15221d0f79e2a96089f3c27d8524acdc6d9edfec53a336399a7fa59606`
-- bibliography: **38/38 cited**
-- abstract: **227 words / unchanged from R14/RF9H**
-- keywords: **7 / unchanged**
+### Final controlled package
 
-Parent canonical R14/RF9H baseline retained for provenance:
-- PDF: `WellPulse_Role_Model_R14_RF9H_Two_Minor_Closure.pdf`
-- pages: **28**
-- PDF SHA-256: `d5f8006ecc3b0a284c7b5836ba4fee505878efe4003380d8cdbf1454a42b2f3a`
-- TeX SHA-256: `18b1c3579ce0e04eb4b0cc3f4c835c4ecb6c9ecdc094acd26fc2f62727b46d98`
+- package: `WellPulse_TNSM_SUB02_Submission_Package_20260909.zip`
+- SHA-256: `7945ccbd58b85aa128bf8163436f0a289d53a80fc8b743e5cc7e0cdae3e32802`
+- main LaTeX upload archive: `WellPulse_TNSM_Main_Manuscript_LaTeX_20260909.zip`
+- main LaTeX upload SHA-256: `803a92148b6239ea61fc04770df315390814441fd4680fec727c101640e84466`
+- reproducibility supplement: `WellPulse_TNSM_Supplement_Reproducibility_20260909_FRESH.zip`
+- supplement SHA-256: `3b6ede7ba4b73dd19767eff531eab05058e9220c95c873fb540cfad28677d5d9`
 
-The accepted upgrade was constructed from those exact canonical TeX bytes. The source-diff gate verified that every byte outside the four authorized LaTeX `figure` environments remained unchanged.
+### IEEE-generated Reviewer PDF
 
-## Figure + caption upgrade authority
+- portal file / submission ID: `cac73869-ae6f-416c-8a36-7d82afeff8eb.pdf`
+- pages: **12 total** = 3-page IEEE submission wrapper + 9-page manuscript
+- SHA-256: `3f73ab4c7f3280f27debb215320614d6e926c46d9465a18a0a860863510dfec9`
+- visual/render QA: **PASS**
+- title/byline/ORCID/affiliation: **PASS**
+- equations/tables/figures/references: **PASS**
+- supplement binding: **PASS** (`Supplementary Zip Bundle`, accessible online to reviewers)
+- cover letter correctly excluded from reviewer bundle
 
-The current manuscript uses the approved v2 full-width figure set and four detailed captions.
+## Frozen TNSM contribution architecture
 
-### Figure 1
-- asset: `Figure01_system_evidence_architecture_v2.pdf`
-- SHA-256: `bd855f923247836a7378e5d0462ebebf182ea3fecdd0bcb121daaa29b8c8b2e5`
-- role: W1 sender-local durable lifecycle, independent receiver reconciliation, FIT/POWDER complementary evidence.
+The paper is a **network/service-management recovery-assurance study**, not a new MQTT persistence-mechanism paper.
 
-### Figure 2
-- asset: `Figure02_FIT_record_survival_reconnect_catchup_v2.pdf`
-- SHA-256: `8ce2e1a3054a10787378f5648e437a3daa36a4816dcdd43160f51259f1ada89c`
-- role: receiver-reconciled record-state survival, reconnect, and durable catch-up.
+Primary contribution wedge:
 
-### Figure 3
-- asset: `Figure03_POWDER_direction_and_cycle_variation_v2_LOSS_CORRECTED.pdf`
-- SHA-256: `8004926f0168a86fddef749b5ac0002c9f0ba19448d42a96fe381d86bf411640`
-- Panel A: **ICMP response (%)** for directional E1R4/E2 sweeps.
-- Panel C: **ICMP loss (%)** for E3 repeated cycles.
-- frozen E3 loss values:
-  - 49 dB: `0,0,0`
-  - 50 dB: `5,0,5`
-  - 51 dB: `10,5,50`
-  - 52 dB: `80,65,70`
-- no interpolation, fitted threshold, or universal attenuation claim.
+> Connectivity restoration is an insufficient service-assurance criterion for stateful MQTT telemetry. Recovery closure should preserve failure-domain identity, declared endpoint, receiver-confirmed application state, and timing semantics.
 
-### Figure 4
-- asset: `Figure04_failure_domain_and_recovery_semantics_v2.pdf`
-- SHA-256: `a0bb9fb61b6de95b9284d88428253324e9762d69545931e191c794d6a095a34e`
-- role: failure-domain coverage plus censored / exact / upper-bound recovery semantics.
+Primary evidence:
 
-Final captions SHA-256: `dae9b81c52cf1f261d6b041f72ef707f5834f7b3b67ca1d7c61249f6cb1d723d`.
+1. **FIT IoT-LAB receiver-state closure**
+   - B0 non-durable negative control: `8,000/10,000` under C1/C2
+   - W1 durable application-buffered path: `10,000/10,000` under C1/C2
+   - three run-level replicates per cell
+   - B0 is **not** a durable MQTT comparator
 
-QA:
-- baseline clean replay: **28/28 pages pixel-identical** to canonical R14/RF9H;
-- accepted upgraded manuscript visual QA: **29/29 pages PASS**;
-- figures inspected at actual manuscript display size: **PASS**;
-- undefined references/citations: **0**;
-- overfull boxes: **0**;
-- clipping / overlap / broken glyphs: **0**;
-- clean-package replay of final manuscript: **29/29 pages pixel-identical** to frozen final PDF.
+2. **Post-reconnect incomplete-state interval**
+   - durable-path connectivity recovery: about `1.3 s`
+   - durable backlog reconciliation: about `67.7–67.9 s`
+   - this W1-internal result is the principal TNSM service-management result and does not depend on generic B0-vs-W1 superiority
 
-Detailed repository record:
-`publication/r14_rf9h_figure_caption_upgrade_2026-08-30/README.md`
-
-## Durable Google Drive archive
-
-Parent folder: `P12_WellPulse` / `1eBQJ8STP-x-MaW0-2m07G7kCoF4UnLft`
-
-Current promotion folder:
-- name: `R14_RF9H_FigureCaptionUpgrade_FINAL_2026-08-30`
-- folder ID: `1lxUZ6ZhKOamOAY6bZJgmErVW-MiOvwpu`
-
-Promoted authorities:
-- final package ZIP ID: `1IA2NhpQLUAdUilQceamrkp6iBPDOwqh-`
-- final package ZIP SHA-256: `68c704363a6ebe8933a7fb985497b2d3b72b88507f3cda41ecfe57741fb2cc6a`
-- final manuscript PDF ID: `1izsyLpRtondjk1_mlPk_JoqEoY0jLPaJ`
-- final manuscript PDF SHA-256: `7f48cfb6f02bff65afda2532ec90c737215b0f5f7330a959f9c16b70af55b67b`
-- final TeX ID: `1clBSiLfEnd22vZ4A0lvk2nipejkxvK6-`
-- Figure 1 ID: `1me1-AouU8MspWEvVwrJ8ygYQpVpRR7kf`
-- Figure 2 ID: `1znQWaF7j0J4bDp5FKs6FiPi-ZkgXB2Vt`
-- Figure 3 ID: `1tHE2vrAhv7PPpiPiy1RQuJIbwKhcHB7N`
-- Figure 4 ID: `1YgaXAd7HVyk5cxuiZy4ox38HSUlvH8Cc`
-- QA receipt ID: `1yDwKtQiuQvLRho1fI2Y6gJYseEHjGb-K`
-- SHA256SUMS ID: `1Wg6A-vqPToYcj1oEBElEibKX560e_hCm`
-- final captions ID: `1GFMD-h1Rw1lMnV71WbnLme6GWV7eJWTL`
-
-Raw-file read-back verification:
-- final ZIP re-fetched from Drive and re-hashed: **PASS / exact SHA match**;
-- final PDF re-fetched from Drive and re-hashed: **PASS / exact SHA match**.
-
-## Historical pre-upgrade package state
-
-Original credited P5 package:
-- `WellPulse_Submission_Package_R14_RF9H_2026-08-30.zip`
-- SHA-256: `62c79223c0bd825250f7dbf92fc9cb51c2e40678285b40d5b5432a4452bd8b33`
-- signed cover-letter SHA-256: `d37d3f383bdc30ab498818987b435ae4227396b208ec59e071450ea8d97f0894`
-
-Existing double-anonymous WP4 bundle:
-- `WellPulse_IOT_DoubleAnonymous_Portal_Bundle_R14_WP4_2026-08-30.zip`
-- SHA-256: `e4c1452771add93b5682c6764285e7f50cd9e2259f46b39676d5ebea0857618d`
-- Drive ID: `1DUWkRXOtoeX_6YnMvNelH9yVFHsP0zln`
-- original WP4 archive/read-back: **PASS for those historical bytes**.
-
-These files remain valid provenance but **must not be used for the next portal preview** because they predate the current figure/caption manuscript authority.
-
-The P5 signed cover letter, graphical abstract, title page, highlights, and unchanged portal metadata may be reused only after confirming they remain semantically compatible with the current manuscript; do not reconstruct them unnecessarily.
-
-## Frozen scientific boundaries
-
-### FIT IoT-LAB
-- B0/W1 × C0/C1/C2 × 3 run-level replicates = 18 cells.
-- 10,000 generated records/run; the **run** is the scientific unit.
-- healthy C0: B0/W1 complete at the declared endpoint.
-- C1/C2: B0 = 8,000/10,000 and W1 = 10,000/10,000 in every replicate.
-- +20 percentage points is a **bounded mechanism-isolation contrast**, not generic MQTT superiority.
-- C2 = broker outage + **gateway-process exec restart**.
-- reconnect ~1.3 s; durable queue drain ~67.7–67.9 s.
-- receiver count termination bounds the claim to the declared capture endpoint.
-
-### POWDER
-- physical RF/LTE/MQTT characterization; not architecture treatment-effect estimation.
-- programmed attenuation behavior is experiment/profile-specific, not universal.
-- E10-A remains censored with no scalar latency.
-- E10-B exact preserved endpoints remain exact.
-- E10-C-B exact preserved endpoints remain exact.
-- E10-D remains upper-bound only.
-- E10 publish-to-receipt 0.0602 s is descriptive because no independent inter-node clock-synchronization error bound was established.
-- FIT and POWDER are **not statistically pooled**.
+3. **POWDER failure-domain observability**
+   - RF/client/core-network/broker-service failure domains
+   - exact, censored, and upper-bound timing semantics retained
+   - lower-layer health and MQTT service state can disagree
+   - FIT and POWDER remain complementary evidence tracks and are never statistically pooled
 
 ## Immutable claim prohibitions
 
 Do not claim:
-- strongest-durable-MQTT superiority;
-- generic `WellPulse beats MQTT`;
-- population reliability from three FIT runs or from message counts;
-- universal 52 dB behavior;
+- generic or strongest-durable-MQTT superiority;
+- `WellPulse beats MQTT`;
+- population reliability from three FIT replicates or from message counts;
+- a universal `52 dB` threshold;
 - deterministic RF-only recovery;
-- exact broker-restart recovery when only an upper bound is preserved;
+- exact broker-restart recovery when only an upper bound exists;
 - pooled FIT+POWDER inference;
-- historical firstness for persistence/store-and-forward/layered recovery;
-- field, agronomic, pump, hydraulic, groundwater, rural, crop, or industrial-process validation.
+- firstness for persistence, store-and-forward, layered recovery, or generic recovery-layer separation;
+- a universal recovery model.
 
-Historical scored state remains:
-`B1=NULL_ABORTED_AFTER_Q3`
-`HISTORICAL_B1=CONSUMED`
-`SCORED_P7B_STATUS=UNCHANGED_NOT_PASSED`
+Comparator scope remains the principal limitation and must stay visible in any revision.
+
+## Portal declarations frozen at submission
+
+- previously submitted to TNSM: **No**
+- previously presented/published: **No**
+- related to prior rejected manuscript: **Yes** — historical Internet of Things desk rejection `IOT-D-26-03494` disclosed; no peer review occurred
+- conference extension: **No**
+- related uncited author papers: **No**
+- preprint: **No**
+- human subjects: **No**
+- animal subjects: **None**
+- conflict of interest: **None disclosed**
+- external research funding: **None**
+- code associated: **Yes**
+- separately linked/repository-hosted data to share: **No**
+- reproducibility material: uploaded as reviewer supplementary ZIP
+- opposed reviewers: none provided
+
+Reviewer-routing keywords:
+- Internet of Things Services
+- Service Assurance
+- Fault Management
+- Performance Management
+
+## Historical route
+
+The earlier manuscript version was submitted to Elsevier *Internet of Things* as `IOT-D-26-03494` and desk-rejected on 2026-09-08 for insufficient novelty / quality threshold while explicitly considered in scope. No peer-review reports were issued. No appeal and no Elsevier transfer were executed.
+
+That route is historical. Do not revert to the older title or IoT-journal positioning unless the owner explicitly reopens it.
 
 ## Exact next action
 
-**Do not resume at the Elsevier portal yet.** The existing anonymous bundle is stale relative to the current manuscript authority.
+**WAIT. Do not perform new experiments, manuscript rewriting, venue shopping, or portal edits.**
 
-Next finite gate:
-1. derive a new double-anonymous manuscript from `wellpulse_role_model_r14_rf9h_FIGURE_CAPTION_UPGRADE.tex` without changing scientific content;
-2. preserve the exact current Figures 1–4 and captions;
-3. rebuild/synchronize anonymous S2 only where necessary to reflect the exact current figure authority;
-4. rebuild the portal bundle and SHA-256 manifests;
-5. clean-unpack QA, anonymity scan, render/visual QA, and figure-semantic checks;
-6. promote the synchronized bundle to Drive and read-back verify it;
-7. only then resume at the live Elsevier portal preview;
-8. build and inspect the portal-generated combined PDF;
-9. stop before final Submit, copyright/license acceptance, or payment unless explicit author authority is given.
+Reopen only on one of these material triggers:
+1. ScholarOne sends the official TNSM Manuscript ID;
+2. TNSM technical check or administrative query;
+3. editor/reviewer assignment or request;
+4. editorial decision;
+5. explicit owner instruction.
 
-If suggested reviewers are mandatory, **STOP** and prepare a conflict-screened shortlist; do not invent names.
+On receipt of the ScholarOne ID, update the Master Submission Tracker from `SUBMITTED — ID PENDING` to `SUBMITTED — WAITING`, record the exact ID and confirmation source, then return to waiting state.
 
 ## Stop state
 
-`R14_RF9H_FIGURE_CAPTION_UPGRADE_CURRENT_AUTHORITY=YES`
-`FIGURE_CAPTION_SURGICAL_QA=PASS`
-`DRIVE_PROMOTION=PASS`
-`DRIVE_READBACK_HASH=PASS`
-`OLD_WP4_PORTAL_BUNDLE=HISTORICAL_STALE`
-`PORTAL_BUNDLE_SYNCHRONIZED=NO`
-`PORTAL_RENDER=NOT_DONE`
-`SUBMISSION_AUTHORIZED=NO`
-`SUBMISSION_EXECUTED=NO`
-`PAYMENT_AUTHORIZED=NO`
-`COPYRIGHT_OR_LICENSE_ACCEPTANCE_AUTHORIZED=NO`
-`CURRENT_PHASE=REBUILD_DOUBLE_ANONYMOUS_BUNDLE_FROM_FIGURE_CAPTION_UPGRADE`
+`TNSM_SUB02_QA=PASS`
+`TNSM_REVIEWER_PDF_QA=PASS`
+`TNSM_SUBMISSION_EXECUTED=YES`
+`TNSM_SUBMISSION_CONFIRMED=YES`
+`TNSM_REX_SUBMISSION_ID=cac73869-ae6f-416c-8a36-7d82afeff8eb`
+`TNSM_MANUSCRIPT_ID=PENDING`
+`ACTIVE_SCIENTIFIC_EXECUTION=CLOSED`
+`CURRENT_PHASE=WAIT_FOR_SCHOLARONE_ID_OR_MATERIAL_EXTERNAL_RESPONSE`
+
+## NEXT CHAT PROMPT
+
+```text
+Resume WellPulse from the canonical repository HANDOVER_CURRENT.md only.
+The paper "Beyond Reconnection: Receiver-Verified Service Recovery in MQTT Telemetry Across Failure Domains" was successfully submitted to IEEE Transactions on Network and Service Management (TNSM) on 2026-09-09 via IEEE Author Portal/ReX submission ID cac73869-ae6f-416c-8a36-7d82afeff8eb. Reviewer-PDF QA passed. The official ScholarOne Manuscript ID was still pending at handover freeze. Read the current EAS/Research Operating Doctrine and current repository handover first. Check for the exact external trigger; do not reopen experiments or manuscript work unless a material TNSM response requires it.
+```
