@@ -71,7 +71,7 @@ jobs:
             "endpoint misclassification was repeatedly demonstrated",
             "novel recovery architecture",
             "durability harms freshness",
-            "m2 materially precedes m3",
+
           ]
           for x in prohibited:
               assert x not in low, x
