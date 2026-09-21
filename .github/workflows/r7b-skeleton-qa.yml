@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended latexmk >/dev/null
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk >/dev/null
 
       - name: Compile exact skeleton
         shell: bash
