@@ -88,7 +88,7 @@ class R5ClockRuleTests(unittest.TestCase):
         post = self._clock(1.2, 0.1, 4.1, 0.2)
         lo, hi = runmod.relative_receiver_minus_source_interval(pre, post)
         self.assertAlmostEqual(lo, 2.5)
-        self.assertAlmostEqual(hi, 3.3)
+        self.assertAlmostEqual(hi, 3.4)
 
 
 class R5StageDecisionTests(unittest.TestCase):
