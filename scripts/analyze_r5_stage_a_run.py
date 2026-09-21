@@ -209,12 +209,13 @@ def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[
     transport_path = source_dir / "q0_transport_events.ndjson"
     metrics_path = source_dir / "edge_metrics.json"
     receiver_path = run_dir / "receiver_raw.tsv"
+    receiver_capture_meta_path = run_dir / "receiver_capture_meta.json"
     pre_clock_path = run_dir / "clock_pre.json"
     post_clock_path = run_dir / "clock_post.json"
 
     required = [
         generated_path, source_events_path, mqtt_path, transport_path, metrics_path,
-        receiver_path, pre_clock_path, post_clock_path,
+        receiver_path, receiver_capture_meta_path, pre_clock_path, post_clock_path,
     ]
     missing_files = [str(p.relative_to(run_dir)) for p in required if not p.exists()]
     if missing_files:
@@ -231,6 +232,7 @@ def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[
     transport = load_ndjson(transport_path)
     metrics = load_json(metrics_path)
     receiver = load_receiver(receiver_path, run_id)
+    receiver_capture_meta = load_json(receiver_capture_meta_path)
     pre_clock = load_json(pre_clock_path)
     post_clock = load_json(post_clock_path)
 
@@ -377,14 +379,17 @@ def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[
     capture_last = (
         max((float(x["receive_epoch_s"]) for x in receiver["arrivals"]), default=None)
     )
+    capture_stop = float(receiver_capture_meta["receiver_stop_epoch_s"])
     censored_positive = False
     censor_receiver_upper = None
     if m1_row is not None and m2_utc is not None:
         m1_utc = float(m1_row["utc_epoch_s"])
         censor_receiver_upper = m1_utc + CENSOR_S + rel_hi
-        if missing_h and capture_last is not None:
-            if capture_last > censor_receiver_upper and m2_utc < m1_utc + CENSOR_S:
+        if missing_h:
+            if capture_stop > censor_receiver_upper and m2_utc < m1_utc + CENSOR_S:
                 censored_positive = True
+            else:
+                invalid.append("receiver_capture_did_not_reach_censor_boundary")
 
     primary_class = adjudicate_primary(
         invalid=invalid,
@@ -453,7 +458,8 @@ def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[
         "historical_records_after_causal_witness": len(h_after_witness),
         "censored_positive": censored_positive,
         "censor_receiver_upper_epoch_s": censor_receiver_upper,
-        "receiver_capture_last_epoch_s": capture_last,
+        "receiver_capture_last_arrival_epoch_s": capture_last,
+        "receiver_capture_stop_epoch_s": capture_stop,
         "generation_gap_5000_5001_s": generation_gap_5000_5001_s,
         "stale_arrival_event_count": stale_arrival_events,
         "clock_method": "pre_post_midpoint_interval_hull",
