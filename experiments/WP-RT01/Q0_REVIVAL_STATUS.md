@@ -100,3 +100,31 @@ The runner:
 - hashes all evidence and emits `Q0_LIVE_VERDICT.json`.
 
 The script requires FIT credentials in environment variables and a controller with FIT IoT-LAB CLI/SSH prerequisites. It has not been executed in this ChatGPT runtime because no live FIT credential/execution channel is connected here.
+
+
+## Live attempt #1 — infrastructure/instrumentation failure, not scientific evidence
+GitHub Actions run: `35591100466` (workflow run #1)
+FIT experiment: `449925`
+Result: FAILED before any C0/C1 qualification cell.
+
+Failure point:
+The initial pre-run A8 clock sampler incorrectly expected `iotlab-ssh run-cmd` stdout to contain the remote command stdout. FIT returned only its JSON run-status map, so the sampler could not parse an epoch timestamp.
+
+Scientific disposition:
+- no scored R5 experiment executed;
+- no Q0 scientific cell executed;
+- no positive/negative recovery result produced;
+- failure is classified as Q0 instrumentation plumbing only.
+
+Evidence upload from failed run:
+- artifact id: `10634726966`
+- artifact ZIP SHA-256 reported by GitHub: `a4f482f089d6c632e0ca8cea055f710638ac27f2ff9b1ab4da9887d07ad5e79a`
+
+Correction:
+The A8 clock sampler now writes the source epoch to the shared FIT filesystem and reads it through the frontend under one conservative midpoint interval; it also verifies the `iotlab-ssh` JSON status map explicitly.
+
+Fix commit on `revival-r4-q0-instrumentation`:
+`0da05df497f0507733dbdd1d9b95e96c01075487`
+
+Current gate remains:
+`Q0_GATE=WAITING_LIVE_FIT_QUALIFICATION`
