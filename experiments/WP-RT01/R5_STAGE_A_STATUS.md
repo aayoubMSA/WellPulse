@@ -103,3 +103,40 @@ PR #35 was closed unmerged after QA. No FIT credentials, reservation, or scored 
 
 Next:
 R5b — prepare the one manual GitHub Actions bootstrap/dispatcher that stages the already-qualified FIT environment and invokes the frozen Stage-A loop. Do not execute until explicitly authorized.
+
+
+## R5c scored launch attempt #1 — execution-plumbing failure before R1 science
+GitHub Actions run: `35642069178`
+FIT experiment: `449952`
+Authorization gate: PASS
+Bootstrap/staging: PASS
+R1 pre-clock qualification: PASS, cross-host bound `4.152086496353149 s`
+
+Failure point:
+The scored loop failed while capturing the receiver start epoch. The remote shell mangled the nested quoting of:
+`python3 -c 'import time; print("%.9f"%time.time())'`
+into invalid Python:
+`import time; print(%.9f%time.time())`
+
+Scientific disposition:
+- failure occurred before receiver subscription startup and before the R1 source runner;
+- no scored R1, R2, or R3 outcome was produced;
+- no Stage-A scientific verdict exists;
+- this is classified as execution plumbing only, not a scientific or instrumentation result.
+
+Evidence preserved:
+- artifact id: `10657948536`
+- artifact size: 273,512 bytes
+- artifact digest: `sha256:22018c38076d373a1260d37a51353329be813f8dc9b5a86999a0beaa7dab7783`
+- 67 files uploaded
+
+Correction:
+Receiver start/stop epoch capture now uses the quote-stable remote command:
+`python3 -c 'import time; print(time.time())'`
+
+Fix commit:
+`4ca152fec27ffea5550e4cd8ea60cfca7b43693a`
+
+Current gate:
+`R5_STAGE_A_SCORED_RUNS_EXECUTED=0`
+`R5c_RETRY=LOCKED_PENDING_PATCH_QA_AND_DISPATCHER_REPIN`
