@@ -1,0 +1,121 @@
+name: WellPulse R7c Methods Results QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7c-methods-results-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7c authority
+        uses: actions/checkout@v4
+        with:
+          ref: dbbe8dd6234dbd22401f04cc952b8232c3c1ca58
+          persist-credentials: false
+
+      - name: Static scientific and scope gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          b=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7b_Skeleton_20260922.tex").read_text(encoding="utf-8")
+          c=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7c_Methods_Results_20260922.tex").read_text(encoding="utf-8")
+
+          ms="\\section{Recovery Observables and Experimental Protocol}"
+          ds="\\section{Discussion}"
+          assert ms in b and ms in c and ds in b and ds in c
+
+          # R7c scope lock: Intro+Related and Discussion onward must be byte-identical to R7b.
+          assert b[:b.index(ms)] == c[:c.index(ms)], "locked prefix changed"
+          assert b[b.index(ds):] == c[c.index(ds):], "locked suffix changed"
+
+          active="\n".join(line.split("%",1)[0] for line in c.splitlines())
+          low=active.lower()
+
+          required=[
+            "exact historical m3 latency was not instrumented",
+            "69.217",
+            "75.438",
+            "not\\_confirmed\\_stop",
+            "0/3 positive",
+            "unresolved",
+            "6.063318",
+            "6.609430",
+            "29.247733",
+            "29.248129",
+            "10.908749",
+            "sequences 251--255 arrived before the older sequence 231",
+            "no occurrence rate or general mqtt prevalence is inferred",
+          ]
+          for x in required:
+              assert x in low, x
+
+          # Historical and prospective FIT must remain separate.
+          assert "reported independently of the historical campaign" in low
+          assert "no historical-plus-prospective fit effect estimate" in low
+
+          prohibited=[
+            "68 s end-to-end recovery",
+            "68 s receiver completion",
+            "complete receiver backlog drainage required about 68",
+            "receiver remained incomplete for about 68",
+            "endpoint misclassification was repeatedly demonstrated",
+            "novel recovery architecture",
+            "durability harms freshness",
+            "m2 materially precedes m3",
+          ]
+          for x in prohibited:
+              assert x not in low, x
+
+          # No accidental inferential inflation.
+          assert "confidence interval" in low  # appears only in explicit non-pooling statement
+          assert "pooled hypothesis test is constructed" in low
+
+          # Key FIT evidence anchors.
+          for x in [
+            "68.992","69.466","68.944","68.785","70.264","68.852",
+            "75.208","76.308","74.798",
+            "[-5.038,\\,+4.801]","[-4.857,\\,+4.932]","[-4.858,\\,+4.815]",
+            "2000/2000",
+          ]:
+              assert x in c, x
+
+          # M0-M5 all present exactly once in the observable table rows.
+          for m in range(6):
+              token=f"M{m} &"
+              assert c.count(token)==1, (token,c.count(token))
+
+          print("R7C_STATIC_SCIENTIFIC_QA=PASS")
+          print("R7C_SCOPE_LOCK=PASS")
+          PY
+
+      - name: Install LaTeX
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk >/dev/null
+
+      - name: Compile exact R7c source
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7c_Methods_Results_20260922.tex
+          test -s WellPulse_Revival_R7c_Methods_Results_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7c_Methods_Results_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7c_Methods_Results_20260922.log
+
+      - name: Summarize
+        run: |
+          echo "R7C_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: dbbe8dd6234dbd22401f04cc952b8232c3c1ca58" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scope lock: Introduction/Related Work/Discussion/Threats/Reproducibility/Conclusion unchanged from R7b." >> "$GITHUB_STEP_SUMMARY"
