@@ -1,0 +1,90 @@
+name: WellPulse Q0 Revival — Live Qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellpulse-q0-revival-live
+  cancel-in-progress: false
+
+jobs:
+  q0-live:
+    name: Q0 non-scored FIT qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      FIT_IDENTIFIER: ${{ secrets.FIT_USERNAME }}
+      FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
+      FIT_SITE: grenoble
+      Q0_ROOT: q0-revival-live
+
+    steps:
+      - name: Check out frozen revival branch
+        uses: actions/checkout@v4
+        with:
+          ref: revival-r4-q0-instrumentation
+          persist-credentials: false
+
+      - name: Record execution provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$Q0_ROOT"
+          git rev-parse HEAD | tee "$Q0_ROOT/executed_git_commit.txt"
+          git status --short | tee "$Q0_ROOT/pre_run_git_status.txt"
+          test "$(git branch --show-current)" = "revival-r4-q0-instrumentation"
+
+      - name: Set up controller runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FIT IoT-LAB clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check iotlabcli iotlabsshcli
+
+      - name: Verify FIT secrets are configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FIT_IDENTIFIER" || { echo "FIT_USERNAME secret is missing" >&2; exit 2; }
+          test -n "$FIT_PASSWORD" || { echo "FIT_PASSWORD secret is missing" >&2; exit 2; }
+          echo "FIT credential presence check: PASS"
+
+      - name: Execute bounded Q0 live qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/run_fit_q0_revive_live.sh | tee "$Q0_ROOT/workflow_console.log"
+
+      - name: Publish concise verdict
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## WellPulse Q0 Revival"
+            echo
+            echo "**Scientific status:** non-scored qualification only; no R5 run is executed by this workflow."
+            echo
+            if [ -f "$Q0_ROOT/Q0_LIVE_VERDICT.json" ]; then
+              echo '~~~json'
+              cat "$Q0_ROOT/Q0_LIVE_VERDICT.json"
+              echo '~~~'
+            else
+              echo "Q0_LIVE_VERDICT.json was not produced; inspect the uploaded evidence/logs."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Q0 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-q0-revival-live-${{ github.run_id }}
+          path: q0-revival-live/
+          if-no-files-found: warn
+          retention-days: 30
