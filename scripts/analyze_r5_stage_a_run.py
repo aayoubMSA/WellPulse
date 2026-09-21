@@ -175,6 +175,32 @@ def first_after(rows: list[dict[str, Any]], event_type: str, utc_after: float | 
     return min(candidates, key=lambda x: float(x["utc_epoch_s"]))
 
 
+def adjudicate_primary(
+    *,
+    invalid: list[str],
+    causal_positive: bool,
+    clock_positive: bool,
+    censored_positive: bool,
+    m3_observed: bool,
+    reversal: bool,
+) -> str:
+    if invalid:
+        return "INVALID"
+    if causal_positive and not m3_observed:
+        return "CENSORED_POSITIVE_CAUSAL"
+    if causal_positive and clock_positive:
+        return "POSITIVE_CAUSAL_AND_CLOCK"
+    if causal_positive:
+        return "POSITIVE_CAUSAL"
+    if censored_positive:
+        return "CENSORED_POSITIVE"
+    if clock_positive:
+        return "POSITIVE_CLOCK"
+    if reversal:
+        return "REVERSAL"
+    return "UNRESOLVED"
+
+
 def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     source_dir = run_dir / "source"
     generated_path = source_dir / "generated.jsonl"
@@ -360,22 +386,14 @@ def classify_run(run_dir: Path, run_id: str) -> tuple[dict[str, Any], list[dict[
             if capture_last > censor_receiver_upper and m2_utc < m1_utc + CENSOR_S:
                 censored_positive = True
 
-    primary_class = "INVALID"
-    if not invalid:
-        if causal_positive and m3_row is None:
-            primary_class = "CENSORED_POSITIVE_CAUSAL"
-        elif causal_positive and clock_positive:
-            primary_class = "POSITIVE_CAUSAL_AND_CLOCK"
-        elif causal_positive:
-            primary_class = "POSITIVE_CAUSAL"
-        elif censored_positive:
-            primary_class = "CENSORED_POSITIVE"
-        elif clock_positive:
-            primary_class = "POSITIVE_CLOCK"
-        elif reversal:
-            primary_class = "REVERSAL"
-        else:
-            primary_class = "UNRESOLVED"
+    primary_class = adjudicate_primary(
+        invalid=invalid,
+        causal_positive=causal_positive,
+        clock_positive=clock_positive,
+        censored_positive=censored_positive,
+        m3_observed=m3_row is not None,
+        reversal=reversal,
+    )
 
     positive_classes = {
         "POSITIVE_CAUSAL_AND_CLOCK",
