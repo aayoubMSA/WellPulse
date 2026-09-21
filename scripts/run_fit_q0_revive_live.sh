@@ -9,9 +9,9 @@ set -euo pipefail
 : "${FIT_PASSWORD:?FIT_PASSWORD required}"
 
 ROOT="${Q0_ROOT:-q0-revival-live}"
-SITE="${FIT_SITE:-saclay}"
-NODE_ID="${FIT_A8_NODE_ID:-100}"
-LOC="${SITE},a8,${NODE_ID}"
+SITE="${FIT_SITE:-grenoble}"
+NODE_ID=""
+LOC=""
 mkdir -p "$ROOT" "$HOME/.ssh"
 EXP_ID=""
 FIT_LOGIN=""
@@ -24,6 +24,23 @@ cleanup() {
     ssh -i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$FRONTEND"       "pkill -f 'mosquitto_sub.*wellpulse/q0-revival' >/dev/null 2>&1 || true; rm -f ~/.config/mosquitto_sub; rm -rf ~/$REMOTE_BASE" >/dev/null 2>&1 || true
   fi
   [[ -n "$EXP_ID" ]] && iotlab-experiment stop -i "$EXP_ID" >/dev/null 2>&1 || true
+  if [[ -f "$HOME/.iotlabrc" && -f "$HOME/.ssh/id_rsa.pub" ]]; then
+    python3 - <<'PY' >/dev/null 2>&1 || true
+from pathlib import Path
+from iotlabcli import auth
+from iotlabcli.rest import Api
+k=Path.home()/'.ssh'/'id_rsa.pub'
+if k.exists():
+    key=k.read_text().strip()
+    user,password=auth._read_password_file()
+    if user and password:
+        api=Api(user,password)
+        obj=api.get_ssh_keys()
+        if key in obj.get('sshkeys',[]):
+            obj['sshkeys']=[x for x in obj['sshkeys'] if x!=key]
+            api.set_ssh_keys(obj)
+PY
+  fi
   rm -f "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_rsa.pub" "$HOME/.iotlabrc" "$ROOT/wp_auth.json" "$ROOT/mosq_auth.conf"
 }
 trap cleanup EXIT
@@ -61,6 +78,7 @@ from iotlabcli import auth
 print(auth._read_password_file()[0])
 PY
 )
+export FIT_LOGIN
 FRONTEND="${FIT_LOGIN}@${SITE}.iot-lab.info"
 
 chmod 700 "$HOME/.ssh"
@@ -68,19 +86,33 @@ ssh-keygen -t rsa -b 3072 -N '' -f "$HOME/.ssh/id_rsa" -C "WellPulse-Q0-revival"
 chmod 600 "$HOME/.ssh/id_rsa"; chmod 644 "$HOME/.ssh/id_rsa.pub"
 iotlab-auth --add-ssh-key > "$ROOT/add_ssh_key.log"
 
-submit=$(iotlab-experiment submit -n "WP-Q0-revival" -d 45 -l "$LOC")
+submit=$(iotlab-experiment submit -n "WP-Q0-revival" -d 45 -l "1,archi=a8:at86rf231+site=$SITE")
 printf '%s\n' "$submit" > "$ROOT/reservation_submit.json"
 EXP_ID=$(printf '%s' "$submit" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
 echo "$EXP_ID" > "$ROOT/experiment_id.txt"
 iotlab-experiment wait -i "$EXP_ID" --timeout 300 --cancel-on-timeout > "$ROOT/reservation_wait.txt"
 iotlab-experiment get -i "$EXP_ID" -n > "$ROOT/experiment_nodes.json"
+NODE_ID=$(python3 - "$ROOT/experiment_nodes.json" <<'PY'
+import json,re,sys
+items=json.load(open(sys.argv[1])).get('items',[])
+if not items:
+    raise SystemExit('No A8 node allocated')
+addr=items[0]['network_address']
+m=re.search(r'(?:node-)?a8-(\d+)\.',addr)
+if not m:
+    raise SystemExit('Cannot parse allocated A8 node: '+addr)
+print(m.group(1))
+PY
+)
+LOC="${SITE},a8,${NODE_ID}"
+printf '%s\n' "$LOC" > "$ROOT/resolved_loc.txt"
 iotlab-ssh -i "$EXP_ID" wait-for-boot --max-wait 180 -l "$LOC" > "$ROOT/wait_for_boot.json"
 
 SSH=(-i "$HOME/.ssh/id_rsa" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
 umask 077
-python3 - <<PY > "$ROOT/wp_auth.json"
-import json
-print(json.dumps({'username':'${FIT_LOGIN}','password':'''${FIT_PASSWORD}'''}))
+python3 - <<'PY' > "$ROOT/wp_auth.json"
+import json,os
+print(json.dumps({'username':os.environ['FIT_LOGIN'],'password':os.environ['FIT_PASSWORD']}))
 PY
 printf '%s\n%s\n' "-u $FIT_LOGIN" "-P $FIT_PASSWORD" > "$ROOT/mosq_auth.conf"
 
