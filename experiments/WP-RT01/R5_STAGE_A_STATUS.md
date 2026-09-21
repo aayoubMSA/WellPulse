@@ -160,3 +160,52 @@ The failed QA predecessor `35642674319` was a temporary-QA grep quoting error af
 Gate transition:
 `R5c_PATCH_QA=PASS`
 `R5c_RETRY=LOCKED_PENDING_DISPATCHER_REPIN_AND_MERGE`
+
+
+## R5 Stage-A scored execution — COMPLETE / NOT CONFIRMED STOP
+GitHub Actions run: `35653569079`
+Workflow conclusion: `success`
+FIT experiment: `449953`
+Node: Grenoble A8-102
+Frozen authority executed: `c9fd8968f1408d9a2e3a57dd825df05c2f1d9147`
+
+All three planned scored runs completed and were objectively valid:
+- R1: `R5-SA-R1-EXP449953` — primary_class=`UNRESOLVED`; positive_for_stage_rule=false; H=2000/2000 receiver-complete; H PUBACK coverage=2000/2000; no causal witness; generation gap 5000→5001 = 75.208044774 s; D23 interval = [-5.037870646, +4.800559282] s.
+- R2: `R5-SA-R2-EXP449953` — primary_class=`UNRESOLVED`; positive_for_stage_rule=false; H=2000/2000 receiver-complete; H PUBACK coverage=2000/2000; no causal witness; generation gap 5000→5001 = 76.307649507 s; D23 interval = [-4.857098222, +4.932285786] s.
+- R3: `R5-SA-R3-EXP449953` — primary_class=`UNRESOLVED`; positive_for_stage_rule=false; H=2000/2000 receiver-complete; H PUBACK coverage=2000/2000; no causal witness; generation gap 5000→5001 = 74.797521961 s; D23 interval = [-4.858398557, +4.814558148] s.
+
+Additional integrity observations common across scored runs:
+- generated_unique=10000;
+- receiver_unique=10000;
+- unresolved_pubacks_all=0;
+- payload_mismatch_count=0;
+- stale_arrival_event_count=0;
+- invalid_reasons=[];
+- historical_records_after_causal_witness=0;
+- receiver_causal_positive=false;
+- clock_resolved_positive=false.
+
+Stage-A machine adjudication:
+- all_runs_valid=true;
+- positive_run_count=0;
+- primary_class_counts={UNRESOLVED:3};
+- decision=`NOT_CONFIRMED_STOP`;
+- stage_complete=true;
+- next_action: STOP. The central repeated-occurrence claim is not confirmed under Stage A. Retain bounded individual phenomena without upgrading C6.
+
+No Stage-B run was executed and none is authorized by the frozen decision rule for a 0/3 Stage-A outcome.
+
+Evidence artifact:
+- artifact id: `10666003184`;
+- size: 6,881,643 bytes;
+- retention: 90 days;
+- digest: `sha256:5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2`.
+
+Scientific interpretation:
+The prospective campaign did not resolve a positive M2→M3 separation under the qualified clock uncertainty and produced no same-receiver causal witness in any of the three valid runs. Therefore C6 cannot be upgraded to a repeated-occurrence central claim. The historical FIT finding remains an implementation-specific ≈75 s live-generation blackout associated with serialized backlog replay, while receiver-side historical completion relative to M2 remains unresolved within approximately ±5 s in this campaign.
+
+Gate:
+`R5_STAGE_A=COMPLETE`
+`R5_DECISION=NOT_CONFIRMED_STOP`
+`R5_STAGE_B=NOT_REQUIRED_AND_NOT_AUTHORIZED`
+`NEXT=R6_INTEGRATED_SCIENTIFIC_ADJUDICATION`
