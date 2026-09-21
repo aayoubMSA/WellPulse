@@ -84,15 +84,33 @@ jobs:
           print("R5_STAGE_A_DISPATCHER_GOVERNANCE=PASS")
           PY
 
+      - name: Check out referenced frozen R5 authority separately
+        uses: actions/checkout@v4
+        with:
+          ref: 616a303b0fd57bf04c80ea5879edb5d35f373da7
+          path: frozen-r5
+          persist-credentials: false
+
       - name: Verify referenced frozen branch content
         shell: bash
         run: |
           set -euo pipefail
+          cd frozen-r5
           test "$(git rev-parse HEAD)" = "616a303b0fd57bf04c80ea5879edb5d35f373da7"
           python -m py_compile scripts/analyze_r5_stage_a_run.py scripts/adjudicate_r5_stage_a.py
           bash -n scripts/run_fit_r5_stage_a_loop.sh
-          test "$(grep -Ec '^run_t1 R[123]$' scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
-          ! grep -Eq '^run_t1 R[45]$' scripts/run_fit_r5_stage_a_loop.sh
+          test "$(grep -Ec '^run_t1 R[123]
+      - name: Summarize
+        run: |
+          echo "R5_STAGE_A_DISPATCHER_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "No FIT credentials, reservation, or scored run were used." >> "$GITHUB_STEP_SUMMARY"
+ scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
+          ! grep -Eq '^run_t1 R[45]
+      - name: Summarize
+        run: |
+          echo "R5_STAGE_A_DISPATCHER_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "No FIT credentials, reservation, or scored run were used." >> "$GITHUB_STEP_SUMMARY"
+ scripts/run_fit_r5_stage_a_loop.sh
 
       - name: Summarize
         run: |
