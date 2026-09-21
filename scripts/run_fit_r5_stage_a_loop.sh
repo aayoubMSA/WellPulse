@@ -76,6 +76,7 @@ run_t1() {
 
   clock_sample "${rep}-pre" "$local_dir/clock_pre.json" | tee "$local_dir/clock_pre_summary.txt"
 
+  recv_start=$(ssh "${SSH[@]}" "$FRONTEND" "python3 -c 'import time; print("%.9f"%time.time())'")
   ssh "${SSH[@]}" "$FRONTEND" "rm -rf ~/$remote_run; mkdir -p ~/$remote_run; cp ~/$REMOTE_BASE/common/mosq_auth.conf ~/.config/mosquitto_sub; chmod 600 ~/.config/mosquitto_sub; rm -f ~/$REMOTE_BASE/recv/${rep}.tsv ~/$REMOTE_BASE/recv/${rep}.err; nohup sh -c 'mosquitto_sub --cafile "\$HOME/$REMOTE_BASE/common/iot-lab-ca.pem" -h mqtt4.iot-lab.info -p 8883 -q 1 -t "$topic" | python3 "\$HOME/$REMOTE_BASE/common/fit_rt01_stamp_stream.py" > "\$HOME/$REMOTE_BASE/recv/${rep}.tsv"' > ~/$REMOTE_BASE/recv/${rep}.err 2>&1 & echo \$! > ~/$REMOTE_BASE/recv/${rep}.pid"
   sleep 2
   ssh "${SSH[@]}" "$FRONTEND" "kill -0 \$(cat ~/$REMOTE_BASE/recv/${rep}.pid)"
@@ -93,6 +94,10 @@ PY
     n=${n:-0}; [[ "$n" -ge 10000 ]] && break; sleep 1
   done
 
+  recv_stop=$(ssh "${SSH[@]}" "$FRONTEND" "python3 -c 'import time; print("%.9f"%time.time())'")
+  recv_lines=$(ssh "${SSH[@]}" "$FRONTEND" "wc -l < ~/$REMOTE_BASE/recv/${rep}.tsv 2>/dev/null || echo 0" | tr -dc '0-9')
+  recv_lines=${recv_lines:-0}
+  printf '{"receiver_start_epoch_s":%s,"receiver_stop_epoch_s":%s,"raw_lines":%s}\n' "$recv_start" "$recv_stop" "$recv_lines" > "$local_dir/receiver_capture_meta.json"
   ssh "${SSH[@]}" "$FRONTEND" "pid=\$(cat ~/$REMOTE_BASE/recv/${rep}.pid 2>/dev/null || true); [ -n "\$pid" ] && kill "\$pid" >/dev/null 2>&1 || true; rm -f ~/.config/mosquitto_sub"
   scp -r "${SSH[@]}" "$FRONTEND:$remote_run" "$local_dir/source"
   scp "${SSH[@]}" "$FRONTEND:$REMOTE_BASE/recv/${rep}.tsv" "$local_dir/receiver_raw.tsv"
