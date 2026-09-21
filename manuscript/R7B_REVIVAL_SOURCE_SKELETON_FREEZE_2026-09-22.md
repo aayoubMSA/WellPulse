@@ -143,3 +143,37 @@ Prohibited:
 
 Next:
 R7c reconstructs Methods + Results only, using this source identity and the preserved evidence. It must not yet perform the Introduction/Related Work/Discussion/Conclusion prose sweep.
+
+## 11. Machine QA receipt
+
+Temporary QA PR: `#41`
+
+Initial QA run: `35661776130`.
+- Static scientific gates: PASS.
+- Compile step failed only because the runner image lacked `IEEEtran.cls`.
+- Source-level scientific assertions had already passed.
+
+QA environment correction:
+- added `texlive-publishers` to the temporary runner only;
+- R7b manuscript source was not changed.
+
+Final QA run: `35661961513`.
+
+PASS:
+- exact R7b authority checkout;
+- title identity;
+- exactly four RQs;
+- exactly four contribution blocks;
+- M0--M5 observable anchors;
+- R1/R2/R3 prospective evidence anchors;
+- explicit 0/3 prospective negative result;
+- prohibited-claim scan with TeX comments excluded;
+- abstract length gate: 169 words by conservative machine parser;
+- all required manuscript sections present;
+- IEEEtran LaTeX compile via `latexmk`;
+- no undefined control sequence;
+- no LaTeX error.
+
+`R7B_MACHINE_QA=PASS`
+
+The temporary QA PR is closed unmerged. No manuscript prose or scientific data were modified by QA.
