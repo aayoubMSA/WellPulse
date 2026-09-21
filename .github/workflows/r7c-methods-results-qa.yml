@@ -76,6 +76,9 @@ jobs:
           for x in prohibited:
               assert x not in low, x
 
+          # The only allowed occurrence of the M2-before-M3 proposition must be an explicit negation.
+          assert "does not support the earlier claim that m2 materially precedes m3" in low
+
           # No accidental inferential inflation.
           assert "confidence interval" in low  # appears only in explicit non-pooling statement
           assert "pooled hypothesis test is constructed" in low
