@@ -53,7 +53,7 @@ jobs:
           assert b >= a
           print("R5_RECEIVER_TIMESTAMP_QUOTING=PASS")
           PY
-          grep -F "recv_start=$(ssh" scripts/run_fit_r5_stage_a_loop.sh
+          grep -F 'recv_start=$(ssh' scripts/run_fit_r5_stage_a_loop.sh
           grep -F "print(time.time())" scripts/run_fit_r5_stage_a_loop.sh
 
       - name: Qualified-code immutability
