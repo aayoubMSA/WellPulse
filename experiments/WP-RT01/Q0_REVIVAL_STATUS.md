@@ -77,3 +77,26 @@ One bounded, non-scored FIT qualification session should close Q0-2/Q0-3/Q0-5/Q0
 5. preserve and hash raw sidecar and receiver evidence.
 
 No C0/T1 scientific R5 run is authorized until this Q0 live gate passes.
+
+
+## Prepared live qualification runner
+A deterministic non-scored runner is frozen on the same branch:
+
+`scripts/run_fit_q0_revive_live.sh`
+
+Commit:
+`7755e24be90181de85f65f58005247b531cbb3fc`
+
+Verified local shell-syntax SHA-256:
+`ea0cda5ec9ac8d36226c8f541f02720c04715320b0ef9f79b2e3125e10113da5`
+
+The runner:
+- creates one bounded 45-minute pinned FIT A8 reservation;
+- executes frozen C0, instrumented C0, then one non-scored instrumented C1;
+- collects pre/post midpoint clock-bound evidence;
+- checks real CONNACK/PUBACK attribution;
+- checks instrumentation overhead against the frozen C0;
+- verifies OUTAGE_CONFIRMED, restoration probe, and no scored R5 execution;
+- hashes all evidence and emits `Q0_LIVE_VERDICT.json`.
+
+The script requires FIT credentials in environment variables and a controller with FIT IoT-LAB CLI/SSH prerequisites. It has not been executed in this ChatGPT runtime because no live FIT credential/execution channel is connected here.
