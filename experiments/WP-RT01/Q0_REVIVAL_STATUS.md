@@ -128,3 +128,43 @@ Fix commit on `revival-r4-q0-instrumentation`:
 
 Current gate remains:
 `Q0_GATE=WAITING_LIVE_FIT_QUALIFICATION`
+
+
+## Live attempt #2 — Q0 PASS
+GitHub Actions run: `35591100466`, attempt 2
+FIT experiment: `449926`
+Workflow conclusion: `success`
+
+Qualification verdict:
+- Q0-1 frozen recovery path reuse: PASS (previously established; unchanged)
+- Q0-2 CONNACK capture: PASS — 2 real CONNACK_OK events
+- Q0-3 PUBACK attribution: PASS — 10,000 PUBACKs; 0 unresolved mappings
+- Q0-4 duplicate-safe receiver reconciliation: PASS (previously established; unchanged)
+- Q0-5 instrumentation overhead: PASS
+  - frozen C0: 10,000 records, 652.763949 s runtime, p99 gap 0.081930 s
+  - instrumented C0: 10,000 records, 672.068473 s runtime, p99 gap 0.084808 s
+  - runtime increase ≈ 2.96%; no new systematic stall detected
+- Q0-6 cross-host clock qualification: PASS
+  - pre bound = 4.183050 s
+  - post bound = 4.179004 s
+  - frozen run-level bound = 4.183050 s
+- Q0-7 outage/restoration instrumentation: PASS
+
+Machine verdict:
+`Q0_LIVE_GATE=PASS`
+`q0_gate_pass=true`
+
+Scientific interpretation:
+The instrumentation is qualified for R5. The 4.183 s cross-host bound is an admissibility/uncertainty bound, not an effect threshold. Any future M2→M3 interval that does not exceed the applicable bound remains UNRESOLVED under the frozen R4 amendment.
+
+Evidence artifact:
+- artifact id: `10635653711`
+- size: 4,698,350 bytes
+- GitHub artifact digest: `sha256:daeb27e53ea20bc61bf5bdb4842b55bfca537eb80003bf27b6f9341fcc23542c`
+- 99 files uploaded
+
+Gate transition:
+`Q0_GATE=PASS`
+`R5_EXECUTION=UNLOCKED`
+
+No scored R5 run was executed during Q0.
