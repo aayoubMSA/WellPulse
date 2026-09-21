@@ -8,6 +8,7 @@ observability required for R4/Q0.
 """
 from __future__ import print_function
 
+import atexit
 import json
 import os
 import socket
@@ -35,6 +36,19 @@ SOURCE_EVENTS = os.path.join(WORK_DIR, "q0_source_generation.ndjson")
 TRANSPORT_EVENTS = os.path.join(WORK_DIR, "q0_transport_events.ndjson")
 
 _emit_lock = threading.Lock()
+_emit_handles = {}
+
+
+def _close_emit_handles():
+    for fh in list(_emit_handles.values()):
+        try:
+            fh.close()
+        except Exception:
+            pass
+    _emit_handles.clear()
+
+
+atexit.register(_close_emit_handles)
 
 
 def _emit(path, obj):
@@ -43,8 +57,11 @@ def _emit(path, obj):
     row.setdefault("mono_s", time.monotonic())
     line = json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
     with _emit_lock:
-        with open(path, "a", 1) as fh:
-            fh.write(line)
+        fh = _emit_handles.get(path)
+        if fh is None:
+            fh = open(path, "a", 1)
+            _emit_handles[path] = fh
+        fh.write(line)
 
 
 _FrozenPublisher = frozen.Publisher
