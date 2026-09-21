@@ -1,0 +1,104 @@
+name: WellPulse R7b Skeleton QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7b-skeleton-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7b authority
+        uses: actions/checkout@v4
+        with:
+          ref: 2ccfe945c3af9e351a66f7c8543692f98ee9332a
+          persist-credentials: false
+
+      - name: Static scientific gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          p=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7b_Skeleton_20260922.tex")
+          s=p.read_text(encoding="utf-8")
+
+          assert "Beyond Reconnection: Measuring Recovery Observables and Replay-Induced Continuity Gaps in MQTT Telemetry" in s
+          assert s.count(r"\item[\textbf{RQ") == 4
+          assert s.count(r"\item[\textbf{A") == 4
+          assert "0/3 produced either a causal witness or a clock-resolved positive M2-to-M3 separation" in s
+          assert s.count("UNRESOLVED") >= 4
+          for token in ["M0 &","M1 &","M2 &","M3 &","M4 &","M5 &"]:
+              assert token in s, token
+          for run in ["R1 & 75.208","R2 & 76.308","R3 & 74.798"]:
+              assert run in s, run
+
+          # Strip TeX comments before prohibited-claim scan.
+          body="\n".join(line.split("%",1)[0] for line in s.splitlines())
+          lower=body.lower()
+          prohibited=[
+              "68 s end-to-end recovery",
+              "68 s receiver completion",
+              "complete receiver backlog drainage required about 68",
+              "receiver remained incomplete for about 68",
+              "novel recovery architecture",
+              "to our knowledge",
+              "endpoint misclassification was repeatedly demonstrated",
+          ]
+          for phrase in prohibited:
+              assert phrase not in lower, phrase
+
+          m=re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}",s,re.S)
+          assert m
+          abstract=m.group(1)
+          # Rough conservative word count after removing common TeX markup.
+          plain=re.sub(r"\\[A-Za-z]+(?:\[[^\]]*\])?"," ",abstract)
+          plain=re.sub(r"[{}~]"," ",plain)
+          words=re.findall(r"\b[\w0-9][\w0-9./+-]*\b",plain)
+          print("ABSTRACT_WORDS",len(words))
+          assert 150 <= len(words) <= 200
+
+          required_sections=[
+              "Introduction",
+              "Related Work and Claim Boundary",
+              "Recovery Observables and Experimental Protocol",
+              "Results",
+              "Discussion",
+              "Threats to Validity",
+              "Reproducibility and Data Availability",
+              "Conclusion",
+          ]
+          for sec in required_sections:
+              assert ("\\section{"+sec+"}") in s, sec
+
+          print("R7B_STATIC_SCIENTIFIC_QA=PASS")
+          PY
+
+      - name: Install LaTeX
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended latexmk >/dev/null
+
+      - name: Compile exact skeleton
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7b_Skeleton_20260922.tex
+          test -s WellPulse_Revival_R7b_Skeleton_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7b_Skeleton_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7b_Skeleton_20260922.log
+
+      - name: Summarize
+        run: |
+          echo "R7B_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact commit: 2ccfe945c3af9e351a66f7c8543692f98ee9332a" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scope: skeleton only; no full manuscript reconstruction." >> "$GITHUB_STEP_SUMMARY"
