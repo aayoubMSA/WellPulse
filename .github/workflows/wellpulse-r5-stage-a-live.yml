@@ -29,7 +29,7 @@ jobs:
       FIT_PASSWORD: ${{ secrets.FIT_PASSWORD }}
       FIT_SITE: grenoble
       R5_ROOT: r5-stage-a
-      FROZEN_R5_COMMIT: 616a303b0fd57bf04c80ea5879edb5d35f373da7
+      FROZEN_R5_COMMIT: c9fd8968f1408d9a2e3a57dd825df05c2f1d9147
 
     steps:
       - name: Authorization gate
@@ -44,7 +44,7 @@ jobs:
       - name: Check out frozen R5 Stage-A authority
         uses: actions/checkout@v4
         with:
-          ref: 616a303b0fd57bf04c80ea5879edb5d35f373da7
+          ref: c9fd8968f1408d9a2e3a57dd825df05c2f1d9147
           persist-credentials: false
 
       - name: Record frozen provenance
