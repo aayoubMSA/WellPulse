@@ -1,0 +1,59 @@
+name: WellPulse R5 Stage-A Static QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r5-stage-a-static-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out R5 Stage-A branch
+        uses: actions/checkout@v4
+        with:
+          ref: revival-r5-stage-a
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python compile gate
+        run: |
+          python -m py_compile             scripts/analyze_r5_stage_a_run.py             scripts/adjudicate_r5_stage_a.py             tests/test_r5_stage_a.py
+
+      - name: Unit tests
+        run: python -m unittest tests/test_r5_stage_a.py
+
+      - name: Bash syntax gate
+        run: bash -n scripts/run_fit_r5_stage_a_loop.sh
+
+      - name: Stage-A boundedness gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -Ec '^run_t1 R[123]$' scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
+          ! grep -Eq '^run_t1 R[45]$' scripts/run_fit_r5_stage_a_loop.sh
+          grep -F 'No Stage-B run was executed.' scripts/run_fit_r5_stage_a_loop.sh
+          grep -F 'STAGE_B_REQUIRED_TWO_ADDITIONAL_VALID_RUNS' scripts/adjudicate_r5_stage_a.py
+          ! grep -F 'FIT_PASSWORD' scripts/run_fit_r5_stage_a_loop.sh
+
+      - name: Qualified-code immutability gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:experiments/WP-RT01/fit_runner_q0_instrumented_py35.py)" = "9a0585ecacc9bdb87ec469d9ea1ad9ce998ccc9e"
+          test "$(git rev-parse HEAD:experiments/WP-RT01/fit_runner_py35.py)" = "3683737f9756c8b96c4c2e41f4372fc388fadb7d"
+          test "$(git rev-parse HEAD:scripts/fit_rt01_stamp_stream.py)" = "51a31081990c4d92e99462f7c6cd88736260036e"
+
+      - name: Summarize
+        run: |
+          echo "R5_STAGE_A_STATIC_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "No FIT reservation or scored run executed." >> "$GITHUB_STEP_SUMMARY"
