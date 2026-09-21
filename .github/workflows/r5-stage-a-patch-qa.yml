@@ -1,0 +1,70 @@
+name: WellPulse R5 Stage-A Patch QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r5-stage-a-patch-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out patched frozen R5 authority
+        uses: actions/checkout@v4
+        with:
+          ref: 3b94574a2a40a1656cd9b063c803b9c81889b5ae
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python and unit-test gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile             scripts/analyze_r5_stage_a_run.py             scripts/adjudicate_r5_stage_a.py             tests/test_r5_stage_a.py
+          python -m unittest tests/test_r5_stage_a.py
+
+      - name: Bash syntax and boundedness gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/run_fit_r5_stage_a_loop.sh
+          test "$(grep -Ec '^run_t1 R[123]$' scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
+          ! grep -Eq '^run_t1 R[45]$' scripts/run_fit_r5_stage_a_loop.sh
+          ! grep -F 'FIT_PASSWORD' scripts/run_fit_r5_stage_a_loop.sh
+
+      - name: Receiver timestamp quoting smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          start=$(bash -lc "python3 -c 'import time; print(time.time())'")
+          stop=$(bash -lc "python3 -c 'import time; print(time.time())'")
+          python - "$start" "$stop" <<'PY'
+          import math,sys
+          a=float(sys.argv[1]); b=float(sys.argv[2])
+          assert math.isfinite(a) and math.isfinite(b)
+          assert b >= a
+          print("R5_RECEIVER_TIMESTAMP_QUOTING=PASS")
+          PY
+          grep -F "recv_start=$(ssh" scripts/run_fit_r5_stage_a_loop.sh
+          grep -F "print(time.time())" scripts/run_fit_r5_stage_a_loop.sh
+
+      - name: Qualified-code immutability
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:experiments/WP-RT01/fit_runner_q0_instrumented_py35.py)" = "9a0585ecacc9bdb87ec469d9ea1ad9ce998ccc9e"
+          test "$(git rev-parse HEAD:experiments/WP-RT01/fit_runner_py35.py)" = "3683737f9756c8b96c4c2e41f4372fc388fadb7d"
+          test "$(git rev-parse HEAD:scripts/fit_rt01_stamp_stream.py)" = "51a31081990c4d92e99462f7c6cd88736260036e"
+
+      - name: Summarize
+        run: |
+          echo "R5_STAGE_A_PATCH_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "No FIT reservation or scored run executed." >> "$GITHUB_STEP_SUMMARY"
