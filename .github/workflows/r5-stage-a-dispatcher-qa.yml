@@ -1,0 +1,100 @@
+name: WellPulse R5 Stage-A Dispatcher QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r5-stage-a-dispatcher-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out dispatcher branch
+        uses: actions/checkout@v4
+        with:
+          ref: r5-stage-a-dispatcher
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check pyyaml
+
+      - name: Parse workflow and assert governance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          p=Path(".github/workflows/wellpulse-r5-stage-a-live.yml")
+          raw=p.read_text(encoding="utf-8")
+          doc=yaml.load(raw,Loader=yaml.BaseLoader)
+
+          triggers=doc.get("on",{})
+          assert list(triggers.keys())==["workflow_dispatch"], triggers
+
+          inputs=triggers["workflow_dispatch"]["inputs"]
+          auth=inputs["execution_authorization"]
+          assert auth["required"]=="true"
+          assert auth["default"]=="DO_NOT_EXECUTE"
+          assert auth["type"]=="choice"
+          assert auth["options"]==["DO_NOT_EXECUTE","EXECUTE_R5_STAGE_A"]
+
+          jobs=doc["jobs"]
+          assert list(jobs.keys())==["stage-a"]
+          job=jobs["stage-a"]
+          assert int(job["timeout-minutes"])==105
+
+          steps=job["steps"]
+          names=[s["name"] for s in steps]
+          required=[
+              "Authorization gate",
+              "Check out frozen R5 Stage-A authority",
+              "Static preflight on frozen harness",
+              "Execute exactly three scored Stage-A runs",
+              "Publish Stage-A verdict",
+              "Cleanup FIT resources",
+              "Upload immutable Stage-A evidence",
+          ]
+          for x in required:
+              assert x in names, x
+
+          checkout=next(s for s in steps if s["name"]=="Check out frozen R5 Stage-A authority")
+          assert checkout["with"]["ref"]=="616a303b0fd57bf04c80ea5879edb5d35f373da7"
+          assert checkout["with"]["persist-credentials"]=="false"
+
+          text=raw
+          assert text.count("bash scripts/run_fit_r5_stage_a_loop.sh")==1
+          assert "run_t1 R4" not in text and "run_t1 R5" not in text
+          assert "STAGE_B" not in text
+          assert "if: always()" in text
+          assert "retention-days: 90" in text
+          assert "cancel-in-progress: false" in text
+          assert "EXECUTE_R5_STAGE_A" in text
+          assert "DO_NOT_EXECUTE" in text
+          print("R5_STAGE_A_DISPATCHER_GOVERNANCE=PASS")
+          PY
+
+      - name: Verify referenced frozen branch content
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "616a303b0fd57bf04c80ea5879edb5d35f373da7"
+          python -m py_compile scripts/analyze_r5_stage_a_run.py scripts/adjudicate_r5_stage_a.py
+          bash -n scripts/run_fit_r5_stage_a_loop.sh
+          test "$(grep -Ec '^run_t1 R[123]$' scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
+          ! grep -Eq '^run_t1 R[45]$' scripts/run_fit_r5_stage_a_loop.sh
+
+      - name: Summarize
+        run: |
+          echo "R5_STAGE_A_DISPATCHER_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "No FIT credentials, reservation, or scored run were used." >> "$GITHUB_STEP_SUMMARY"
