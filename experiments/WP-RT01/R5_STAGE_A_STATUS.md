@@ -140,3 +140,23 @@ Fix commit:
 Current gate:
 `R5_STAGE_A_SCORED_RUNS_EXECUTED=0`
 `R5c_RETRY=LOCKED_PENDING_PATCH_QA_AND_DISPATCHER_REPIN`
+
+
+## R5c timestamp-plumbing patch QA — PASS
+Temporary QA PR: `#38`
+Final successful QA run: `35642747498`
+
+Passed gates:
+- Python compile;
+- all 11 R5 Stage-A unit tests;
+- Bash syntax;
+- exactly R1/R2/R3 boundedness;
+- no automatic R4/R5 Stage-B invocation;
+- receiver timestamp quote-smoke: PASS;
+- qualified instrumented/frozen/receiver blobs unchanged.
+
+The failed QA predecessor `35642674319` was a temporary-QA grep quoting error after the actual timestamp smoke had already passed; it has no effect on the scored harness.
+
+Gate transition:
+`R5c_PATCH_QA=PASS`
+`R5c_RETRY=LOCKED_PENDING_DISPATCHER_REPIN_AND_MERGE`
