@@ -122,26 +122,63 @@ ssh "${SSH[@]}" "$FRONTEND" "cd ~/$REMOTE_BASE/common; mkdir -p vendor; tar -xzf
 
 clock_sample() {
   local label="$1"
-  python3 - "$label" "$EXP_ID" "$LOC" "$FRONTEND" "$HOME/.ssh/id_rsa" "$ROOT" <<'PY'
-import json,subprocess,sys,time,re
-label,exp,loc,frontend,key,root=sys.argv[1:]
-def numeric(s):
-    vals=re.findall(r'(?<![0-9])([0-9]{9,}(?:\.[0-9]+)?)(?![0-9])',s)
-    if not vals: raise RuntimeError('remote epoch not found: '+s[-500:])
-    return float(vals[-1])
-def sample(cmd):
+  python3 - "$label" "$EXP_ID" "$LOC" "$FRONTEND" "$HOME/.ssh/id_rsa" "$ROOT" "$REMOTE_BASE" <<'PY'
+import json,subprocess,sys,time
+label,exp,loc,frontend,key,root,remote_base=sys.argv[1:]
+
+ssh_base=['ssh','-i',key,'-o','StrictHostKeyChecking=accept-new','-o','ConnectTimeout=20',frontend]
+
+def receiver_sample():
     out=[]
     for _ in range(9):
-        t0=time.time(); p=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True); t1=time.time()
-        remote=numeric(p.stdout); mid=(t0+t1)/2.0
-        out.append({'t0':t0,'t1':t1,'remote':remote,'rtt_s':t1-t0,'offset_remote_minus_controller_s':remote-mid,'midpoint_bound_s':(t1-t0)/2.0})
-    best=min(out,key=lambda x:x['rtt_s'])
-    return {'samples':out,'best':best}
-source=sample(['iotlab-ssh','-i',exp,'run-cmd','python3 -c "import time; print(\"%.9f\"%time.time())"','-l',loc])
-receiver=sample(['ssh','-i',key,'-o','StrictHostKeyChecking=accept-new','-o','ConnectTimeout=20',frontend,'python3 -c "import time; print(\"%.9f\"%time.time())"'])
-obj={'label':label,'controller_epoch_s':time.time(),'source':source,'receiver':receiver,'cross_host_bound_s':source['best']['midpoint_bound_s']+receiver['best']['midpoint_bound_s']}
+        t0=time.time()
+        p=subprocess.run(ssh_base+['python3 -c "import time; print(\\"%.9f\\"%time.time())"'],
+                         stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True)
+        t1=time.time()
+        remote=float(p.stdout.strip().splitlines()[-1])
+        mid=(t0+t1)/2.0
+        out.append({'t0':t0,'t1':t1,'remote':remote,'rtt_s':t1-t0,
+                    'offset_remote_minus_controller_s':remote-mid,
+                    'midpoint_bound_s':(t1-t0)/2.0})
+    return {'method':'direct_frontend_ssh_midpoint','samples':out,
+            'best':min(out,key=lambda x:x['rtt_s'])}
+
+def source_sample():
+    out=[]
+    for i in range(9):
+        name='q0_clock_source_%s_%02d.txt'%(label,i)
+        node_path='$HOME/'+remote_base+'/common/'+name
+        frontend_path='~/'+remote_base+'/common/'+name
+        cmd='python3 -c \'import time; print("%.9f"%time.time())\' > "'+node_path+'"'
+        t0=time.time()
+        p=subprocess.run(['iotlab-ssh','-i',exp,'run-cmd',cmd,'-l',loc],
+                         stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True)
+        try:
+            status=json.loads(p.stdout).get('run-cmd',{})
+        except Exception:
+            raise RuntimeError('unparseable iotlab-ssh status: '+p.stdout[-500:])
+        if not status.get('0'):
+            raise RuntimeError('A8 clock command failed: '+p.stdout[-500:]+' '+p.stderr[-500:])
+        q=subprocess.run(ssh_base+['cat '+frontend_path],
+                         stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=True)
+        t1=time.time()
+        remote=float(q.stdout.strip().splitlines()[-1])
+        mid=(t0+t1)/2.0
+        out.append({'t0':t0,'t1':t1,'remote':remote,'rtt_s':t1-t0,
+                    'offset_remote_minus_controller_s':remote-mid,
+                    'midpoint_bound_s':(t1-t0)/2.0,
+                    'status_map':status})
+    return {'method':'A8_write_shared_then_frontend_read_midpoint_conservative',
+            'samples':out,'best':min(out,key=lambda x:x['rtt_s'])}
+
+source=source_sample()
+receiver=receiver_sample()
+obj={'label':label,'controller_epoch_s':time.time(),'source':source,'receiver':receiver,
+     'cross_host_bound_s':source['best']['midpoint_bound_s']+receiver['best']['midpoint_bound_s']}
 open(root+'/clock_'+label+'.json','w').write(json.dumps(obj,indent=2,sort_keys=True)+'\n')
-print(json.dumps({'label':label,'cross_host_bound_s':obj['cross_host_bound_s'],'source_best_rtt_s':source['best']['rtt_s'],'receiver_best_rtt_s':receiver['best']['rtt_s']},sort_keys=True))
+print(json.dumps({'label':label,'cross_host_bound_s':obj['cross_host_bound_s'],
+                  'source_best_rtt_s':source['best']['rtt_s'],
+                  'receiver_best_rtt_s':receiver['best']['rtt_s']},sort_keys=True))
 PY
 }
 clock_sample pre | tee "$ROOT/clock_pre_summary.txt"
