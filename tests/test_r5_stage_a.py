@@ -232,6 +232,14 @@ class R5EndToEndSyntheticTests(unittest.TestCase):
                 for i, seq in enumerate(order, 1):
                     fh.write(f"{100.0 + i * 0.1:.6f}\t{wires[seq]}\n")
 
+            (root / "receiver_capture_meta.json").write_text(
+                json.dumps({
+                    "receiver_start_epoch_s": 99.0,
+                    "receiver_stop_epoch_s": 500.0,
+                    "raw_lines": len(order),
+                }),
+                encoding="utf-8",
+            )
             (root / "clock_pre.json").write_text(
                 json.dumps(self._clock()), encoding="utf-8"
             )
