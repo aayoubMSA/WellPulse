@@ -72,15 +72,14 @@ jobs:
           assert checkout["with"]["ref"]=="616a303b0fd57bf04c80ea5879edb5d35f373da7"
           assert checkout["with"]["persist-credentials"]=="false"
 
-          text=raw
-          assert text.count("bash scripts/run_fit_r5_stage_a_loop.sh")==1
-          assert "run_t1 R4" not in text and "run_t1 R5" not in text
-          assert "STAGE_B" not in text
-          assert "if: always()" in text
-          assert "retention-days: 90" in text
-          assert "cancel-in-progress: false" in text
-          assert "EXECUTE_R5_STAGE_A" in text
-          assert "DO_NOT_EXECUTE" in text
+          assert raw.count("bash scripts/run_fit_r5_stage_a_loop.sh")==1
+          assert "run_t1 R4" not in raw and "run_t1 R5" not in raw
+          assert "STAGE_B" not in raw
+          assert "if: always()" in raw
+          assert "retention-days: 90" in raw
+          assert "cancel-in-progress: false" in raw
+          assert "EXECUTE_R5_STAGE_A" in raw
+          assert "DO_NOT_EXECUTE" in raw
           print("R5_STAGE_A_DISPATCHER_GOVERNANCE=PASS")
           PY
 
@@ -99,18 +98,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "616a303b0fd57bf04c80ea5879edb5d35f373da7"
           python -m py_compile scripts/analyze_r5_stage_a_run.py scripts/adjudicate_r5_stage_a.py
           bash -n scripts/run_fit_r5_stage_a_loop.sh
-          test "$(grep -Ec '^run_t1 R[123]
-      - name: Summarize
-        run: |
-          echo "R5_STAGE_A_DISPATCHER_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "No FIT credentials, reservation, or scored run were used." >> "$GITHUB_STEP_SUMMARY"
- scripts/run_fit_r5_stage_a_loop.sh)" -eq 3
-          ! grep -Eq '^run_t1 R[45]
-      - name: Summarize
-        run: |
-          echo "R5_STAGE_A_DISPATCHER_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "No FIT credentials, reservation, or scored run were used." >> "$GITHUB_STEP_SUMMARY"
- scripts/run_fit_r5_stage_a_loop.sh
+          count=$(grep -Ec '^run_t1 R[123]$' scripts/run_fit_r5_stage_a_loop.sh)
+          test "$count" -eq 3
+          if grep -Eq '^run_t1 R[45]$' scripts/run_fit_r5_stage_a_loop.sh; then
+            echo "Unexpected Stage-B invocation in frozen loop" >&2
+            exit 1
+          fi
 
       - name: Summarize
         run: |
