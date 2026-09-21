@@ -1,0 +1,178 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath,amssymb}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+% WellPulse IEEE Revival -- R7b source skeleton.
+% NEW SOURCE IDENTITY. Does not overwrite rejected TNSM release.
+% Governing science: experiments/WP-RT01/R6_INTEGRATED_SCIENTIFIC_ADJUDICATION.md
+
+\begin{document}
+
+\title{Beyond Reconnection: Measuring Recovery Observables and Replay-Induced Continuity Gaps in MQTT Telemetry}
+
+\author{Ahmed Ayoub%
+\thanks{Author affiliation and correspondence metadata are intentionally deferred to final editorial reconciliation in R7e; R7b does not alter submission metadata.}}
+
+\maketitle
+
+\begin{abstract}
+Telemetry recovery is often summarized by a single reconnect or catch-up time, although network restoration, MQTT session restoration, broker-side QoS-1 acknowledgement closure, receiver-side historical completion, live-data continuity, and stale-record carryover are different observables. This study defines an experimental measurement protocol that separates these states and applies it to MQTT telemetry on FIT IoT-LAB and POWDER. In the tested W1 implementation, serialized backlog replay preserved eventual 10,000/10,000 receiver completeness but repeatedly suspended new record generation. Six historical FIT runs showed sequence-5000-to-5001 gaps of 68.785--70.264~s (mean 69.217~s); three prospective scored runs showed 74.798--76.308~s (mean 75.438~s). The prospective runs directly instrumented sender PUBACK closure and receiver completion, but 0/3 produced either a causal witness or a clock-resolved positive M2-to-M3 separation, so that interval remains unresolved. A POWDER trace independently exhibited stale carryover: newer records arrived before an older record after restoration. The results support recovery-observable measurement and identify an implementation-specific completeness--continuity trade-off without claiming a new persistence architecture, a universal MQTT effect, or pooled cross-testbed inference.
+\end{abstract}
+
+\begin{IEEEkeywords}
+MQTT, telemetry recovery, failure recovery, data durability, backlog replay, continuity, receiver reconciliation, fault injection, IoT testbeds.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:introduction}
+
+% R7d: rebuild motivation around the overloaded term recovery.
+% Do not lead with architecture novelty or repeated M2-to-M3 misclassification.
+
+\subsection{Research Questions}
+This revival is organized around four bounded research questions:
+\begin{enumerate}
+    \item[\textbf{RQ1}] Which experimentally observable endpoints are required to distinguish network-path restoration, MQTT-session restoration, broker-side QoS-1 acknowledgement closure, receiver-side historical completion, live-data continuity, and receiver-side stale carryover?
+    \item[\textbf{RQ2}] Under the tested serialized W1 backlog-replay implementation, what live-generation discontinuity is observed in the historical and prospective FIT IoT-LAB campaigns?
+    \item[\textbf{RQ3}] When M2 and M3 are directly instrumented prospectively, does the qualified evidence resolve a positive M2-to-M3 separation under the frozen causal-witness and clock-uncertainty rules?
+    \item[\textbf{RQ4}] What complementary, bounded evidence does POWDER provide about failure-domain-specific recovery and receiver-side stale carryover without pooling the two testbeds?
+\end{enumerate}
+
+\subsection{Contributions}
+The reconstructed paper is limited to four contributions:
+\begin{enumerate}
+    \item[\textbf{A1}] \textbf{Recovery-observable measurement protocol.} A reproducible measurement discipline that separates M0--M5 and prevents reconnect, session restoration, PUBACK closure, receiver completion, continuity, and ordering from being treated as interchangeable evidence.
+    \item[\textbf{A2}] \textbf{Repeated W1 completeness--continuity result.} Across separate historical and prospective FIT campaigns, serialized backlog replay repeatedly produced a tens-of-seconds suspension of new record generation while eventual receiver completeness was preserved.
+    \item[\textbf{A3}] \textbf{Cross-environment triangulation without pooling.} FIT provides implementation-specific replay evidence; POWDER provides complementary bounded physical failure-domain and stale-carryover evidence. No cross-platform effect estimate is constructed.
+    \item[\textbf{A4}] \textbf{Explicit negative/bounded result.} The prospective Stage-A campaign produced 0/3 positive M2-to-M3 results and 3/3 UNRESOLVED outcomes; the negative result is retained rather than converted into a favorable recovery claim.
+\end{enumerate}
+
+% R7d: add final Introduction roadmap. Single-author voice only.
+
+\section{Related Work and Claim Boundary}
+\label{sec:related}
+
+% R7d block 1: MQTT persistence/session/store-and-forward.
+% R7d block 2: robustness, broker performance, fault injection.
+% R7d block 3: layered network/service/data continuity and subscriber confirmation.
+% R7d block 4: retained bounded measurement gap.
+% Prohibited: first, to our knowledge, novel recovery architecture.
+
+\section{Recovery Observables and Experimental Protocol}
+\label{sec:protocol}
+
+\subsection{Recovery-observable taxonomy}
+
+\begin{table*}[t]
+\centering
+\caption{Frozen recovery observables used by the revival study.}
+\label{tab:observables}
+\begin{tabular}{p{0.06\textwidth}p{0.22\textwidth}p{0.31\textwidth}p{0.31\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Observable} & \textbf{Operational event / authority} & \textbf{Does not establish} \\
+\midrule
+M0 & Network-path restoration & First successful post-restoration user-plane probe under the frozen probing rule & MQTT session restoration, broker acceptance, or receiver delivery \\
+M1 & MQTT-session restoration & Publisher-side successful CONNACK & Historical completion or subscriber receipt \\
+M2 & Sender-to-broker QoS-1 closure & Publisher timestamp of the final PUBACK covering the frozen historical set $H$ & Subscriber receipt or receiver-side historical completion \\
+M3 & Receiver historical-state completion & Receiver timestamp at which every unique record in $H$ has been observed & Live-generation continuity or freshness \\
+M4 & Live-data continuity & Source-generation timing, including the replay-associated generation gap & Receiver completion latency \\
+M5 & Receiver ordering / stale carryover & Same-receiver arrival order and older-after-newer evidence & Prevalence or probability across deployments \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Historical FIT campaign}
+% R7c:
+% B0 is a non-durable mechanism-isolation control only.
+% Historical W1 generation gaps:
+% 68.992, 69.466, 68.944, 68.785, 70.264, 68.852 s.
+% Mean 69.217 s; range 68.785--70.264 s.
+% Historical 68--70 s must not be called receiver M3 completion.
+
+\subsection{Prospective FIT Stage-A campaign}
+% H = sequences 3001--5000, exactly 2000 records.
+% Same-receiver causal witness: seq5001 before any remaining H record.
+% Conservative pre/post cross-host clock-offset interval.
+% Actual outcome: 0/3 positive; Stage B not executed.
+
+\subsection{POWDER physical campaign}
+% Preserve named failure domains and exact/censored/upper-bound semantics.
+% Add E3 cycle-3 stale-carryover existence observation:
+% seq251--255 arrived before older seq231 on the same receiver clock.
+% Do not infer prevalence.
+
+\subsection{Evidence separation and non-pooling}
+% Historical FIT, prospective FIT, and POWDER remain separate evidence classes.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Historical FIT: eventual completeness and replay-associated continuity gap}
+% R7c full prose. Headline is M4 / implementation behavior.
+
+\subsection{Prospective FIT: direct M2/M3 instrumentation and Stage-A adjudication}
+
+\begin{table*}[t]
+\centering
+\caption{Prospective scored FIT Stage-A results. All three runs were valid.}
+\label{tab:stagea}
+\begin{tabular}{lrrrrcl}
+\toprule
+\textbf{Run} &
+\textbf{Seq. 5000$\rightarrow$5001 gap (s)} &
+\textbf{$H$ PUBACK} &
+\textbf{$H$ receiver} &
+\textbf{Causal witness} &
+\textbf{Conservative $D_{23}$ interval (s)} &
+\textbf{Class} \\
+\midrule
+R1 & 75.208 & 2000/2000 & 2000/2000 & No & $[-5.038,\,+4.801]$ & UNRESOLVED \\
+R2 & 76.308 & 2000/2000 & 2000/2000 & No & $[-4.857,\,+4.932]$ & UNRESOLVED \\
+R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% State 0/3 positive; decision NOT_CONFIRMED_STOP.
+% Raw cross-clock differences are not ordering facts because intervals cross zero.
+
+\subsection{POWDER: bounded failure-domain and stale-carryover evidence}
+% R7c full prose.
+
+\subsection{Cross-evidence synthesis}
+% Common result is measurement discipline, not a pooled effect.
+
+\section{Discussion}
+\label{sec:discussion}
+% R7d full prose.
+
+\section{Threats to Validity}
+\label{sec:threats}
+% R7d: historical endpoint error, prospective clock uncertainty, no causal
+% witness, 0/3 does not prove equality, W1 specificity, B0 asymmetry,
+% three run-level replicates, non-pooling, bounded POWDER observation.
+
+\section{Reproducibility and Data Availability}
+\label{sec:repro}
+% R5 raw authority SHA-256:
+% 5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2
+% Public artifact must remain sanitized.
+
+\section{Conclusion}
+\label{sec:conclusion}
+% R7d full rewrite under R6 claim ceiling.
+
+% R7e will rebuild the complete IEEE-formatted reference list.
+\begin{thebibliography}{1}
+\bibitem{mqtt5}
+A.~Banks, E.~Briggs, K.~Borgendale, and R.~Gupta, Eds.,
+MQTT Version 5.0, OASIS Standard, Mar. 2019.
+\end{thebibliography}
+
+\end{document}
