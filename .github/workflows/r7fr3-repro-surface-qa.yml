@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7f-R3 authority
         uses: actions/checkout@v4
         with:
-          ref: 4160640ee6deb834b2258727e682a9b3ec76d37f
+          ref: 33f055ea21aea78c3fb6c9780d60005156bd7aec
           fetch-depth: 0
           persist-credentials: false
 
@@ -155,9 +155,11 @@ jobs:
           cp experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md "$OUT/code/"
           cp experiments/WP-RT01/Q0_REVIVAL_STATUS.md "$OUT/code/"
           cp experiments/WP-RT01/R5_STAGE_A_STATUS.md "$OUT/code/"
-          cp experiments/WP-RT01/R5_RAW_EVIDENCE_PRESERVATION.md "$OUT/code/"
 
-          ! grep -R -E "(FIT_PASSWORD=|BEGIN OPENSSH PRIVATE KEY|1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC|1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs|1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw)" "$OUT"
+          if grep -R -E "(FIT_PASSWORD=|BEGIN OPENSSH PRIVATE KEY|Drive file ID:|Drive folder ID:)" "$OUT"; then
+            echo "privacy scan failed" >&2
+            exit 3
+          fi
 
           find "$OUT" -type f -print0 | sort -z | xargs -0 sha256sum > "$ROOT/R7fR3_PACKAGE_SHA256SUMS.txt"
           tar -czf "$ROOT/WellPulse_R7fR3_Sanitized_Reproducibility_20260922.tar.gz" -C "$ROOT" R7fR3_sanitized_package
@@ -179,5 +181,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7FR3_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: 4160640ee6deb834b2258727e682a9b3ec76d37f" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 33f055ea21aea78c3fb6c9780d60005156bd7aec" >> "$GITHUB_STEP_SUMMARY"
           echo "Sanitized supplement built; private raw archives and credentials excluded." >> "$GITHUB_STEP_SUMMARY"
