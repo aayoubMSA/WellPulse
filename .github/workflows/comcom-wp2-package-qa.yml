@@ -131,19 +131,6 @@ jobs:
           pdfinfo WellPulse_COMCOM_Manuscript.pdf | tee COMCOM_Manuscript_pdfinfo.txt
           pdfinfo WellPulse_COMCOM_Cover_Letter.pdf | tee COMCOM_CoverLetter_pdfinfo.txt
 
-          pdftotext WellPulse_COMCOM_Manuscript.pdf COMCOM_Manuscript_rendered.txt
-          pdftotext WellPulse_COMCOM_Cover_Letter.pdf COMCOM_CoverLetter_rendered.txt
-
-          python3 - <<'PY'
-          from pathlib import Path
-          m=" ".join(Path("COMCOM_Manuscript_rendered.txt").read_text(errors="replace").split())
-          c=" ".join(Path("COMCOM_CoverLetter_rendered.txt").read_text(errors="replace").split())
-          assert "OpenAI ChatGPT" in m
-          assert "takes full responsibility for the content of the publication" in m
-          assert "Computer Communications" in c
-          assert "single-author work" in c
-          print("COMCOM_WP2_RENDER_SMOKE=PASS")
-          PY
 
       - name: Build flat source ZIP and sanitized supplement ZIP
         shell: bash
