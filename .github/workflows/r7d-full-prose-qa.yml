@@ -1,0 +1,156 @@
+name: WellPulse R7d Full Prose QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7d-full-prose-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7d authority
+        uses: actions/checkout@v4
+        with:
+          ref: 331c9268eb415b98caea70e058e899542adba13e
+          persist-credentials: false
+
+      - name: Static scope scientific and editorial gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          c=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7c_Methods_Results_20260922.tex").read_text(encoding="utf-8")
+          d=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7d_Full_Prose_20260922.tex").read_text(encoding="utf-8")
+
+          ms="\\section{Recovery Observables and Experimental Protocol}"
+          ds="\\section{Discussion}"
+          assert ms in c and ms in d and ds in c and ds in d
+
+          # R7d lock: Methods + Results must be byte-identical to R7c.
+          c_mid=c[c.index(ms):c.index(ds)]
+          d_mid=d[d.index(ms):d.index(ds)]
+          assert c_mid == d_mid, "R7c Methods/Results changed in R7d"
+
+          active="\n".join(line.split("%",1)[0] for line in d.splitlines())
+          low=active.lower()
+
+          # AE closure: motivation/proposal/gap/roadmap present.
+          required=[
+            "experimental recovery-observable protocol",
+            "the contribution set is deliberately narrower than a new recovery architecture",
+            "the remainder of the paper is organized as follows",
+            "retained gap",
+            "0/3 positive",
+            "3/3 unresolved",
+            "not a new mqtt persistence or failover architecture",
+            "does not by itself identify the time at which an arbitrary subscriber has consumed the application record",
+            "layered recovery is likewise not new",
+            "freshness versus historical reconstruction",
+            "recovery declaration matrix",
+            "exact historical m3 latency",
+            "does not support a generic statement that mqtt durability harms freshness",
+            "0/3 positive runs do not establish that m2 and m3 are equal",
+            "6,881,643-byte archive",
+            "5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2",
+          ]
+          for x in required:
+              assert x in low, x
+
+          # Four RQs and four contributions retained.
+          assert d.count(r"\item[\textbf{RQ")==4
+          assert d.count(r"\item[\textbf{A")==4
+
+          # Single-author voice: no prose "we"/"our" tokens.
+          prose=re.sub(r"\\begin\{thebibliography\}.*?\\end\{thebibliography\}","",active,flags=re.S)
+          assert re.search(r"\bwe\b",prose,re.I) is None, "first-person plural 'we' remains"
+          assert re.search(r"\bour\b",prose,re.I) is None, "first-person plural 'our' remains"
+
+          # Claim firewall.
+          prohibited=[
+            "68 s end-to-end recovery",
+            "68 s receiver completion",
+            "complete receiver backlog drainage required about 68",
+            "receiver remained incomplete for about 68",
+            "endpoint misclassification was repeatedly demonstrated",
+            "novel recovery architecture",
+            "first to separate recovery",
+            "to our knowledge",
+            "52 db is",
+            "wellpulse is 100% reliable",
+            "wellpulse outperformed mqtt",
+          ]
+          for x in prohibited:
+              assert x not in low, x
+
+          # Explicit negation is required for M2/M3 and generic durability claim.
+          assert "not that m2 equals m3 and not that m2 repeatedly precedes m3" in low
+          assert "do not support a generic statement that mqtt durability harms freshness" in low
+
+          # Related-work citations + DOI anchors.
+          for key in ["mqtt5","emqtt","jesus2025","gaspar2026","neagu2026","kang2026"]:
+              assert ("\\cite{"+key+"}") in d or ("\\bibitem{"+key+"}") in d
+          for doi in [
+            "10.3390/app132212419",
+            "10.1016/j.iot.2025.101590",
+            "10.1109/MIOT.2026.3681190",
+            "10.3390/fi18030137",
+            "10.1109/TON.2026.3673496",
+          ]:
+              assert doi in d, doi
+
+          # Do not leak private preservation identifiers.
+          for private_id in [
+            "1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC",
+            "1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs",
+            "1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw",
+          ]:
+              assert private_id not in d
+
+          # Required section architecture.
+          for sec in [
+            "Introduction",
+            "Related Work and Claim Boundary",
+            "Recovery Observables and Experimental Protocol",
+            "Results",
+            "Discussion",
+            "Threats to Validity",
+            "Reproducibility and Data Availability",
+            "Conclusion",
+          ]:
+              assert ("\\section{"+sec+"}") in d, sec
+
+          print("R7D_SCOPE_LOCK=PASS")
+          print("R7D_SCIENTIFIC_CLAIM_QA=PASS")
+          print("R7D_AE_CLOSURE_QA=PASS")
+          print("R7D_SINGLE_AUTHOR_VOICE=PASS")
+          PY
+
+      - name: Install LaTeX
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk >/dev/null
+
+      - name: Compile exact R7d source
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7d_Full_Prose_20260922.tex
+          test -s WellPulse_Revival_R7d_Full_Prose_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7d_Full_Prose_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7d_Full_Prose_20260922.log
+
+      - name: Summarize
+        run: |
+          echo "R7D_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 331c9268eb415b98caea70e058e899542adba13e" >> "$GITHUB_STEP_SUMMARY"
+          echo "Methods + Results were byte-locked to R7c." >> "$GITHUB_STEP_SUMMARY"
