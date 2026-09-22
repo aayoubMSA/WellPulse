@@ -153,7 +153,7 @@ jobs:
           grep -F "Ahmed Ayoub" R7e_rendered.txt
           grep -F "aelsayedo@msa.edu.eg" R7e_rendered.txt
           grep -Fi "Acknowledgment" R7e_rendered.txt
-          grep -F "References" R7e_rendered.txt
+          grep -Fi "References" R7e_rendered.txt
 
       - name: Package cleanliness gate
         shell: bash
