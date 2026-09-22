@@ -227,7 +227,8 @@ Table~\ref{tab:historicalsplit} keeps the two historical outage treatments separ
 \small
 \caption{Historical FIT W1 continuity results separated by treatment. Means are descriptive; C1 and C2 are not pooled for condition-level inference.}
 \label{tab:historicalsplit}
-\begin{tabular}{@{}lp{0.29\textwidth}rrp{0.19\textwidth}p{0.19\textwidth}@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lp{0.28\textwidth}rrp{0.18\textwidth}p{0.18\textwidth}@{}}
 \toprule
 \textbf{Cond.} & \textbf{Seq. 5000$\rightarrow$5001 gaps (s)} & \textbf{Mean (s)} & \textbf{Range (s)} & \textbf{W1 final receiver state} & \textbf{B0 final receiver state} \\
 \midrule
@@ -273,6 +274,7 @@ R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED \\
 
 \begin{figure*}[t]
 \centering
+\resizebox{0.98\textwidth}{!}{%
 \begin{tikzpicture}[font=\footnotesize,>=Latex,x=1cm,y=1cm]
   \node[anchor=west,font=\bfseries] at (0,3.55) {(a) Frozen W1 source-side execution order};
   \draw[->,line width=0.7pt] (0.2,2.35) -- (15.5,2.35) node[right] {program order};
@@ -314,7 +316,8 @@ R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED \\
 
   \draw[rounded corners,dashed] (0,-4.55) rectangle (16.2,-5.25);
   \node[align=center] at (8.1,-4.9) {M3 is deliberately not placed after M2 on the source timeline: the prospective evidence does not resolve that ordering.};
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Evidence-faithful recovery measurement view. (a) shows only source-side program order that is fixed by the W1 implementation; the M4 gap is measured from generation of seq5000 to generation of seq5001. (b) shows the three conservative prospective $D_{23}$ intervals, each crossing zero. The figure therefore does not encode an unsupported M2-before-M3 ordering.}
 \label{fig:recoveryview}
 \end{figure*}
