@@ -283,7 +283,7 @@ R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED \\
   \draw[dashed] (3.2,1.75) -- (3.2,3.05);
   \node[align=center] at (3.2,1.45) {transport\\restored};
   \fill (4.25,2.35) circle (1.8pt);
-  \node[align=center] at (4.25,2.85) {M0\\probe};
+  \node[align=center] at (4.25,2.85) {M0 (pros.)\\probe};
   \fill (5.35,2.35) circle (1.8pt);
   \node[align=center] at (5.35,1.72) {M1\\CONNACK};
   \draw[line width=3pt] (6.05,2.35) -- (10.65,2.35);
@@ -294,10 +294,10 @@ R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED \\
   \node[align=center] at (12.3,2.86) {seq5001\\generated};
   \draw[<->] (0.8,1.05) -- (12.3,1.05);
   \node[fill=white,inner sep=2pt] at (6.55,1.05) {M4 = source-generation gap seq5000$\rightarrow$seq5001};
-  \node[anchor=west,align=left] at (12.85,2.4) {historical: C1 mean 69.134~s; C2 mean 69.300~s\\prospective C1: 74.798--76.308~s};
+  \node[align=center] at (8.1,0.42) {Observed M4: historical C1 mean 69.134~s; C2 mean 69.300~s; prospective C1 74.798--76.308~s};
 
-  \node[anchor=west,font=\bfseries] at (0,-0.05) {(b) Prospective $D_{23}=M3-M2$ adjudication};
-  \node[anchor=west,align=left] at (0,-0.55) {M2 and M3 are different endpoints, but their relative timing was not resolved.};
+  \node[anchor=west,font=\bfseries] at (0,-0.20) {(b) Prospective $D_{23}=M3-M2$ adjudication};
+  \node[anchor=west,align=left] at (0,-0.70) {M2 and M3 are different endpoints, but their relative timing was not resolved.};
   \coordinate (O) at (8,-2.2);
   \draw[->] (2.7,-2.2) -- (13.4,-2.2) node[right] {$D_{23}$ (s)};
   \foreach \x/\lab in {-6/-6,-3/-3,0/0,3/3,6/6} {
