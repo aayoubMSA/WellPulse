@@ -159,8 +159,11 @@ jobs:
           text=" ".join(Path("R7fR4_rendered.txt").read_text(errors="replace").split())
           for phrase in [
               "Campaign-by-observable coverage",
-              "Historical FIT W1 continuity results separated by treatment",
-              "Evidence-faithful recovery measurement view",
+              "69.134",
+              "69.300",
+              "74.798",
+              "76.308",
+              "3/3 UNRESOLVED",
           ]:
               assert phrase in text, phrase
           print("R7FR4_RENDERED_TEXT=PASS")
