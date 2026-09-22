@@ -1,0 +1,317 @@
+name: WellPulse R7g Final Integrated QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7g-final-integrated-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact R7f-R4 scientific authority
+        uses: actions/checkout@v4
+        with:
+          ref: ef2902e545668516ad30e1cd95751aecad314281
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Integrated scientific and evidence gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, math, re, subprocess
+
+          p=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex")
+          s=p.read_text(encoding="utf-8")
+          low=s.lower()
+
+          # Exact accepted source authority.
+          sha=hashlib.sha256(p.read_bytes()).hexdigest()
+          assert sha=="14c29c0d693bc696ae042b291b0528ab68c62ebfdb91e7c4d461bce8f05756eb", sha
+
+          # R6 surviving scientific object / claim ceiling.
+          required=[
+            "operational recovery-measurement discipline",
+            "not a new mqtt persistence or failover architecture",
+            "not a claim that the labels m0--m5 are novel by themselves",
+            "measured w1 replay consequence",
+            "complementary cross-environment evidence without pooling",
+            "prospective endpoint adjudication",
+            "0/3 positive results and 3/3 unresolved outcomes",
+            "m2 is not used as evidence of subscriber receipt",
+            "exact historical m3 latency was not instrumented",
+            "historical and prospective fit campaigns have different instrumentation",
+            "no historical-plus-prospective fit effect estimate",
+            "does not support a generic statement that mqtt durability harms freshness",
+            "0/3 positive runs do not establish that m2 and m3 are equal",
+            "single bounded physical trace",
+            "does not estimate its frequency",
+          ]
+          for x in required:
+              assert x in low, x
+
+          prohibited=[
+            "novel recovery architecture",
+            "first recovery architecture",
+            "to our knowledge",
+            "68 s receiver completion",
+            "68 s end-to-end recovery",
+            "puback means subscriber delivery",
+            "endpoint misclassification was repeatedly demonstrated",
+            "mqtt durability harms freshness",
+            "wellpulse outperformed mqtt",
+            "100% reliable",
+          ]
+          # Generic durability phrase exists only under explicit negation; handle separately.
+          for x in prohibited:
+              if x=="mqtt durability harms freshness":
+                  continue
+              assert x not in low, x
+          assert "do not support a generic statement that mqtt durability harms freshness" in low
+
+          # Historical FIT evidence.
+          hist=[68.992,69.466,68.944,68.785,70.264,68.852]
+          assert math.isclose(sum(hist)/6,69.21716666666667,abs_tol=1e-12)
+          for v in hist:
+              assert f"{v:.3f}" in s
+          assert "69.217" in s and "68.785--70.264" in s
+          assert "C1 & 68.992, 69.466, 68.944 & 69.134 & 68.944--69.466" in s
+          assert "C2 & 68.785, 70.264, 68.852 & 69.300 & 68.785--70.264" in s
+          assert "1.317~s for C1 and 1.345~s for C2" in s
+
+          # Prospective FIT frozen evidence.
+          for x in [
+            "R1 & 75.208 & 2000/2000 & 2000/2000 & No & $[-5.038,\,+4.801]$ & UNRESOLVED",
+            "R2 & 76.308 & 2000/2000 & 2000/2000 & No & $[-4.857,\,+4.932]$ & UNRESOLVED",
+            "R3 & 74.798 & 2000/2000 & 2000/2000 & No & $[-4.858,\,+4.815]$ & UNRESOLVED",
+            "75.438",
+            "NOT\_CONFIRMED\_STOP",
+            "protocol did not authorize Stage B",
+          ]:
+              assert x in s, x
+          assert "no stale-arrival event and no causal witness in 3/3" in low
+
+          # POWDER bounded evidence.
+          for x in [
+            "E1R4 at 51~dB, ICMP lost 30\% of 20 probes while MQTT receiver reconciliation remained complete at 20/20",
+            "At 52~dB, the same ascending run showed 60\% ICMP loss and 13/20 unique MQTT records",
+            "E2, 52~dB produced 65\% ICMP loss and 11/20 MQTT records",
+            "60\%, 25\%, and 55\%",
+            "80\%, 65\%, and 70\%",
+            "6.063318",
+            "6.609430",
+            "0.060172",
+            "29.247733",
+            "29.248129",
+            "10.908749",
+            "sequences 251--255 arrived before the older sequence 231",
+          ]:
+              assert x in s, x
+
+          # Campaign coverage + visual firewall.
+          for x in [
+            "Campaign-by-observable coverage",
+            "no dedicated post-restoration user-plane probe",
+            "relation to M2 unresolved in 3/3 runs",
+            "M3 is deliberately not placed after M2 on the source timeline",
+            "does not encode an unsupported M2-before-M3 ordering",
+          ]:
+              assert x in s, x
+
+          # Reproducibility and executed-code disclosure.
+          for x in [
+            "32628193889","448265/448266/448269",
+            "35653569079","449953",
+            "Paho MQTT 1.6.1",
+            "journal_mode",
+            "intended \texttt{DELETE}",
+            "requests \texttt{WAL}",
+            "no scientific claim in this paper is attributed to journal-mode choice",
+            "6,881,643-byte archive",
+            "127 entries",
+          ]:
+              assert x in s, x
+
+          # Exact author/declaration metadata.
+          for x in [
+            "Ahmed Ayoub",
+            "Computer Systems Engineering Department",
+            "October University for Modern Sciences and Arts (MSA University)",
+            "aelsayedo@msa.edu.eg",
+            "0009-0004-7895-3191",
+            "This work received no external research funding.",
+            "The author declares that he has no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.",
+          ]:
+              assert x in s, x
+
+          # Citation/reference integrity.
+          cites=[]
+          for grp in re.findall(r"\\cite\{([^}]*)\}",s):
+              cites.extend(k.strip() for k in grp.split(",") if k.strip())
+          bibs=re.findall(r"\\bibitem\{([^}]*)\}",s)
+          assert len(bibs)==len(set(bibs))==14, bibs
+          assert set(cites) <= set(bibs), set(cites)-set(bibs)
+          assert len(set(cites))==14, sorted(set(cites))
+
+          # Single-author voice.
+          active="\n".join(line.split("%",1)[0] for line in s.splitlines())
+          prose=re.sub(r"\\begin\{thebibliography\}.*?\\end\{thebibliography\}","",active,flags=re.S)
+          assert re.search(r"\bwe\b",prose,re.I) is None
+          assert re.search(r"\bour\b",prose,re.I) is None
+
+          # Private storage/credential exclusion from manuscript.
+          for x in [
+            "FIT_PASSWORD=",
+            "BEGIN OPENSSH PRIVATE KEY",
+            "1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC",
+            "1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs",
+            "1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw",
+          ]:
+              assert x not in s
+
+          # Supplement files must be exact frozen authorities.
+          expected={
+            "manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_REPRODUCIBILITY_SUPPLEMENT.md":"ca80b83b753eb8f5f1980ee5f91cfd6cc500d88c",
+            "manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_EXECUTION_CONFIG.csv":"bc4b6c85037c5571bc8187b5fd1d3d1fd644ba6c",
+            "manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_CODE_MANIFEST.csv":"d07cd79d3d82fba750809cf000bc0087174c647a",
+            "manuscript/revival_2026-09-22/supplement_r7fr3/r7fr3_selfcheck.py":"05751a640931facd25483235d1b65ad9445f9b2a",
+          }
+          for path,blob in expected.items():
+              observed=subprocess.check_output(["git","rev-parse","HEAD:"+path],text=True).strip()
+              assert observed==blob,(path,observed,blob)
+
+          print("R7G_SOURCE_AUTHORITY=PASS")
+          print("R7G_R6_CLAIM_CEILING=PASS")
+          print("R7G_EVIDENCE_NUMBERS=PASS")
+          print("R7G_REFERENCE_INTEGRITY=PASS")
+          print("R7G_PRIVACY_STATIC=PASS")
+          PY
+
+      - name: Re-run sanitized supplement self-check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 manuscript/revival_2026-09-22/supplement_r7fr3/r7fr3_selfcheck.py
+
+      - name: Install LaTeX and PDF inspection tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk poppler-utils >/dev/null
+
+      - name: Compile final candidate
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex
+          test -s WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf
+          if grep -q "Undefined control sequence" WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log; then exit 10; fi
+          if grep -q "LaTeX Error" WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log; then exit 11; fi
+          if grep -q "Citation .* undefined" WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log; then exit 12; fi
+          if grep -q "There were undefined references" WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log; then exit 13; fi
+          if grep -Fq 'Overfull \hbox' WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log; then
+            grep -F 'Overfull \hbox' WellPulse_Revival_R7fR4_EvidencePresentation_20260922.log
+            exit 14
+          fi
+
+          pdfinfo WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf | tee R7g_pdfinfo.txt
+          pages="$(pdfinfo WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf | awk '/^Pages:/ {print $2}')"
+          test "$pages" = "10"
+
+          pdftotext WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf R7g_rendered.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          t=" ".join(Path("R7g_rendered.txt").read_text(errors="replace").split())
+          required=[
+            "Beyond Reconnection",
+            "Operational recovery-measurement discipline",
+            "Measured W1 replay consequence",
+            "Campaign-by-observable coverage",
+            "69.134","69.300","75.438",
+            "3/3 UNRESOLVED",
+            "Evidence-faithful recovery measurement view",
+            "Reproducibility and Data Availability",
+            "Acknowledgment","Funding","Conflict of Interest",
+          ]
+          for x in required:
+              assert x.lower() in t.lower(), x
+          assert "??" not in t
+          print("R7G_RENDERED_TEXT=PASS")
+          PY
+
+          rm -rf R7g_renders
+          mkdir R7g_renders
+          pdftoppm -png -r 160 WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf R7g_renders/page >/dev/null 2>&1
+          test "$(find R7g_renders -maxdepth 1 -name 'page-*.png' | wc -l)" -eq 10
+
+      - name: Build final R7g candidate package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="manuscript/revival_2026-09-22"
+          OUT="$ROOT/R7g_final_candidate"
+          rm -rf "$OUT"
+          mkdir -p "$OUT/manuscript" "$OUT/supplement"
+          cp "$ROOT/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex" "$OUT/manuscript/"
+          cp "$ROOT/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf" "$OUT/manuscript/"
+          cp "$ROOT/supplement_r7fr3/"* "$OUT/supplement/"
+
+          cat > "$OUT/README.txt" <<'EOF'
+          WellPulse R7g final integrated QA candidate.
+          Scientific authority: ef2902e545668516ad30e1cd95751aecad314281
+          Manuscript source SHA-256: 14c29c0d693bc696ae042b291b0528ab68c62ebfdb91e7c4d461bce8f05756eb
+          R7g is QA only. Venue selection remains R8.
+          Private raw archives and credentials are not included.
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("manuscript/revival_2026-09-22/R7g_final_candidate")
+          bad=[
+            r"FIT_PASSWORD=",
+            r"BEGIN OPENSSH PRIVATE KEY",
+            r"1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC",
+            r"1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs",
+            r"1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw",
+          ]
+          for p in root.rglob("*"):
+              if not p.is_file(): continue
+              data=p.read_bytes()
+              txt=data.decode("utf-8",errors="ignore")
+              for pat in bad:
+                  assert not re.search(pat,txt), (p,pat)
+          print("R7G_PACKAGE_PRIVACY=PASS")
+          PY
+
+          find "$OUT" -type f -print0 | sort -z | xargs -0 sha256sum > "$ROOT/R7g_PACKAGE_FILE_SHA256SUMS.txt"
+          tar -czf "$ROOT/WellPulse_R7g_Final_Integrated_QA_20260922.tar.gz" -C "$ROOT" R7g_final_candidate
+          sha256sum             "$ROOT/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex"             "$ROOT/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf"             "$ROOT/WellPulse_R7g_Final_Integrated_QA_20260922.tar.gz"             | tee "$ROOT/R7g_BUILD_SHA256SUMS.txt"
+
+      - name: Upload R7g integrated QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-r7g-final-qa-${{ github.run_id }}
+          path: |
+            manuscript/revival_2026-09-22/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex
+            manuscript/revival_2026-09-22/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf
+            manuscript/revival_2026-09-22/WellPulse_R7g_Final_Integrated_QA_20260922.tar.gz
+            manuscript/revival_2026-09-22/R7g_PACKAGE_FILE_SHA256SUMS.txt
+            manuscript/revival_2026-09-22/R7g_BUILD_SHA256SUMS.txt
+            manuscript/revival_2026-09-22/R7g_pdfinfo.txt
+            manuscript/revival_2026-09-22/R7g_renders/
+          retention-days: 30
+
+      - name: Summarize
+        run: |
+          echo "R7G_FINAL_INTEGRATED_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scientific authority: ef2902e545668516ad30e1cd95751aecad314281" >> "$GITHUB_STEP_SUMMARY"
+          echo "No scientific source edits were made in R7g." >> "$GITHUB_STEP_SUMMARY"
