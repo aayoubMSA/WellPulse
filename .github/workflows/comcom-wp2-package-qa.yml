@@ -1,0 +1,275 @@
+name: WellPulse COMCOM WP2 Package QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/comcom-wp2-package-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact package authority
+        uses: actions/checkout@v4
+        with:
+          ref: 22e6b1d6bff5f4df07ab7c8f6260bd72eafdc173
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Science-lock and editorial-declaration QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          frozen=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7fR4_EvidencePresentation_20260922.tex").read_text(encoding="utf-8")
+          pkg=Path("manuscript/comcom_2026-09-22/WellPulse_COMCOM_Manuscript.tex").read_text(encoding="utf-8")
+
+          ai='''\\section*{Declaration of Generative AI and AI-Assisted Technologies in the Manuscript Preparation Process}
+          During the preparation of this work, the author used OpenAI ChatGPT to assist with literature organization, manuscript structuring, language refinement, and consistency checking. The author independently reviewed and verified the scientific claims, source records, calculations, experimental evidence, and citations, edited the content as needed, and takes full responsibility for the content of the publication.
+
+          '''
+          assert ai in pkg
+          stripped=pkg.replace(ai,"")
+          assert stripped==frozen, "Computer Communications manuscript changed beyond AI disclosure"
+
+          required=[
+            "During the preparation of this work, the author used OpenAI ChatGPT",
+            "independently reviewed and verified the scientific claims",
+            "takes full responsibility for the content of the publication",
+          ]
+          for x in required:
+              assert x in pkg, x
+
+          # Frozen scientific claim firewall.
+          low=pkg.lower()
+          for x in [
+            "68 s receiver completion",
+            "68 s end-to-end recovery",
+            "novel recovery architecture",
+            "endpoint misclassification was repeatedly demonstrated",
+            "to our knowledge",
+          ]:
+              assert x not in low, x
+
+          # AI declaration occurs before references.
+          assert pkg.index("Declaration of Generative AI") < pkg.index("\\begin{thebibliography}")
+
+          print("COMCOM_WP2_SCIENCE_LOCK=PASS")
+          print("COMCOM_WP2_AI_DECLARATION=PASS")
+          PY
+
+      - name: Highlights and metadata QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path("manuscript/comcom_2026-09-22/WellPulse_COMCOM_Highlights.txt")
+          bullets=[x.strip() for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
+          assert 3 <= len(bullets) <= 5, len(bullets)
+          for b in bullets:
+              assert len(b) <= 85, (len(b),b)
+          assert len(bullets)==5
+          print("HIGHLIGHTS")
+          for b in bullets:
+              print(len(b),b)
+
+          data=Path("manuscript/comcom_2026-09-22/WellPulse_COMCOM_Data_Availability.txt").read_text(encoding="utf-8")
+          for x in [
+            "sanitized reproducibility supplement accompanies this submission",
+            "Protected raw FIT and POWDER evidence is not publicly distributed",
+            "cryptographic hashes",
+            "No public repository DOI is claimed",
+          ]:
+              assert x in data, x
+
+          status=Path("manuscript/comcom_2026-09-22/COMCOM_WP2_PACKAGE_STATUS.txt").read_text(encoding="utf-8")
+          assert "CRediT authorship roles for Ahmed Ayoub" in status
+          assert "Graphical abstract (portal-dependent)" in status
+          assert "Any submission action" in status
+
+          print("COMCOM_WP2_HIGHLIGHTS=PASS")
+          print("COMCOM_WP2_DATA_AVAILABILITY=PASS")
+          print("COMCOM_WP2_PENDING_CREDIT=LOCKED")
+          PY
+
+      - name: Install TeX and packaging tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk poppler-utils zip >/dev/null
+
+      - name: Compile manuscript and cover letter
+        shell: bash
+        working-directory: manuscript/comcom_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_COMCOM_Manuscript.tex
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_COMCOM_Cover_Letter.tex
+
+          test -s WellPulse_COMCOM_Manuscript.pdf
+          test -s WellPulse_COMCOM_Cover_Letter.pdf
+
+          for f in WellPulse_COMCOM_Manuscript WellPulse_COMCOM_Cover_Letter; do
+            ! grep -q "Undefined control sequence" "$f.log"
+            ! grep -q "LaTeX Error" "$f.log"
+            if grep -Fq 'Overfull \hbox' "$f.log"; then
+              echo "overfull box in $f" >&2
+              grep -F 'Overfull \hbox' "$f.log"
+              exit 4
+            fi
+          done
+
+          pdfinfo WellPulse_COMCOM_Manuscript.pdf | tee COMCOM_Manuscript_pdfinfo.txt
+          pdfinfo WellPulse_COMCOM_Cover_Letter.pdf | tee COMCOM_CoverLetter_pdfinfo.txt
+
+          pdftotext WellPulse_COMCOM_Manuscript.pdf COMCOM_Manuscript_rendered.txt
+          pdftotext WellPulse_COMCOM_Cover_Letter.pdf COMCOM_CoverLetter_rendered.txt
+
+          grep -Fi "Declaration of Generative AI" COMCOM_Manuscript_rendered.txt
+          grep -F "OpenAI ChatGPT" COMCOM_Manuscript_rendered.txt
+          grep -F "Computer Communications" COMCOM_CoverLetter_rendered.txt
+          grep -F "not currently under consideration by another journal" COMCOM_CoverLetter_rendered.txt
+
+      - name: Build flat source ZIP and sanitized supplement ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="manuscript/comcom_2026-09-22"
+          rm -rf "$ROOT/build"
+          mkdir -p "$ROOT/build/source_flat" "$ROOT/build/supplement/code" "$ROOT/build/supplement/docs" "$ROOT/build/submission_files"
+
+          cp "$ROOT/WellPulse_COMCOM_Manuscript.tex" "$ROOT/build/source_flat/"
+
+          cp manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_REPRODUCIBILITY_SUPPLEMENT.md "$ROOT/build/supplement/docs/"
+          cp manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_EXECUTION_CONFIG.csv "$ROOT/build/supplement/docs/"
+          cp manuscript/revival_2026-09-22/supplement_r7fr3/R7fR3_CODE_MANIFEST.csv "$ROOT/build/supplement/docs/"
+          cp manuscript/revival_2026-09-22/supplement_r7fr3/r7fr3_selfcheck.py "$ROOT/build/supplement/docs/"
+          cp experiments/WP-RT01/fit_runner_py35.py "$ROOT/build/supplement/code/"
+          cp experiments/WP-RT01/fit_runner_q0_instrumented_py35.py "$ROOT/build/supplement/code/"
+          cp scripts/fit_rt01_stamp_stream.py "$ROOT/build/supplement/code/"
+          cp scripts/run_fit_r5_stage_a_loop.sh "$ROOT/build/supplement/code/"
+          cp scripts/analyze_r5_stage_a_run.py "$ROOT/build/supplement/code/"
+          cp scripts/adjudicate_r5_stage_a.py "$ROOT/build/supplement/code/"
+          cp tests/test_r5_stage_a.py "$ROOT/build/supplement/code/"
+          cp experiments/WP-RT01/EXPERIMENT_CONTRACT.md "$ROOT/build/supplement/docs/"
+          cp experiments/WP-RT01/AMENDMENT_001_FIT_EXECUTION.md "$ROOT/build/supplement/docs/"
+          cp experiments/WP-RT01/AMENDMENT_002_PREFINAL_CORRECTIONS.md "$ROOT/build/supplement/docs/"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots=[
+              Path("manuscript/comcom_2026-09-22/build/source_flat"),
+              Path("manuscript/comcom_2026-09-22/build/supplement"),
+          ]
+          bad=[
+              r"FIT_PASSWORD=",
+              r"BEGIN OPENSSH PRIVATE KEY",
+              r"1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC",
+              r"1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs",
+              r"1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw",
+          ]
+          for root in roots:
+              for p in root.rglob("*"):
+                  if not p.is_file(): continue
+                  txt=p.read_bytes().decode("utf-8",errors="ignore")
+                  for pat in bad:
+                      assert not re.search(pat,txt),(p,pat)
+          print("COMCOM_WP2_PRIVACY=PASS")
+          PY
+
+          (
+            cd "$ROOT/build/source_flat"
+            zip -q -j ../../WellPulse_COMCOM_LaTeX_Source.zip WellPulse_COMCOM_Manuscript.tex
+          )
+          (
+            cd "$ROOT/build/supplement"
+            zip -q -r ../../WellPulse_COMCOM_Reproducibility_Supplement.zip .
+          )
+
+          # Flat-source gate: exactly one file and no subfolder entries.
+          unzip -Z1 "$ROOT/WellPulse_COMCOM_LaTeX_Source.zip" | tee "$ROOT/COMCOM_SourceZip_inventory.txt"
+          test "$(unzip -Z1 "$ROOT/WellPulse_COMCOM_LaTeX_Source.zip" | wc -l)" -eq 1
+          test "$(unzip -Z1 "$ROOT/WellPulse_COMCOM_LaTeX_Source.zip" | grep -c '/')" -eq 0
+
+          cp "$ROOT/WellPulse_COMCOM_Manuscript.pdf" "$ROOT/build/submission_files/"
+          cp "$ROOT/WellPulse_COMCOM_LaTeX_Source.zip" "$ROOT/build/submission_files/"
+          cp "$ROOT/WellPulse_COMCOM_Highlights.txt" "$ROOT/build/submission_files/"
+          cp "$ROOT/WellPulse_COMCOM_Cover_Letter.pdf" "$ROOT/build/submission_files/"
+          cp "$ROOT/WellPulse_COMCOM_Reproducibility_Supplement.zip" "$ROOT/build/submission_files/"
+          cp "$ROOT/WellPulse_COMCOM_Data_Availability.txt" "$ROOT/build/submission_files/"
+
+          find "$ROOT/build/submission_files" -maxdepth 1 -type f -printf '%f\n' | sort | tee "$ROOT/COMCOM_SubmissionFile_inventory.txt"
+          test "$(find "$ROOT/build/submission_files" -maxdepth 1 -type f | wc -l)" -eq 6
+
+          (cd "$ROOT/build/submission_files" && sha256sum * | sort) > "$ROOT/COMCOM_SubmissionFile_SHA256SUMS.txt"
+          zip -q -r "$ROOT/WellPulse_COMCOM_WP2_PreFinal_Package.zip" "$ROOT/build/submission_files" "$ROOT/COMCOM_SubmissionFile_SHA256SUMS.txt" "$ROOT/COMCOM_SubmissionFile_inventory.txt"
+
+      - name: Cover-letter claim firewall
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          c=Path("manuscript/comcom_2026-09-22/WellPulse_COMCOM_Cover_Letter.tex").read_text(encoding="utf-8").lower()
+          for x in [
+              "novel recovery architecture",
+              "first",
+              "to our knowledge",
+              "guaranteed",
+              "outperformed",
+              "universal durability",
+          ]:
+              assert x not in c,x
+          for x in [
+              "experimental network/iot measurement study",
+              "all three runs remained unresolved",
+              "does not claim a new mqtt recovery architecture",
+              "sanitized reproducibility supplement accompanies the submission",
+          ]:
+              assert x in c,x
+          print("COMCOM_WP2_COVER_LETTER=PASS")
+          PY
+
+      - name: Hash WP2 outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="manuscript/comcom_2026-09-22"
+          sha256sum             "$ROOT/WellPulse_COMCOM_Manuscript.tex"             "$ROOT/WellPulse_COMCOM_Manuscript.pdf"             "$ROOT/WellPulse_COMCOM_LaTeX_Source.zip"             "$ROOT/WellPulse_COMCOM_Highlights.txt"             "$ROOT/WellPulse_COMCOM_Cover_Letter.pdf"             "$ROOT/WellPulse_COMCOM_Reproducibility_Supplement.zip"             "$ROOT/WellPulse_COMCOM_Data_Availability.txt"             "$ROOT/WellPulse_COMCOM_WP2_PreFinal_Package.zip"             | tee "$ROOT/COMCOM_WP2_BUILD_SHA256SUMS.txt"
+
+      - name: Upload WP2 pre-final package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-comcom-wp2-prefinal-${{ github.run_id }}
+          path: |
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Manuscript.tex
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Manuscript.pdf
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_LaTeX_Source.zip
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Highlights.txt
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Cover_Letter.tex
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Cover_Letter.pdf
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Reproducibility_Supplement.zip
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_Data_Availability.txt
+            manuscript/comcom_2026-09-22/COMCOM_WP2_PACKAGE_STATUS.txt
+            manuscript/comcom_2026-09-22/COMCOM_SubmissionFile_inventory.txt
+            manuscript/comcom_2026-09-22/COMCOM_SubmissionFile_SHA256SUMS.txt
+            manuscript/comcom_2026-09-22/COMCOM_WP2_BUILD_SHA256SUMS.txt
+            manuscript/comcom_2026-09-22/WellPulse_COMCOM_WP2_PreFinal_Package.zip
+          retention-days: 30
+
+      - name: Summarize
+        run: |
+          echo "COMCOM_WP2_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scientific delta: AI disclosure only." >> "$GITHUB_STEP_SUMMARY"
+          echo "CRediT roles remain the sole human-confirmation delta." >> "$GITHUB_STEP_SUMMARY"
+          echo "No submission action executed." >> "$GITHUB_STEP_SUMMARY"
