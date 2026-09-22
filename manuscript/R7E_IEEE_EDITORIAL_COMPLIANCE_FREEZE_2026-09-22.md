@@ -121,3 +121,29 @@ File hashes from the exact successful build:
 
 Next:
 R7f performs hostile scientific review of the complete R7e manuscript. No venue decision occurs until R8.
+
+## 10. Durable R7e package preservation
+
+The successful 30-day GitHub Actions artifact was copied to project Drive before expiry.
+
+Drive folder:
+`P12_WellPulse / R7e_Editorial_Package_2026-09-22`
+
+Drive folder ID:
+`1hzZDy4BAiWtC3qX0EGv3THmlIKFU5nFr`
+
+Drive file:
+`WellPulse_R7e_Editorial_QA_35703430589.zip`
+
+Drive file ID:
+`1Vl7dzrKSdFKvkIjxTAh-1jDmcbaiOE2d`
+
+Drive file size:
+`225,376 bytes`
+
+The Drive copy was re-downloaded and byte-verified:
+`sha256:efa98631a63f9634124abe6e4c75a206e13b06bcfddf42ee2c570e6ff3c9507a`
+
+This exactly matches the GitHub Actions artifact digest.
+
+`R7E_PACKAGE_PRESERVATION=PASS`
