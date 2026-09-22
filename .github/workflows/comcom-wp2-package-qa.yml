@@ -134,10 +134,16 @@ jobs:
           pdftotext WellPulse_COMCOM_Manuscript.pdf COMCOM_Manuscript_rendered.txt
           pdftotext WellPulse_COMCOM_Cover_Letter.pdf COMCOM_CoverLetter_rendered.txt
 
-          grep -Fi "Declaration of Generative AI" COMCOM_Manuscript_rendered.txt
-          grep -F "OpenAI ChatGPT" COMCOM_Manuscript_rendered.txt
-          grep -F "Computer Communications" COMCOM_CoverLetter_rendered.txt
-          grep -F "not currently under consideration by another journal" COMCOM_CoverLetter_rendered.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          m=" ".join(Path("COMCOM_Manuscript_rendered.txt").read_text(errors="replace").split())
+          c=" ".join(Path("COMCOM_CoverLetter_rendered.txt").read_text(errors="replace").split())
+          assert "OpenAI ChatGPT" in m
+          assert "takes full responsibility for the content of the publication" in m
+          assert "Computer Communications" in c
+          assert "single-author work" in c
+          print("COMCOM_WP2_RENDER_SMOKE=PASS")
+          PY
 
       - name: Build flat source ZIP and sanitized supplement ZIP
         shell: bash
