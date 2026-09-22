@@ -1,0 +1,21 @@
+Computer Communications submission package status
+Date: 2026-09-22
+
+READY COMPONENTS:
+- Manuscript source with frozen R7g science + required AI disclosure
+- Highlights
+- Cover letter source
+- Data Availability Statement
+- Sanitized reproducibility supplement source materials
+
+PENDING HUMAN CONFIRMATION:
+- CRediT authorship roles for Ahmed Ayoub
+
+NOT INCLUDED:
+- Graphical abstract (portal-dependent)
+- APC/open-access choice
+- Copyright/licence commitment
+- Reviewer suggestions
+- Any submission action
+
+Do not treat this package as final until CRediT roles are confirmed and the live portal is checked.
