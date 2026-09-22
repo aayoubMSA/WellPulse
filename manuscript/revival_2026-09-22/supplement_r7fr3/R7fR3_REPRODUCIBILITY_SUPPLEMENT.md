@@ -136,9 +136,6 @@ The repository contains the code required to inspect or rerun the bounded FIT lo
 - experiments/WP-RT01/EXPERIMENT_CONTRACT.md
 - experiments/WP-RT01/AMENDMENT_001_FIT_EXECUTION.md
 - experiments/WP-RT01/AMENDMENT_002_PREFINAL_CORRECTIONS.md
-- experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md
-- experiments/WP-RT01/Q0_REVIVAL_STATUS.md
-- experiments/WP-RT01/R5_STAGE_A_STATUS.md
 
 This supplement intentionally omits the internal raw-preservation record because it contains private storage identifiers. It also omits:
 - FIT usernames/passwords
