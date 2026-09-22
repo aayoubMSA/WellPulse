@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7f-R4 authority
         uses: actions/checkout@v4
         with:
-          ref: e3377bb11da5518476ff993515cbe481cbda49f8
+          ref: dc2b7e39c16dae1ea6eb1e9d8b82beba5ca3792a
           persist-credentials: false
 
       - name: Static science-lock and evidence-presentation gates
@@ -179,5 +179,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7FR4_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: e3377bb11da5518476ff993515cbe481cbda49f8" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: dc2b7e39c16dae1ea6eb1e9d8b82beba5ca3792a" >> "$GITHUB_STEP_SUMMARY"
           echo "Coverage matrix + split C1/C2 summary + evidence-faithful vector figure passed." >> "$GITHUB_STEP_SUMMARY"
