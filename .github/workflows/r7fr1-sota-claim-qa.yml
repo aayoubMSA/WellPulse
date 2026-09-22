@@ -1,0 +1,142 @@
+name: WellPulse R7f-R1 SOTA Claim Boundary QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7fr1-sota-claim-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7f-R1 authority
+        uses: actions/checkout@v4
+        with:
+          ref: adef6dfffde024199df460b15bd25ca709d54b36
+          persist-credentials: false
+
+      - name: Static SOTA claim-boundary and science-lock gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          old=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7e_Editorial_20260922.tex").read_text(encoding="utf-8")
+          new=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.tex").read_text(encoding="utf-8")
+
+          # Title and abstract must remain byte-identical.
+          def between(s,a,b):
+              return s[s.index(a):s.index(b)]
+          assert between(old,"\\title{","\\author{") == between(new,"\\title{","\\author{")
+          assert between(old,"\\begin{abstract}","\\end{abstract}") == between(new,"\\begin{abstract}","\\end{abstract}")
+
+          # From Methods through declarations, science must be byte-identical.
+          ms="\\section{Recovery Observables and Experimental Protocol}"
+          dec="\\section*{Acknowledgment}"
+          assert old[old.index(ms):old.index(dec)] == new[new.index(ms):new.index(dec)]
+
+          active="\n".join(line.split("%",1)[0] for line in new.splitlines())
+          low=active.lower()
+
+          # Contribution-boundary repairs.
+          required=[
+              "operational recovery-measurement discipline",
+              "not a claim that the labels m0--m5 are novel by themselves",
+              "complementary cross-environment evidence without pooling",
+              "prospective endpoint adjudication",
+              "the environments answer different measurement questions and are not treated as replications of one common effect",
+              "reclassification of the historical sender-side backlog endpoint",
+              "not architectural firstness, end-to-end acknowledgement novelty, or the novelty of naming recovery layers",
+          ]
+          for x in required:
+              assert x in low, x
+
+          # Direct 2026 prior art and focused SOTA.
+          for key in [
+              "mohammed2026resilient","mohammed2026scalable","chen2020",
+              "sochor2021","nawaz2019","kamoun2024"
+          ]:
+              assert ("\\cite{"+key+"}") in new or ("\\bibitem{"+key+"}") in new, key
+
+          for doi in [
+              "10.22266/ijies2026.0531.19",
+              "10.48084/etasr.16945",
+              "10.1155/2020/8884924",
+              "10.1002/smr.2410",
+              "10.1002/ett.3742",
+              "10.1002/ett.4945",
+          ]:
+              assert doi in new, doi
+
+          # Required explicit concessions.
+          concessions=[
+              "application-level acknowledgement, disk-backed persistence, or end-to-end durability confirmation is introduced here",
+              "broker failover, broker substitution, and distributed-broker availability are prior art",
+              "results from one client/broker/software path characterize mqtt implementations in general",
+              "a live-versus-history scheduling trade-off is not claimed as a new concept here",
+          ]
+          for x in concessions:
+              assert x in low, x
+          assert "directly preclude any claim that application-level acknowledgement" in low
+          assert "do not assume that results from one client/broker/software path characterize mqtt implementations in general" in low
+
+          # Old vulnerable labels removed from contributions / related-work prose.
+          assert "cross-environment triangulation" not in low
+          assert "recovery-observable measurement protocol. a reproducible measurement discipline" not in low
+          assert "explicit negative/bounded result" not in low
+
+          # Citation/reference integrity.
+          cites=[]
+          for grp in re.findall(r"\\cite\{([^}]*)\}",new):
+              cites.extend(k.strip() for k in grp.split(",") if k.strip())
+          bibs=re.findall(r"\\bibitem\{([^}]*)\}",new)
+          assert set(cites) <= set(bibs), set(cites)-set(bibs)
+          assert len(bibs)==len(set(bibs))==14, bibs
+
+          # Claim firewall remains active.
+          prohibited=[
+              "novel recovery architecture",
+              "68 s receiver completion",
+              "68 s end-to-end recovery",
+              "endpoint misclassification was repeatedly demonstrated",
+              "to our knowledge",
+          ]
+          for x in prohibited:
+              assert x not in low, x
+
+          print("R7FR1_SCIENCE_LOCK=PASS")
+          print("R7FR1_SOTA_COVERAGE=PASS")
+          print("R7FR1_CLAIM_BOUNDARY=PASS")
+          print("R7FR1_CITATION_INTEGRITY=PASS")
+          PY
+
+      - name: Install LaTeX
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk >/dev/null
+
+      - name: Compile exact R7f-R1 source
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.tex
+          test -s WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.log
+          ! grep -q "Citation .* undefined" WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.log
+          ! grep -q "There were undefined references" WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.log
+          ! grep -Fq 'Overfull \hbox' WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.log
+
+      - name: Summarize
+        run: |
+          echo "R7FR1_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: adef6dfffde024199df460b15bd25ca709d54b36" >> "$GITHUB_STEP_SUMMARY"
+          echo "Methods/Results/Discussion/Threats/Reproducibility/Conclusion locked to R7e." >> "$GITHUB_STEP_SUMMARY"
