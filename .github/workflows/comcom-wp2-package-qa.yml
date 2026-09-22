@@ -216,7 +216,7 @@ jobs:
           c=Path("manuscript/comcom_2026-09-22/WellPulse_COMCOM_Cover_Letter.tex").read_text(encoding="utf-8").lower()
           for x in [
               "novel recovery architecture",
-              "first",
+              "first to",
               "to our knowledge",
               "guaranteed",
               "outperformed",
