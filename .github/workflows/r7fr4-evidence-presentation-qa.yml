@@ -154,9 +154,17 @@ jobs:
           fi
           pdfinfo WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf | tee R7fR4_pdfinfo.txt
           pdftotext WellPulse_Revival_R7fR4_EvidencePresentation_20260922.pdf R7fR4_rendered.txt
-          grep -F "Campaign-by-observable coverage" R7fR4_rendered.txt || true
-          grep -F "Historical FIT W1 continuity results separated by treatment" R7fR4_rendered.txt
-          grep -F "Evidence-faithful recovery measurement view" R7fR4_rendered.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          text=" ".join(Path("R7fR4_rendered.txt").read_text(errors="replace").split())
+          for phrase in [
+              "Campaign-by-observable coverage",
+              "Historical FIT W1 continuity results separated by treatment",
+              "Evidence-faithful recovery measurement view",
+          ]:
+              assert phrase in text, phrase
+          print("R7FR4_RENDERED_TEXT=PASS")
+          PY
 
       - name: Hash accepted build
         shell: bash
