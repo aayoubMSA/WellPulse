@@ -134,13 +134,13 @@ Table~\ref{tab:execconfig} exposes the execution details needed to interpret and
 \small
 \caption{Execution configuration for the historical and prospective FIT campaigns.}
 \label{tab:execconfig}
-\begin{tabular}{p{0.14\textwidth}p{0.19\textwidth}p{0.19\textwidth}p{0.21\textwidth}p{0.21\textwidth}}
+\begin{tabular}{@{}p{0.12\textwidth}p{0.17\textwidth}p{0.17\textwidth}p{0.19\textwidth}p{0.19\textwidth}@{}}
 \toprule
 \textbf{Campaign} & \textbf{Platform / authority} & \textbf{Runtime / MQTT} & \textbf{Treatment / persistence} & \textbf{Observation authority} \\
 \midrule
 Historical FIT final &
 Grenoble A8-100; Actions run 32628193889; FIT experiments 448265/448266/448269 &
-Python-3.5-compatible A8 runner; Paho MQTT 1.6.1; broker \texttt{mqtt4.iot-lab.info:8883}; QoS~1; TLS peer verification &
+Python-3.5-compatible A8 runner; Paho MQTT 1.6.1; broker \path{mqtt4.iot-lab.info:8883}; QoS~1; TLS peer verification &
 C1/C2: \texttt{iptables OUTPUT REJECT} to broker TCP/8883 for records 3001--5000; C2 exec restart after record 4000; SQLite queue with \texttt{synchronous=FULL} &
 Receiver reconciliation on FIT frontend; exact receiver \texttt{mosquitto\_sub} version was not preserved; exact historical M3 timestamp was not instrumented \\
 Prospective FIT Stage A &
