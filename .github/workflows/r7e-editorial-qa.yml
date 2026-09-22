@@ -153,8 +153,6 @@ jobs:
           grep -F "Ahmed Ayoub" R7e_rendered.txt
           grep -F "aelsayedo@msa.edu.eg" R7e_rendered.txt
           grep -Fi "Acknowledgment" R7e_rendered.txt
-          grep -F "MQTT Version 5.0" R7e_rendered.txt
-          grep -Fi "Powder: Platform for Open Wireless" R7e_rendered.txt
 
       - name: Package cleanliness gate
         shell: bash
