@@ -3,6 +3,7 @@ from pathlib import Path
 import csv
 import re
 import sys
+import subprocess
 
 root=Path(__file__).resolve().parents[3]
 cfg=Path(__file__).with_name("R7fR3_EXECUTION_CONFIG.csv")
@@ -20,6 +21,11 @@ assert len(mrows)>=10
 for row in mrows:
     p=root/row["path"]
     assert p.exists(), p
+    observed=subprocess.check_output(
+        ["git","-C",str(root),"rev-parse","HEAD:"+row["path"]],
+        text=True
+    ).strip()
+    assert observed==row["git_blob_sha"], (row["path"],observed,row["git_blob_sha"])
 
 runner=(root/"experiments/WP-RT01/fit_runner_py35.py").read_text(encoding="utf-8")
 assert 'BROKER="mqtt4.iot-lab.info"; PORT=8883' in runner
