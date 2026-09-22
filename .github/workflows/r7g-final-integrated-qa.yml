@@ -240,8 +240,9 @@ jobs:
             "69.134","69.300","75.438",
             "3/3 UNRESOLVED",
             "Evidence-faithful recovery measurement view",
-            "Reproducibility and Data Availability",
-            "Acknowledgment","Funding","Conflict of Interest",
+            "sanitized reviewer-facing reproducibility supplement",
+            "This work received no external research funding.",
+            "no known competing financial interests",
           ]
           for x in required:
               assert x.lower() in t.lower(), x
