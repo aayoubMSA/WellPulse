@@ -56,7 +56,7 @@ jobs:
             "freshness versus historical reconstruction",
             "recovery declaration matrix",
             "exact historical m3 latency",
-            "does not support a generic statement that mqtt durability harms freshness",
+            "do not support a generic statement that mqtt durability harms freshness",
             "0/3 positive runs do not establish that m2 and m3 are equal",
             "6,881,643-byte archive",
             "5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2",
