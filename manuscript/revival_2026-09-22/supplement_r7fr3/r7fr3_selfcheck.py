@@ -48,7 +48,12 @@ assert "journal_mode=DELETE" in supp and "journal_mode=WAL" in supp
 assert "not recorded" in supp
 assert "private Drive identifiers" in supp
 
-for secret_pattern in [r"FIT_PASSWORD\s*=", r"BEGIN OPENSSH PRIVATE KEY", r"Drive file ID:", r"Drive folder ID:"]:
+for secret_pattern in [
+    r"FIT_" + r"PASSWORD\s*=",
+    r"BEGIN OPENSSH " + r"PRIVATE KEY",
+    r"Drive file " + r"ID:",
+    r"Drive folder " + r"ID:",
+]:
     assert not re.search(secret_pattern, supp)
 
 print("R7FR3_SUPPLEMENT_SELFCHECK=PASS")
