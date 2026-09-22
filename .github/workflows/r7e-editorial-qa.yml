@@ -1,0 +1,179 @@
+name: WellPulse R7e Editorial QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7e-editorial-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7e authority
+        uses: actions/checkout@v4
+        with:
+          ref: b721fe26727136184c47b392cdefe9a673814609
+          persist-credentials: false
+
+      - name: Static editorial and science-lock gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          p7d=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7d_Full_Prose_20260922.tex")
+          p7e=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7e_Editorial_20260922.tex")
+          d=p7d.read_text(encoding="utf-8")
+          e=p7e.read_text(encoding="utf-8")
+
+          ms="\\section{Recovery Observables and Experimental Protocol}"
+          ds="\\section{Discussion}"
+          bs="\\begin{thebibliography}"
+          assert ms in d and ms in e and ds in d and ds in e and bs in d and bs in e
+
+          # Title + abstract must be scientifically identical.
+          def between(s,a,b):
+              return s[s.index(a):s.index(b)]
+          assert between(d,"\\title{","\\author{") == between(e,"\\title{","\\author{")
+          assert between(d,"\\begin{abstract}","\\end{abstract}") == between(e,"\\begin{abstract}","\\end{abstract}")
+
+          # Intro/Related scientific prose unchanged.
+          d_pre=d[d.index("\\section{Introduction}"):d.index(ms)]
+          e_pre=e[e.index("\\section{Introduction}"):e.index(ms)]
+          assert d_pre == e_pre, "Introduction/Related Work changed scientifically"
+
+          # Normalize the only permitted Methods/Results editorial additions.
+          d_mid=d[d.index(ms):d.index(ds)]
+          e_mid=e[e.index(ms):e.index(ds)]
+          e_mid=e_mid.replace(" \\cite{fitlab}","").replace(" \\cite{powder}","")
+          e_mid=e_mid.replace("\\centering\n\\small","\\centering")
+          assert d_mid == e_mid, "Methods/Results changed beyond citation/float formatting"
+
+          # Discussion through end of Conclusion must be unchanged.
+          concl_end="The study does not introduce a new persistence architecture and does not pool heterogeneous testbeds into a global reliability claim."
+          d_post=d[d.index(ds):d.index(concl_end)+len(concl_end)]
+          e_post=e[e.index(ds):e.index(concl_end)+len(concl_end)]
+          assert d_post == e_post, "Discussion/Threats/Repro/Conclusion scientific prose changed"
+
+          # Exact recovered author metadata.
+          for x in [
+            "Ahmed Ayoub",
+            "Computer Systems Engineering Department",
+            "Faculty of Engineering",
+            "October University for Modern Sciences and Arts (MSA University)",
+            "6th of October City, 12451, Egypt",
+            "aelsayedo@msa.edu.eg",
+            "0009-0004-7895-3191",
+          ]:
+              assert x in e, x
+
+          # Prior-submission declarations preserved.
+          for x in [
+            "The author acknowledges FIT IoT-LAB for access to its experimental IoT infrastructure and POWDER for access to its wireless experimentation platform.",
+            "This work received no external research funding.",
+            "The author declares that he has no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.",
+          ]:
+              assert x in e, x
+
+          # Citation/reference integrity.
+          cites=[]
+          for grp in re.findall(r"\\cite\{([^}]*)\}",e):
+              cites.extend(k.strip() for k in grp.split(",") if k.strip())
+          bibs=re.findall(r"\\bibitem\{([^}]*)\}",e)
+          assert set(cites) <= set(bibs), (set(cites)-set(bibs))
+          assert len(bibs)==len(set(bibs))==8, bibs
+          for key in ["mqtt5","emqtt","jesus2025","gaspar2026","neagu2026","kang2026","fitlab","powder"]:
+              assert key in bibs, key
+          assert "10.1109/WF-IoT.2015.7389098" in e
+          assert "10.1016/j.comnet.2021.108281" in e
+
+          # Single-author voice, privacy, and claim firewall.
+          active="\n".join(line.split("%",1)[0] for line in e.splitlines())
+          prose=re.sub(r"\\begin\{thebibliography\}.*?\\end\{thebibliography\}","",active,flags=re.S)
+          assert re.search(r"\bwe\b",prose,re.I) is None
+          assert re.search(r"\bour\b",prose,re.I) is None
+          for private_id in [
+            "1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC",
+            "1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs",
+            "1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw",
+          ]:
+              assert private_id not in e
+          low=active.lower()
+          for phrase in [
+            "68 s end-to-end recovery",
+            "68 s receiver completion",
+            "novel recovery architecture",
+            "endpoint misclassification was repeatedly demonstrated",
+            "wellpulse is 100% reliable",
+            "wellpulse outperformed mqtt",
+          ]:
+              assert phrase not in low, phrase
+
+          print("R7E_SCIENCE_LOCK=PASS")
+          print("R7E_METADATA=PASS")
+          print("R7E_CITATION_REFERENCE_INTEGRITY=PASS")
+          print("R7E_SINGLE_AUTHOR_PRIVACY=PASS")
+          PY
+
+      - name: Install LaTeX and PDF tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk poppler-utils >/dev/null
+
+      - name: Compile exact R7e source
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7e_Editorial_20260922.tex
+          test -s WellPulse_Revival_R7e_Editorial_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7e_Editorial_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7e_Editorial_20260922.log
+          ! grep -q "Citation .* undefined" WellPulse_Revival_R7e_Editorial_20260922.log
+          ! grep -q "There were undefined references" WellPulse_Revival_R7e_Editorial_20260922.log
+          ! grep -q "Overfull \\hbox" WellPulse_Revival_R7e_Editorial_20260922.log
+          pdfinfo WellPulse_Revival_R7e_Editorial_20260922.pdf | tee R7e_pdfinfo.txt
+          pdftotext WellPulse_Revival_R7e_Editorial_20260922.pdf R7e_rendered.txt
+          grep -F "Ahmed Ayoub" R7e_rendered.txt
+          grep -F "aelsayedo@msa.edu.eg" R7e_rendered.txt
+          grep -F "Acknowledgment" R7e_rendered.txt
+          grep -F "References" R7e_rendered.txt
+
+      - name: Package cleanliness gate
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          mkdir -p R7e_clean_source
+          cp WellPulse_Revival_R7e_Editorial_20260922.tex R7e_clean_source/
+          find R7e_clean_source -type f | sort | tee R7e_clean_source_inventory.txt
+          test "$(find R7e_clean_source -type f | wc -l)" -eq 1
+          ! grep -R -E "(FIT_PASSWORD|BEGIN OPENSSH PRIVATE KEY|1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC|1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs|1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw)" R7e_clean_source
+          tar -czf WellPulse_R7e_Clean_Source_20260922.tar.gz R7e_clean_source
+          sha256sum WellPulse_Revival_R7e_Editorial_20260922.tex                     WellPulse_Revival_R7e_Editorial_20260922.pdf                     WellPulse_R7e_Clean_Source_20260922.tar.gz | tee R7e_SHA256SUMS.txt
+
+      - name: Upload R7e QA package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpulse-r7e-editorial-qa-${{ github.run_id }}
+          path: |
+            manuscript/revival_2026-09-22/WellPulse_Revival_R7e_Editorial_20260922.tex
+            manuscript/revival_2026-09-22/WellPulse_Revival_R7e_Editorial_20260922.pdf
+            manuscript/revival_2026-09-22/WellPulse_R7e_Clean_Source_20260922.tar.gz
+            manuscript/revival_2026-09-22/R7e_SHA256SUMS.txt
+            manuscript/revival_2026-09-22/R7e_pdfinfo.txt
+            manuscript/revival_2026-09-22/R7e_clean_source_inventory.txt
+          retention-days: 30
+
+      - name: Summarize
+        run: |
+          echo "R7E_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: b721fe26727136184c47b392cdefe9a673814609" >> "$GITHUB_STEP_SUMMARY"
+          echo "Science locked; only metadata/citations/references/declarations/float typography changed." >> "$GITHUB_STEP_SUMMARY"
