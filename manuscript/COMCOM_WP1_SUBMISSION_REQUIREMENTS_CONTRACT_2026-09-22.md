@@ -239,3 +239,35 @@ Prepare in the next package WP:
 `COMCOM_WP1_SUBMISSION_EXECUTED=NO`
 
 `NEXT=COMCOM_WP2_PACKAGE_ASSEMBLY_AND_EDITORIAL_DECLARATIONS`
+
+
+## 14. Web authority log
+
+Checked 2026-09-22.
+
+Official/current sources:
+- Computer Communications official Elsevier scope page:
+  https://shop.elsevier.com/journals/computer-communications/0140-3664
+- Elsevier LaTeX instructions:
+  https://www.elsevier.com/researcher/author/policies-and-guidelines/latex-instructions
+- Elsevier Your Paper Your Way / Guide for Authors:
+  https://www.elsevier.com/subject/next/guide-for-authors
+- Elsevier Highlights:
+  https://www.elsevier.com/researcher/author/tools-and-resources/highlights
+- Elsevier graphical abstract guidance:
+  https://www.elsevier.com/researcher/author/tools-and-resources/graphical-abstract
+- Elsevier August-2026 generative-AI policy:
+  https://www.elsevier.com/about/policies-and-standards/generative-ai-policies-for-journals
+- Elsevier research-data statement guidance:
+  https://www.elsevier.com/researcher/author/tools-and-resources/research-data/data-statement
+
+Current Computer Communications article-pattern checks:
+- FALCON, Computer Communications 251 (2026), article 108481:
+  published page exposes Highlights, Graphical abstract, and Data availability.
+- Digital Twins for smart campus networks, Computer Communications 253 (2026), article 108518:
+  published page exposes CRediT authorship, Declaration of competing interest, Acknowledgments, and Data availability.
+- Intent-based networking using LLM-driven agentic reinforcement learning, Computer Communications 257 (2026), article 108602:
+  published page exposes Funding and CRediT authorship.
+
+Evidence limitation:
+the live Computer Communications journal-specific Guide for Authors was linked from the official journal page but returned HTTP 403 to automated retrieval in this WP. Therefore journal-specific mandatory status for graphical abstract, exact reviewer count, and first-submission source-file requirement remains portal-dependent and is not invented.
