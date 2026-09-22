@@ -1,0 +1,5 @@
+Recovery is measured as six observables rather than one reconnect time.
+Serialized replay preserved completeness but paused new telemetry for 69–76 s.
+Prospective M2–M3 timing was unresolved in all three scored runs.
+FIT and POWDER provide complementary evidence without cross-testbed pooling.
+A sanitized supplement preserves code authority, timing bounds, and claim limits.
