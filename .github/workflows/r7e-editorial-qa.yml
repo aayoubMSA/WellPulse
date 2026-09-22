@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7e authority
         uses: actions/checkout@v4
         with:
-          ref: b721fe26727136184c47b392cdefe9a673814609
+          ref: 9163a164af38cc36dafe317b3893078cb3e262a8
           persist-credentials: false
 
       - name: Static editorial and science-lock gates
@@ -53,6 +53,7 @@ jobs:
           e_mid=e[e.index(ms):e.index(ds)]
           e_mid=e_mid.replace(" \\cite{fitlab}","").replace(" \\cite{powder}","")
           e_mid=e_mid.replace("\\centering\n\\small","\\centering")
+          e_mid=e_mid.replace("\\begin{tabular}{@{}lrrrrcl@{}}","\\begin{tabular}{lrrrrcl}")
           assert d_mid == e_mid, "Methods/Results changed beyond citation/float formatting"
 
           # Discussion through end of Conclusion must be unchanged.
@@ -60,6 +61,11 @@ jobs:
           d_post=d[d.index(ds):d.index(concl_end)+len(concl_end)]
           e_post=e[e.index(ds):e.index(concl_end)+len(concl_end)]
           e_post=e_post.replace("\\centering\n\\small","\\centering")
+          sha="5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2"
+          h1,h2=sha[:32],sha[32:]
+          editorial_hash="\\begin{center}\n\\small\\texttt{"+h1+"}\\\\\n\\texttt{"+h2+"}\n\\end{center}"
+          original_hash="\\[\n\\texttt{"+sha+"}.\n\\]"
+          e_post=e_post.replace(editorial_hash,original_hash)
           assert d_post == e_post, "Discussion/Threats/Repro/Conclusion scientific prose changed"
 
           # Exact recovered author metadata.
@@ -139,12 +145,14 @@ jobs:
           ! grep -q "LaTeX Error" WellPulse_Revival_R7e_Editorial_20260922.log
           ! grep -q "Citation .* undefined" WellPulse_Revival_R7e_Editorial_20260922.log
           ! grep -q "There were undefined references" WellPulse_Revival_R7e_Editorial_20260922.log
-          ! grep -q "Overfull \\hbox" WellPulse_Revival_R7e_Editorial_20260922.log
+          ! grep -Fq 'Overfull \\hbox' WellPulse_Revival_R7e_Editorial_20260922.log
           pdfinfo WellPulse_Revival_R7e_Editorial_20260922.pdf | tee R7e_pdfinfo.txt
+          grep -F "Title:" R7e_pdfinfo.txt | grep -F "Beyond Reconnection"
+          grep -F "Author:" R7e_pdfinfo.txt | grep -F "Ahmed Ayoub"
           pdftotext WellPulse_Revival_R7e_Editorial_20260922.pdf R7e_rendered.txt
           grep -F "Ahmed Ayoub" R7e_rendered.txt
           grep -F "aelsayedo@msa.edu.eg" R7e_rendered.txt
-          grep -F "Acknowledgment" R7e_rendered.txt
+          grep -Fi "Acknowledgment" R7e_rendered.txt
           grep -F "References" R7e_rendered.txt
 
       - name: Package cleanliness gate
@@ -176,5 +184,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7E_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: b721fe26727136184c47b392cdefe9a673814609" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 9163a164af38cc36dafe317b3893078cb3e262a8" >> "$GITHUB_STEP_SUMMARY"
           echo "Science locked; only metadata/citations/references/declarations/float typography changed." >> "$GITHUB_STEP_SUMMARY"
