@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7f-R3 authority
         uses: actions/checkout@v4
         with:
-          ref: 33f055ea21aea78c3fb6c9780d60005156bd7aec
+          ref: 53e9b176c4d3c0d7249354f458553857366caee0
           fetch-depth: 0
           persist-credentials: false
 
@@ -68,7 +68,7 @@ jobs:
             "pre-final amendment documented an intended",
             "executed frozen runner requests",
             "no scientific claim in this paper is attributed to journal-mode choice",
-            "supplement\\_r7fr3",
+            "supplement_r7fr3",
             "127 entries",
             "6,881,643-byte archive",
           ]
@@ -130,7 +130,10 @@ jobs:
           ! grep -q "LaTeX Error" WellPulse_Revival_R7fR3_ReproSurface_20260922.log
           ! grep -q "Citation .* undefined" WellPulse_Revival_R7fR3_ReproSurface_20260922.log
           ! grep -q "There were undefined references" WellPulse_Revival_R7fR3_ReproSurface_20260922.log
-          ! grep -Fq 'Overfull \hbox' WellPulse_Revival_R7fR3_ReproSurface_20260922.log
+          if grep -Fq 'Overfull \hbox' WellPulse_Revival_R7fR3_ReproSurface_20260922.log; then
+            echo "overfull box detected" >&2
+            exit 4
+          fi
           pdfinfo WellPulse_Revival_R7fR3_ReproSurface_20260922.pdf | tee R7fR3_pdfinfo.txt
 
       - name: Build sanitized reviewer supplement package
@@ -152,11 +155,8 @@ jobs:
           cp experiments/WP-RT01/EXPERIMENT_CONTRACT.md "$OUT/code/"
           cp experiments/WP-RT01/AMENDMENT_001_FIT_EXECUTION.md "$OUT/code/"
           cp experiments/WP-RT01/AMENDMENT_002_PREFINAL_CORRECTIONS.md "$OUT/code/"
-          cp experiments/WP-RT01/FINAL_RESULTS_2026-08-23.md "$OUT/code/"
-          cp experiments/WP-RT01/Q0_REVIVAL_STATUS.md "$OUT/code/"
-          cp experiments/WP-RT01/R5_STAGE_A_STATUS.md "$OUT/code/"
 
-          if grep -R -E "(FIT_PASSWORD=|BEGIN OPENSSH PRIVATE KEY|Drive file ID:|Drive folder ID:)" "$OUT"; then
+          if grep -R -E "(FIT_PASSWORD=|BEGIN OPENSSH PRIVATE KEY|Drive file ID:|Drive folder ID:|1jDv2kw0uqUExfT6dfnd1LrZglyyi-KKC|1HxR_B7fyiEGgYj4CB0iJVuhHbWDU7QWs|1qS-_vvDcRkx6nOOxxEnfo3FzGuTo6Ebw|14SMrvpmFgX7J2eHIkBuUkEcCwI19c5Nl|1Bi8zr7lO6UKn5BSoMrjQhoTcXIL5UtIX|1Y1bBgs0iclyXeKsDr4tTI-ZcQEqr3EaO)" "$OUT"; then
             echo "privacy scan failed" >&2
             exit 3
           fi
@@ -181,5 +181,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7FR3_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: 33f055ea21aea78c3fb6c9780d60005156bd7aec" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 53e9b176c4d3c0d7249354f458553857366caee0" >> "$GITHUB_STEP_SUMMARY"
           echo "Sanitized supplement built; private raw archives and credentials excluded." >> "$GITHUB_STEP_SUMMARY"
