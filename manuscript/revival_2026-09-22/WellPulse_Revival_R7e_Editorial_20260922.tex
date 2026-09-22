@@ -7,6 +7,12 @@
 \usepackage{url}
 \usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
+\hypersetup{
+  pdftitle={Beyond Reconnection: Measuring Recovery Observables and Replay-Induced Continuity Gaps in MQTT Telemetry},
+  pdfauthor={Ahmed Ayoub},
+  pdfsubject={Experimental recovery observables for MQTT telemetry},
+  pdfkeywords={MQTT, telemetry recovery, data durability, backlog replay, receiver reconciliation, IoT testbeds}
+}
 
 % WellPulse IEEE Revival -- R7b source skeleton.
 % NEW SOURCE IDENTITY. Does not overwrite rejected TNSM release.
@@ -163,7 +169,7 @@ Table~\ref{tab:stagea} reports the three prospective scored runs. All were valid
 \small
 \caption{Prospective scored FIT Stage-A results. All three runs were valid; $H$ contains sequences 3001--5000.}
 \label{tab:stagea}
-\begin{tabular}{lrrrrcl}
+\begin{tabular}{@{}lrrrrcl@{}}
 \toprule
 \textbf{Run} &
 \textbf{Seq. 5000$\rightarrow$5001 gap (s)} &
@@ -269,9 +275,10 @@ Recovery timing on POWDER is also endpoint-specific. Exact E10-B and E10-C-B mea
 \label{sec:repro}
 
 The study preserves raw evidence and derived adjudication artifacts separately from manuscript prose. The prospective scored FIT Stage-A archive contains the three run analyses, the aggregate Stage-A verdict, bootstrap evidence, workflow console, adjudication console, and an internal SHA-256 manifest. Its frozen archive identity is SHA-256
-\[
-\texttt{5b52005e48d8987091c447186eb39261824f32df15653c3d2773a031b062d4a2}.
-\]
+\begin{center}
+\small\texttt{5b52005e48d8987091c447186eb39261}\\
+\texttt{824f32df15653c3d2773a031b062d4a2}
+\end{center}
 The 6,881,643-byte archive contains 127 entries and was copied to three durable storage locations; each copy was re-downloaded and verified against the same SHA-256 digest. The original GitHub Actions artifact is retained only as a temporary convenience copy and is not the long-term preservation authority.
 
 Historical FIT and POWDER claims remain traceable through the project's frozen reconstruction tables, forensic trace maps, immutable archive hashes, and receiver-side identity reconciliation. A public release package must exclude credentials, private infrastructure metadata, and other sensitive execution material while retaining the scientific records required to reproduce the published tables and claim checks. The final public repository/DOI pointer is an editorial release task and is not invented in this reconstruction.
