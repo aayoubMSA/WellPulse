@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7f-R3 authority
         uses: actions/checkout@v4
         with:
-          ref: 53e9b176c4d3c0d7249354f458553857366caee0
+          ref: 82d4e4e6ac82ae15f75fc2d281e0eca1c8410f2b
           fetch-depth: 0
           persist-credentials: false
 
@@ -181,5 +181,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7FR3_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: 53e9b176c4d3c0d7249354f458553857366caee0" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 82d4e4e6ac82ae15f75fc2d281e0eca1c8410f2b" >> "$GITHUB_STEP_SUMMARY"
           echo "Sanitized supplement built; private raw archives and credentials excluded." >> "$GITHUB_STEP_SUMMARY"
