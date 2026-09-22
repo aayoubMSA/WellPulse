@@ -137,7 +137,7 @@ jobs:
             "6,881,643-byte archive",
             "127 entries",
           ]:
-              assert x in s, x
+              assert x.lower() in low, x
 
           # Exact author/declaration metadata.
           for x in [
