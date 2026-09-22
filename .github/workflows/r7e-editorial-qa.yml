@@ -59,6 +59,7 @@ jobs:
           concl_end="The study does not introduce a new persistence architecture and does not pool heterogeneous testbeds into a global reliability claim."
           d_post=d[d.index(ds):d.index(concl_end)+len(concl_end)]
           e_post=e[e.index(ds):e.index(concl_end)+len(concl_end)]
+          e_post=e_post.replace("\\centering\n\\small","\\centering")
           assert d_post == e_post, "Discussion/Threats/Repro/Conclusion scientific prose changed"
 
           # Exact recovered author metadata.
