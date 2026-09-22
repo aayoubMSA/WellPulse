@@ -1,0 +1,139 @@
+name: WellPulse R7f-R2 Evidence Framing QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/r7fr2-evidence-framing-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact R7f-R2 authority
+        uses: actions/checkout@v4
+        with:
+          ref: 046347410630dd851d1e79f6913c4804be7cf3f6
+          persist-credentials: false
+
+      - name: Static framing and science-lock gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          old=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7fR1_SOTA_ClaimBoundary_20260922.tex").read_text(encoding="utf-8")
+          new=Path("manuscript/revival_2026-09-22/WellPulse_Revival_R7fR2_EvidenceFraming_20260922.tex").read_text(encoding="utf-8")
+
+          ms="\\section{Recovery Observables and Experimental Protocol}"
+          ds="\\section{Discussion}"
+          bib="\\begin{thebibliography}"
+          assert ms in old and ms in new and ds in old and ds in new
+
+          # Methods + Results are frozen byte-for-byte.
+          assert old[old.index(ms):old.index(ds)] == new[new.index(ms):new.index(ds)], "Methods/Results changed"
+
+          # Bibliography and declarations remain byte-identical to R7f-R1.
+          assert old[old.index("\\section*{Acknowledgment}"):] == new[new.index("\\section*{Acknowledgment}"):], "Declarations/bibliography changed"
+
+          active="\n".join(line.split("%",1)[0] for line in new.splitlines())
+          low=active.lower()
+
+          required=[
+            "measured w1 replay consequence",
+            "code-path-implied continuity cost",
+            "quantify the magnitude and repeatability",
+            "structurally consistent with w1's serialized execution order",
+            "direct comparison of alternative replay schedulers, backlog-size scaling, replay concurrency, and broker-throughput sensitivity is outside the bounded claim tested here and is reserved for future work",
+            "measurement discipline prevents sender-side acknowledgement closure from being mislabeled as receiver completion",
+            "keeping replay-associated continuity evidence separate from the unresolved m2-to-m3 question",
+          ]
+          for x in required:
+              assert x in low, x
+
+          # Old vulnerable framing removed.
+          prohibited=[
+            "repeated w1 completeness--continuity result",
+            "the results support recovery-observable measurement",
+            "identify an implementation-specific completeness--continuity trade-off",
+            "emergent generic mqtt phenomenon",
+          ]
+          # The last phrase may appear only under explicit negation.
+          for x in prohibited[:3]:
+              assert x not in low, x
+          assert "not an architecture ranking, a receiver-latency estimate, or a claim of an emergent generic mqtt phenomenon" in low
+
+          # All frozen quantitative anchors must remain present.
+          for x in [
+            "68.785--70.264",
+            "69.217",
+            "74.798--76.308",
+            "75.438",
+            "0/3",
+            "3/3 unresolved",
+            "10,000/10,000",
+            "2000/2000",
+            "[-5.038,\,+4.801]",
+            "[-4.857,\,+4.932]",
+            "[-4.858,\,+4.815]",
+          ]:
+              assert x.lower() in low, x
+
+          # R7f-R1 boundary remains intact.
+          for x in [
+            "operational recovery-measurement discipline",
+            "complementary cross-environment evidence without pooling",
+            "prospective endpoint adjudication",
+            "not a claim that the labels m0--m5 are novel by themselves",
+          ]:
+              assert x in low, x
+
+          # Citation set unchanged.
+          old_bibs=re.findall(r"\\bibitem\{([^}]*)\}",old)
+          new_bibs=re.findall(r"\\bibitem\{([^}]*)\}",new)
+          assert old_bibs == new_bibs and len(new_bibs)==14
+
+          # Claim firewall.
+          for x in [
+            "novel recovery architecture",
+            "68 s receiver completion",
+            "68 s end-to-end recovery",
+            "endpoint misclassification was repeatedly demonstrated",
+            "to our knowledge",
+          ]:
+              assert x not in low, x
+
+          print("R7FR2_METHODS_RESULTS_LOCK=PASS")
+          print("R7FR2_EVIDENCE_FRAMING=PASS")
+          print("R7FR2_R1_BOUNDARY_PRESERVED=PASS")
+          PY
+
+      - name: Install LaTeX
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-publishers latexmk >/dev/null
+
+      - name: Compile exact R7f-R2 source
+        shell: bash
+        working-directory: manuscript/revival_2026-09-22
+        run: |
+          set -euo pipefail
+          latexmk -pdf -interaction=nonstopmode -halt-on-error WellPulse_Revival_R7fR2_EvidenceFraming_20260922.tex
+          test -s WellPulse_Revival_R7fR2_EvidenceFraming_20260922.pdf
+          ! grep -q "Undefined control sequence" WellPulse_Revival_R7fR2_EvidenceFraming_20260922.log
+          ! grep -q "LaTeX Error" WellPulse_Revival_R7fR2_EvidenceFraming_20260922.log
+          ! grep -q "Citation .* undefined" WellPulse_Revival_R7fR2_EvidenceFraming_20260922.log
+          ! grep -q "There were undefined references" WellPulse_Revival_R7fR2_EvidenceFraming_20260922.log
+          ! grep -Fq 'Overfull \hbox' WellPulse_Revival_R7fR2_EvidenceFraming_20260922.log
+
+      - name: Summarize
+        run: |
+          echo "R7FR2_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 046347410630dd851d1e79f6913c4804be7cf3f6" >> "$GITHUB_STEP_SUMMARY"
+          echo "Methods and Results frozen byte-for-byte from R7f-R1." >> "$GITHUB_STEP_SUMMARY"
