@@ -1,0 +1,5 @@
+Data Availability Statement
+
+A sanitized reproducibility supplement accompanies this submission and contains the execution-configuration matrix, exact code-authority manifest, clock-bound procedure, treatment definitions, and deterministic self-check used to audit the reported FIT experiments. Protected raw FIT and POWDER evidence is not publicly distributed because it contains private infrastructure and account metadata. The integrity of the preserved raw evidence is documented by cryptographic hashes. Access to protected raw records is subject to testbed, platform, and privacy constraints.
+
+No public repository DOI is claimed in this submission package.
