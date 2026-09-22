@@ -16,7 +16,7 @@ jobs:
       - name: Check out exact R7f-R4 authority
         uses: actions/checkout@v4
         with:
-          ref: dc2b7e39c16dae1ea6eb1e9d8b82beba5ca3792a
+          ref: 2fe60f8b3784304ce256bb584aa734a07f5bfc86
           persist-credentials: false
 
       - name: Static science-lock and evidence-presentation gates
@@ -80,7 +80,7 @@ jobs:
             "\\begin{figure*}[t]",
             "Frozen W1 source-side execution order",
             "M4 = source-generation gap seq5000$\\rightarrow$seq5001",
-            "historical: C1 mean 69.134~s; C2 mean 69.300~s",
+            "Observed M4: historical C1 mean 69.134~s; C2 mean 69.300~s; prospective C1 74.798--76.308~s",
             "Prospective $D_{23}=M3-M2$ adjudication",
             "-5.038/4.801",
             "-4.857/4.932",
@@ -190,5 +190,5 @@ jobs:
       - name: Summarize
         run: |
           echo "R7FR4_MACHINE_QA=PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "Exact authority: dc2b7e39c16dae1ea6eb1e9d8b82beba5ca3792a" >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact authority: 2fe60f8b3784304ce256bb584aa734a07f5bfc86" >> "$GITHUB_STEP_SUMMARY"
           echo "Coverage matrix + split C1/C2 summary + evidence-faithful vector figure passed." >> "$GITHUB_STEP_SUMMARY"
